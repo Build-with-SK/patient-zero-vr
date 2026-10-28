@@ -21,3 +21,15 @@ Evidence: GAME_DESIGN §4 Act 1 gate versus current Interfaces.cs. No Core edits
 Kind: PROGRESS
 What: The cue-table rows list ZombieLunge and ZombieGlassTap at 8 m, while the mandatory tested fairness rule says every zombie vocal max is at least 9 m. B will conservatively use 9 m for these two cues and record this for Claude's review; ids and contracts are unchanged. The ending's white/black fade and title stay with seat A; B drives reveal amounts and state requests only through existing Core channels. Built-in Unity panning is the default until optional Meta XR Audio licensing is confirmed.
 Evidence: GAME_DESIGN §§4,6; ARCHITECTURE ownership table. No runtime/editor/device claims.
+
+## 2026-10-28 15:49 · B1 logic review checkpoint
+Kind: READY FOR REVIEW 22d40025f0e680471396feb48971710f2fde8c8d
+What: B1 is a separate reviewable implementation commit before B2 shells. Ported approved flood-control/hearing/AI guards, replaced the incompatible six-state/health model, implemented the full cue table, protected 24/12 voice budget, four-act director, lighting rules and derived room boundaries. Core and frozen branches are untouched. The original 26 tests were rerun independently; current contract tests are not represented as the same suite.
+Evidence:
+```
+python tools/logic_tests/run_logic_tests.py
+Logic tests: 91 passed, 0 failed.
+python tools/review/check_rules.py --seat B --base origin/main --head integration/xr-systems
+0 error(s), 0 warning(s).
+```
+No compiler warnings. Includes the Standard/Reduced golden run, catch/LOS/range/timeout cases, exactly-once cue coverage, HRTF voice cap, tracking-loss hint handling, and 10 minutes of flicker/pulse sampled at 1 ms. Not verified in Unity or on a headset. Proceeding with separately committed B2/B3 source under the user's full implementation request; review does not imply merge approval.
