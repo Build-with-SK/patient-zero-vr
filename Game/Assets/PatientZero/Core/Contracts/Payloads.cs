@@ -69,6 +69,17 @@ namespace PatientZero.Core
         }
     }
 
+    /// <summary>A gate the director has opened for the current act (contract v1.1).</summary>
+    public readonly struct GateReleased
+    {
+        public readonly GateId Gate;
+
+        public GateReleased(GateId gate)
+        {
+            Gate = gate;
+        }
+    }
+
     public readonly struct AssistChanged
     {
         public readonly ObjectiveId Objective;

@@ -66,5 +66,11 @@ namespace PatientZero.Core
         /// <summary>Scaled seconds since the run started, across restores.</summary>
         float ExperienceTime { get; }
         void StartRun(ActId startAct, bool isRestore);
+        /// <summary>
+        /// True once the gate has been released in the current act (GameEvents.GateReleased).
+        /// False for GateId.None, for a gate of another act, and after the act restarts until
+        /// the beat releases it again (contract v1.1).
+        /// </summary>
+        bool IsGateReleased(GateId gate);
     }
 }

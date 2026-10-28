@@ -17,12 +17,14 @@ Last updated 2026-10-28 by Claude · Build under test: **none exists** · Repo c
 
 | Layer | Tool | Runs without Unity | Status today |
 |---|---|---|---|
-| 1. Contract and logic tests | `python tools/logic_tests/run_logic_tests.py` | yes | runs: 43/43 PASS (Core only, no seat code yet) |
+| 1. Contract and logic tests | `python tools/logic_tests/run_logic_tests.py` | yes | runs: 72/72 PASS (Core 45 + Integration 27; no seat code on `main` yet) |
 | 2. Static rules | `python tools/review/check_rules.py` (+ `--self-test`) | yes | runs: 0 findings; self-test PASS |
-| 3. Unity EditMode tests (same files as layer 1, plus Unity-only ones) | Unity Test Runner, `-runTests -testPlatform EditMode` | no | BLOCKED: no Unity Editor |
-| 4. Scene build and validation | `PatientZero/Build Scenes` (batchmode) | no | BLOCKED: no Unity Editor; composer not written yet |
+| 2b. Package policy and tooling tests | `python tools/unity/validate_packages.py` (+ `--online`); `python -m unittest discover -s tools/unity -p "test_*.py"` | yes | runs: 0 errors; 24/24 PASS |
+| 2c. CI | GitHub Actions `checks` runs layers 1, 2 and 2b on every push and PR | yes | see the evidence log |
+| 3. Unity EditMode tests (same files as layer 1, plus Unity-only ones) | `python tools/unity/unity_batch.py editmode-tests` | no | BLOCKED: no Unity Editor (the runner exits 2) |
+| 4. Scene build and validation | `python tools/unity/unity_batch.py compose` / menu `PatientZero/Build Scenes` | no | BLOCKED: no Unity Editor. Composer written, UNVERIFIED IN EDITOR; its rules are tested in layer 1 |
 | 5. PlayMode tests: autoplay full run, restart ×10 leak test, pause during load | Unity Test Runner, `-testPlatform PlayMode` | no | BLOCKED: no Unity Editor; tests not written yet |
-| 6. Android development build | `PatientZero/Build Quest APK` (batchmode) | no | BLOCKED: no Unity Editor or Android module |
+| 6. Android development build | `python tools/unity/unity_batch.py build-apk` / menu `PatientZero/Build Dev APK` | no | BLOCKED: no Unity Editor or Android module. Build script written, UNVERIFIED IN EDITOR |
 | 7. On-device checks | headset + `adb` + OVR Metrics Tool | no | BLOCKED: no headset connected, no `adb` |
 
 ## Evidence log
@@ -33,7 +35,34 @@ Last updated 2026-10-28 by Claude · Build under test: **none exists** · Repo c
 | 2026-10-28 | 1 | contract v1 | mutation check: dropped one channel from `GameEvents.ResetAll`; made `EventChannel` remove handlers immediately during a raise | both caught (`ResetAll_ClearsEveryChannel`, `Unsubscribe_EarlierHandlerDuringRaise_LaterHandlersStillRun`) |
 | 2026-10-28 | 2 | contract v1 | `python tools/review/check_rules.py --self-test` | every rule fired on its planted violation; 0 false positives from comments or strings |
 | 2026-10-28 | 2 | contract v1 | `python tools/review/check_rules.py` | 0 errors, 0 warnings |
+| 2026-10-28 | 1 | `claude/technical-director` (Integration logic) | `python tools/logic_tests/run_logic_tests.py` | 70 passed, 0 failed |
+| 2026-10-28 | 1 | same | mutation check: let Flow build into Ward; removed the missing-required-point check | both caught (`SeatBuildingIntoTheWrongScene_IsAnError`, `MissingRequiredPoint_IsAnError`); 70/70 after restore |
+| 2026-10-28 | 2 | same | `check_rules.py --self-test`, then `check_rules.py` | SELF-TEST PASSED; 0 errors, 0 warnings (Integration editor scripts included) |
+| 2026-10-28 | 2b | same | `validate_packages.py`; tooling unittest | 0 errors; 24/24 PASS. Mutation: forbidden-package checks disabled → 2 tests fail; restored → OK |
+| 2026-10-28 | 2b | same | `validate_packages.py --online` (packages.unity.com) | 7 non-core pins published and support Unity 6000.x; 2 core pins fixed by the editor |
+| 2026-10-28 | — | same | Roslyn parse of the 5 Integration editor scripts with no Unity references | 0 syntax errors; 64 expected missing-type errors (CS0246/CS0234). **Not a compile check** |
+| 2026-10-28 | 3–6 | same | `python tools/unity/unity_batch.py validate` | BLOCKED, exit 2: `C:\Program Files\Unity\Hub\Editor\6000.3.27f1\Editor\Unity.exe` not found |
+| 2026-10-28 | 1 | contract v1.1 | `python tools/logic_tests/run_logic_tests.py` | 72 passed, 0 failed (new: `GateIds_AreUniqueAndPinned`, `GateReleased_CarriesItsGate`; `ResetAll_ClearsEveryChannel` now covers `GateReleased`) |
+| 2026-10-28 | 1–2 | contract v1.1 | mutations: dropped `GateReleased.Clear()` from `ResetAll`; planted an Interaction file raising `GateReleased` | both caught: `GateReleased is missing from GameEvents.ResetAll`; `event-writer … Interaction may not raise GameEvents.GateReleased (writers: Atmosphere)` |
 | 2026-10-28 | review | `codex/xr-systems` `72be6d8` (not on `main`) | Codex 2's portable suite: Roslyn csc against the .NET 8.0.8 runtime (C# 9, warnings as errors), run with `dotnet` | 26 passed, 0 failed, 0 skipped; 2 mutations caught; `validate_assets.py` PASS. **Not counted toward acceptance:** not on `main`, and Unity import was not run. Details: `docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md` |
+
+## Quality gates (Full Production Director prompt, Mission 6)
+
+| # | Gate | Status | Evidence / blocker |
+|---|---|---|---|
+| Q-01 | Contract tests | PASS | layer 1: 72/72 with contract v1.1; mutations caught |
+| Q-02 | Compile (outside Unity) | PASS for Core and every `Logic/` assembly | Roslyn csc, C# 9, 0 warnings. Editor scripts: parse only, NOT TESTED as a compile |
+| Q-03 | Unity compile | BLOCKED | no Unity 6000.3.27f1 on any seat |
+| Q-04 | Scene assembly | BLOCKED | composer written (UNVERIFIED IN EDITOR); no seat build steps exist yet, so it is expected to fail with `layout-missing` and `service-count` |
+| Q-05 | Hand tracking | BLOCKED | no headset; seat A code not written |
+| Q-06 | Controller fallback | BLOCKED | no headset; seat A code not written |
+| Q-07 | Zombies respond to noise | NOT TESTED | seat B `ZombieBrain` not on `main`; testable in layer 1 once ported |
+| Q-08 | Spatial audio direction | BLOCKED | needs a headset and 3 testers (F-05) |
+| Q-09 | 120-second loop | BLOCKED | no Unity Editor; seat code not written |
+| Q-10 | Ending | BLOCKED | no Unity Editor |
+| Q-11 | No critical errors | NOT TESTED | no build to run |
+| Q-12 | Quest build (APK) | BLOCKED | no Unity Editor or Android module; build script UNVERIFIED IN EDITOR |
+| Q-13 | 72 FPS on device | BLOCKED | no headset, no build (`PERFORMANCE_REPORT.md`) |
 
 ## Feature acceptance (Mission 6)
 
