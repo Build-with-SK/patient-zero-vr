@@ -259,7 +259,7 @@ See section 7.
 | `claude/technical-director` | Claude | `Documents/patient-zero` (this checkout) |
 | `codex/a-player-interaction` | Codex A | `Documents/patient-zero-worktrees/codex-a` |
 | `codex/b-ai-atmosphere` | Codex B | `Documents/patient-zero-worktrees/codex-b` |
-| `main` | — | created when the owner approves the v1 contract. Only Claude merges into it |
+| `main` | — | created 2026-10-28 from approved contract v1. Only Claude merges into it |
 
 **Ready for review:** the agent appends to its log `READY FOR REVIEW <commit>` with its logic-harness output and `check_rules.py --seat <X> --base main --head <branch>` output, both clean.
 
@@ -267,7 +267,7 @@ See section 7.
 
 **Merge order** (the seats share no files, so conflicts can only come from Core, Packages or ProjectSettings, which only Claude edits):
 
-1. `claude/technical-director` → `main` (needs the owner's approval)
+1. `claude/technical-director` → `main` (done for contract v1 on 2026-10-28; later contract changes follow the same path)
 2. `codex/b-ai-atmosphere` → `main` (the world exists first)
 3. `codex/a-player-interaction` → `main`
 4. Integration commit by Claude: generated scenes, `.meta` files, package lock, settings
@@ -299,7 +299,7 @@ git config merge.unityyamlmerge.driver "'<Unity install>/Editor/Data/Tools/Unity
 | 4 | Say which headset model you have (Quest 2, 3 or 3S) | Owner | Performance targets |
 | 5 | Read and accept the Meta XR Audio SDK licence, or choose the built-in panning fallback | Owner | Spatial audio |
 | 6 | Give each Codex agent its brief (`docs/collab/CODEX_A_BRIEF.md`, `CODEX_B_BRIEF.md`) | Owner | Implementation |
-| 7 | Approve contract v1 so Claude creates `main` from `claude/technical-director` | Owner | Agents branch from `main` |
+| 7 | ~~Approve contract v1 so Claude creates `main`~~ **Done 2026-10-28** | Owner | Agents branch from `main` |
 | 8 | If either Codex agent runs in the cloud: create a **private** GitHub repo and allow Claude to push. Git LFS is installed locally; run `git lfs install` once before the first binary asset | Owner | Remote collaboration |
 
 ---

@@ -10,7 +10,7 @@ A release candidate is approved only when every **critical** box is checked and 
 - [ ] `Game/` opened as a project; packages pinned; `Packages/` and `ProjectSettings/` committed by Claude
 - [ ] Headset in developer mode; `adb devices` lists it; model recorded
 - [ ] Meta XR Audio licence accepted, or the built-in fallback chosen
-- [ ] Contract v1 approved and `main` created
+- [x] Contract v1 approved and `main` created (owner approval in chat, 2026-10-28)
 
 ## Gate 1: Branches reviewed and merged (Mission 4–5)
 

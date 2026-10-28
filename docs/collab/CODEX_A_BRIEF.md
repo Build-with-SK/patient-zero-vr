@@ -9,10 +9,10 @@ You are **Codex A** on PATIENT ZERO, a 120-second hand-tracked VR horror game fo
 **Repository:** `Documents/patient-zero` in the owner's Windows user folder. Work in your own worktree. From the repo root:
 
 ```bash
-git worktree add ../patient-zero-worktrees/codex-a -b codex/a-player-interaction claude/technical-director
+git worktree add ../patient-zero-worktrees/codex-a -b codex/a-player-interaction main
 ```
 
-(Use `main` instead of `claude/technical-director` once `main` exists.)
+Review diffs are taken against `main`: `--base main --head codex/a-player-interaction`.
 
 **Read first, in this order:** `docs/collab/WORK_PLAN.md`, `docs/ARCHITECTURE.md`, `docs/GAME_DESIGN.md` (sections 2, 4, 8, 9), `docs/REVIEW_CHECKLIST.md`, and everything in `Game/Assets/PatientZero/Core/Contracts/`.
 

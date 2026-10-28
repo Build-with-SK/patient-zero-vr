@@ -10,7 +10,7 @@ Owner of this file: Claude (Technical Director). **Read this before every task.*
 | A | Codex A | `codex/a-player-interaction` | `Player/`, `Interaction/`, `Flow/`, `UI/` under `Game/Assets/PatientZero/` | `docs/collab/CODEX_A_LOG.md` |
 | B | Codex B | `codex/b-ai-atmosphere` | `AI/`, `Audio/`, `Atmosphere/`, `Environment/` under `Game/Assets/PatientZero/` | `docs/collab/CODEX_B_LOG.md` |
 
-Branch from `main` once the owner approves contract v1. Until then, branch from `claude/technical-director`.
+Branch from `main`. The owner approved contract v1 on 2026-10-28, and `main` was created from it.
 Full ownership table: `docs/ARCHITECTURE.md` section 3.
 
 ## Invariants no seat may weaken
@@ -48,6 +48,6 @@ python tools/review/check_rules.py --seat <A|B> --base <your base> --head <your 
 
 ## Current state (2026-10-28)
 
-* Contract v1 is on `claude/technical-director`: 43 logic tests pass, the checker is clean, the docs are written.
-* **Waiting on the owner:** install Unity 6.3 LTS with Android support, connect the headset, approve contract v1 (`ARCHITECTURE.md` section 11).
+* Contract v1 is **approved and on `main`**: 43 logic tests pass, the checker is clean, the docs are written.
+* **Waiting on the owner:** install Unity 6.3 LTS with Android support, connect the headset, and decide on the Meta XR Audio licence (`ARCHITECTURE.md` section 11).
 * **Seat A and seat B can start now** on their `Logic/` milestones. These need no Unity. See your brief.
