@@ -5,7 +5,7 @@
     "PatientZero.UI",
     "PatientZero.Flow",
     "PatientZero.Player",
-    "Unity.ugui",
+    "UnityEngine.UI",
     "Unity.XR.Interaction.Toolkit",
     "Unity.InputSystem"
   ],

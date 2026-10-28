@@ -3,6 +3,6 @@
   "references": [
     "PatientZero.Core",
     "PatientZero.Flow.Logic",
-    "Unity.ugui"
+    "UnityEngine.UI"
   ]
 }

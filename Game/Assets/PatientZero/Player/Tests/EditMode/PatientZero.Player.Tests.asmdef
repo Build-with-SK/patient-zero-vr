@@ -2,12 +2,19 @@
   "name": "PatientZero.Player.Tests",
   "references": [
     "PatientZero.Core",
-    "PatientZero.Player.Logic"
+    "PatientZero.Player.Logic",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
   ],
   "includePlatforms": [
     "Editor"
   ],
-  "optionalUnityReferences": [
-    "TestAssemblies"
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
   ]
 }
