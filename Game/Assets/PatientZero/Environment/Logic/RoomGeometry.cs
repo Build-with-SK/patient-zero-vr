@@ -10,6 +10,9 @@ namespace PatientZero.Environment.Logic
         public readonly Vector3 A, B;
         public WallSpan(Vector3 a, Vector3 b) { A = a; B = b; }
         public float Length => Vector3.Distance(A, B);
+        // Exact longitudinal extent preserves doorway cuts; thickness is perpendicular only.
+        public Vector3 ColliderSize => new Vector3(Math.Abs(B.x - A.x) > .001f ? Length : .1f,
+            2.8f, Math.Abs(B.z - A.z) > .001f ? Length : .1f);
     }
     public readonly struct DoorOpening
     {

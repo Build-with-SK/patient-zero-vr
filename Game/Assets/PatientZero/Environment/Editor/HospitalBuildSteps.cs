@@ -2,6 +2,8 @@
 using PatientZero.Core;
 using PatientZero.Environment.Logic;
 using Unity.AI.Navigation;
+using UnityEditor;
+using System;
 using UnityEngine;
 
 namespace PatientZero.Environment.Editor
@@ -25,7 +27,7 @@ namespace PatientZero.Environment.Editor
             }
             foreach (var span in geometry.Walls)
             {
-                var size = new Vector3(Mathf.Abs(span.B.x - span.A.x) + .1f, 2.8f, Mathf.Abs(span.B.z - span.A.z) + .1f);
+                var size = span.ColliderSize;
                 WardPrimitives.Box(root, "Wall", (span.A + span.B) * .5f + Vector3.up * 1.4f, size, wall);
             }
             foreach (var door in geometry.Doors)
@@ -42,7 +44,7 @@ namespace PatientZero.Environment.Editor
             var emissive = WardPrimitives.Material("ExitEmission", new Color(.08f, .5f, .12f));
             emissive.EnableKeyword("_EMISSION"); emissive.SetColor("_EmissionColor", new Color(.08f, .5f, .12f));
             WardPrimitives.Box(sign, "ExitSign", sign.position, new Vector3(.05f, .25f, .5f), emissive, false);
-            Label(sign, "EXIT →", sign.position - Vector3.right * .06f, .045f, 90);
+            Label(sign, "EXIT â†’", sign.position - Vector3.right * .06f, .045f, 90);
             var route = new[] { WardLayout.A3_Start, WardLayout.A3_Mid1, WardLayout.A3_Mid2, WardLayout.A3_End };
             for (int i = 0; i < route.Length - 1; i++)
             {
@@ -56,6 +58,27 @@ namespace PatientZero.Environment.Editor
             var cart = WardPrimitives.Marker(root, WardLayout.A3_Cart);
             Cart(cart, cart.position, metal);
             Gurney(root, metal);
+            // Dress existing rooms without changing approved anchors or reserving new interaction ids.
+            foreach (var room in geometry.Floors)
+            {
+                if (room.Id == "IsolationB7")
+                {
+                    var at = new Vector3(room.MinX + .65f, .65f, room.MinZ + .8f);
+                    WardPrimitives.Box(root, "PatientBed", at, new Vector3(.8f, .12f, 1.4f), metal);
+                    WardPrimitives.Box(root, "PatientMattress", at + Vector3.up * .1f, new Vector3(.75f, .1f, 1.35f), wall, false);
+                    Label(root, "PATIENT ROOM B-7", WardLayout.A1_DoorWindow.Position + Vector3.up * .65f, .04f);
+                }
+                else if (room.Id == "SupplyRoom")
+                {
+                    // Theatre dressing stays against the west wall, clear of Z2's doorway route.
+                    var at = new Vector3(room.MinX + .7f, .85f, (room.MinZ + room.MaxZ) * .5f);
+                    WardPrimitives.Box(root, "OperatingTable", at, new Vector3(.75f, .15f, 1.6f), metal);
+                    WardPrimitives.Box(root, "TablePedestal", at - Vector3.up * .45f, new Vector3(.4f, .8f, .65f), metal);
+                    WardPrimitives.Box(root, "InstrumentTray", at + Vector3.back * .6f + Vector3.up * .15f, new Vector3(.55f, .035f, .3f), metal, false);
+                    Label(root, "OPERATING THEATRE", WardLayout.Z2_Doorway.Position + Vector3.up * 2.3f, .04f);
+                }
+            }
+            Label(root, "EMERGENCY CORRIDOR", WardLayout.A3_Drip.Position + Vector3.up * .2f, .04f);
             Label(root, "THEY HEAR YOU", WardLayout.A1_PlankMid.Position - Vector3.forward * .08f, .04f);
             Label(root, "B-7", WardLayout.A1_DoorWindow.Position + Vector3.up * .45f, .055f);
             foreach (var p in new[] { WardLayout.A1_DoorWindow, WardLayout.A2_Monitor, WardLayout.A3_Drip, WardLayout.A4_ExitDoor })
@@ -68,7 +91,20 @@ namespace PatientZero.Environment.Editor
         public static void BakeNavigation(Transform root)
         {
             var surface = WardPrimitives.FindInScene<NavMeshSurface>(root);
-            if (surface) surface.BuildNavMesh();
+            if (!surface) throw new InvalidOperationException("Ward NavMeshSurface missing");
+            surface.BuildNavMesh();
+            if (!surface.navMeshData) throw new InvalidOperationException("Ward bake produced no NavMeshData");
+            string path = WardPrimitives.GeneratedFolder("Environment") + "/WardNavMesh.asset";
+            var previous = AssetDatabase.LoadAssetAtPath<UnityEngine.AI.NavMeshData>(path);
+            if (previous)
+            {
+                // Preserve the GUID referenced by existing generated scenes.
+                EditorUtility.CopySerialized(surface.navMeshData, previous);
+                surface.RemoveData(); surface.navMeshData = previous; surface.AddData();
+                EditorUtility.SetDirty(previous);
+            }
+            else AssetDatabase.CreateAsset(surface.navMeshData, path);
+            AssetDatabase.SaveAssets();
         }
         private static void Cart(Transform root, Vector3 p, Material metal)
         {
@@ -91,7 +127,7 @@ namespace PatientZero.Environment.Editor
                 Vector3 at = p + towards * (WardLayout.FinalPatientReach * link / 13) + Vector3.up * .08f;
                 WardPrimitives.Box(root, "ChainLink", at, new Vector3(.08f, .025f, .025f), metal, false);
             }
-            Label(root, "RESTRAINED — KEEP CLEAR", p + Vector3.up * .2f, .03f);
+            Label(root, "RESTRAINED â€” KEEP CLEAR", p + Vector3.up * .2f, .03f);
         }
         private static void Label(Transform root, string text, Vector3 p, float size, float yaw = 0)
         {

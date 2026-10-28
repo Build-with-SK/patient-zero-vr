@@ -16,7 +16,7 @@ namespace PatientZero.Audio.Editor
         public static void Build(Transform root)
         {
             var audio = root.gameObject.AddComponent<AudioCuePlayer>();
-            audio.EnableLicensedSpatializer = false; audio.Mixer = CreateMixer();
+            audio.Occluders = 1; audio.EnableLicensedSpatializer = false; audio.Mixer = CreateMixer();
         }
         [SceneBuildStep(BuildScene.Ward, 650)]
         public static void Emitters(Transform root)

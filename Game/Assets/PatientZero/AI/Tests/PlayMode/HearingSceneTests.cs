@@ -39,7 +39,7 @@ namespace PatientZero.AI.Tests
                 audioRoot.AddComponent<AudioCuePlayer>();
                 actor = new GameObject("Orderly"); actor.SetActive(false); actor.transform.position = WardLayout.Z2_Dormant.Position;
                 actor.AddComponent<NavMeshAgent>(); actor.AddComponent<ZombieNavigation>().Obstacles = 0;
-                var zombie = actor.AddComponent<ZombieAgentShell>(); zombie.ZombieId = ZombieIds.Orderly; zombie.Occluders = 0;
+                var zombie = actor.AddComponent<ZombieAgentShell>(); zombie.ZombieId = ZombieIds.Orderly; zombie.SightBlockers = 0; zombie.HearingOccluders = 0;
                 actor.SetActive(true);
                 GameEvents.StateChanged.Raise(new GameStateChanged(GameState.Boot, GameState.Playing, FailReason.None));
                 GameEvents.ActStarted.Raise(new ActStarted(ActId.Machinery, false, 1));

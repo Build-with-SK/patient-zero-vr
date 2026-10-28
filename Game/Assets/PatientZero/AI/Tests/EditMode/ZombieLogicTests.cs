@@ -185,5 +185,13 @@ namespace PatientZero.AI.Tests
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
             Assert.AreEqual(0L, allocated);
         }
+        [Test] public void WallsDoNotReduceGameplayHearingButClosedDoorsDo()
+        {
+            Assert.AreEqual(1f, Hearing.Occlusion(false, true));
+            Assert.AreEqual(.5f, Hearing.Occlusion(true, true));
+            var n = new NoiseEvent(Vector3.zero, 6, CueId.ImpactHeavy, NoiseOrigin.Player, 0);
+            Assert.IsTrue(Hearing.CanHear(in n, Vector3.right * 5, 1, Hearing.Occlusion(false, true), 0));
+            Assert.IsFalse(Hearing.CanHear(in n, Vector3.right * 5, 1, Hearing.Occlusion(true), 0));
+        }
     }
 }

@@ -4,6 +4,7 @@ using NUnit.Framework;
 using PatientZero.Core;
 using UnityEngine;
 using UnityEngine.AI;
+using Unity.AI.Navigation;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
@@ -20,6 +21,12 @@ namespace PatientZero.Environment.Tests
             AsyncOperation unload = null;
             try
             {
+                NavMeshSurface surface = null;
+                foreach (var root in scene.GetRootGameObjects())
+                    foreach (var candidate in root.GetComponentsInChildren<NavMeshSurface>(true))
+                    { Assert.IsNull(surface, "Only one navigation surface is expected"); surface = candidate; }
+                Assert.IsNotNull(surface, "Generated Ward needs a navigation surface");
+                Assert.IsNotNull(surface.navMeshData, "Navigation data must survive scene reload");
                 var from = new[] { WardLayout.Z1_WalkFrom.Position, WardLayout.Z1_WalkFrom.Position,
                     WardLayout.Z2_Dormant.Position, WardLayout.Z2_Doorway.Position, WardLayout.Z3_PatrolNorth.Position, WardLayout.Z4_Gurney.Position };
                 var to = new[] { WardLayout.A1_DoorWindow.Position + Vector3.forward * .45f, WardLayout.Z1_WalkTo.Position,

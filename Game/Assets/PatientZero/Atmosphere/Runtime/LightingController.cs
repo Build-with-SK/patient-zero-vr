@@ -65,7 +65,7 @@ namespace PatientZero.Atmosphere
             for (int i = 0; i < Emissives.Length; i++)
             {
                 if (!Emissives[i]) continue;
-                Emissives[i].GetPropertyBlock(block); block.SetColor(EmissionId, colour * (current == LightingState.Blackout ? .2f : gain));
+                Emissives[i].GetPropertyBlock(block); block.SetColor(EmissionId, new Color(.08f, .5f, .12f) * (current == LightingState.Blackout ? 1f : Mathf.Max(.4f, gain)));
                 Emissives[i].SetPropertyBlock(block);
             }
             for (int i = 0; i < GuidanceStrip.Length; i++)

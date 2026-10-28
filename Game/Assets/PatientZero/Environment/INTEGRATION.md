@@ -1,14 +1,15 @@
 # Seat B integration handoff
 
-Approved base: `origin/main` at `73a3b67`; historical sources remain at frozen `72be6d8`
+Approved base: `origin/main` at `44ea7b7` (PR #4 merged, contract v1.1); historical sources remain at frozen `72be6d8`
 and its implementation parent `87bb494482a0c00ed40d52eebb2871009c730091`.
 No old package, duplicate Core, SDK imports, handwritten Unity assets or foreign-seat files are introduced.
 
 ## What is built
 
-The approved layout is isolation B-7 → corridor → exit vestibule, with supply/side/linen rooms.
-It has no operating theatre. Adding one requires Claude to change WardLayout/design; this branch
-does not add coordinates outside that contract. The geometry contains six floors/ceilings, deduplicated
+The approved layout is isolation B-7 â†’ corridor â†’ exit vestibule, with supply/side/linen rooms.
+The supply room now has operating-table and instrument-tray dressing inside its existing footprint;
+no room boundary, puzzle anchor or objective is changed. A larger theatre or relocated valve/cable
+still requires the design/layout amendment described in DESIGN_RECONCILIATION.md. The geometry contains six floors/ceilings, deduplicated
 walls, six aligned door openings/headers, a monitor, narrative text, exit sign, guidance strip, cart,
 gurney, readable 1.3 m chain and PA/vent dressing. Functional door leaves and cart interactions belong
 to seat A. Text currently uses Unity's built-in legacy font as a generated greybox placeholder.
@@ -31,7 +32,7 @@ fails scene generation explicitly rather than manufacturing a mixer asset.
 
 ## Required integration bindings
 
-- Claude pins Unity **6000.3.x**, URP, AI Navigation, XRI ≥3.5, XR Hands ≥1.8 and the test framework
+- Claude pins Unity **6000.3.x**, URP, AI Navigation, XRI â‰¥3.5, XR Hands â‰¥1.8 and the test framework
   in the approved Game project. B has no XRI/Hands/Meta Interaction SDK assembly references.
 - Seat A registers **IPlayerQuery**, **ISettingsProvider** and **IScreenFader** in Bootstrap and calls
   **IExperienceDirector.StartRun** after Ward load. B registers IAudioCuePlayer and IExperienceDirector.
@@ -42,16 +43,19 @@ fails scene generation explicitly rather than manufacturing a mixer asset.
   and teleport landings use their dedicated cue ids. B raises Noise only after an accepted audible cue.
   Intensity zero emits no noise; user volume preferences do not reduce gameplay hearing radii.
 - Supply player/held-prop collision layers separately from geometry/doors. **ZombieNavigation.Obstacles**
-  and all occlusion masks default to layer 0 for the greybox. They must include physical walls/closed
+  and SightBlockers/audio Occluders default to layer 0 for the greybox. HearingOccluders defaults to Nothing until the approved door-only layer is supplied. Walls do not attenuate gameplay hearing. They must include physical walls/closed
   door leaves and exclude player/zombie colliders. Zombie roots use Ignore Raycast. Seat A's moving
   doors require appropriate NavMesh carving or a final bake by Claude, plus the collision-only path
   guard. Do not mark a door traversal/catch test passed before this is verified.
 - Environment creates static tags for all zombie markers and A2.Monitor/A3.Beacon/A3.Cart/A3.Drip.
   Seat A supplies anchor, puzzle and functional-door tags. Do not duplicate LayoutTag ids on dynamic
   actors or secondary audio/visual children. Validate every required tag/coordinate in the composer.
-- Act 1's **physical door gate is pending a Core contract response**: see CODEX_B_LOG. B internally
-  prevents act advance until the window beat and four-metre retreat, but seat A currently has no
-  approved interface for querying that gate. No unapproved property was added to Core.
+- Act 1 uses approved **contract v1.1**. The Atmosphere director alone raises GateReleased(Act1Door)
+  once after planks, window encounter, lure and four-metre retreat. IsGateReleased returns its latched
+  status for a late-loaded door; it resets before ActStarted on every restore/full restart, and returns
+  false outside Awakening. Seat A subscribes and queries; Act1_DoorOpened advances to Act 2.
+- WardNavMesh.asset is persisted by the bake step, preserving an existing asset GUID when rebuilt.
+  NavigationSceneTests must pass after scene unload/reload before navigation is accepted.
 - The director owns story beats, hints, tension, adaptive attempt memory and InfectionReveal.
   Seat A owns ending screen fades/title and player hand rendering. Ward reload is the reset mechanism.
 
@@ -70,7 +74,7 @@ speech ducking (-6 dB), post-scare ambience ducking (-9 dB), occlusion gain/filt
 are applied in the audio service, so fallback routing remains functional.
 
 Standard mode has two hard-scare budgets; Reduced has none and no final lunge. Blackout disables sight.
-The window light pulse replaces a scheduled flicker edge, lasts approximately 250 ms (≤300 ms), and
+The window light pulse replaces a scheduled flicker edge, lasts approximately 250 ms (â‰¤300 ms), and
 holds other flicker stable to stay under three discrete luminance changes in any second. Reduced
 flicker removes that pulse and holds the fluorescent/red variations constant. No camera motion is added.
 
@@ -91,8 +95,20 @@ Unity-facing sources are marked `UNVERIFIED IN EDITOR`. Once Claude provisions t
 3. Run B's PlayMode tests: real cue-to-hearing boundary, missing/zero-intensity assets, mono/custom rolloff,
    director lifecycle subscribers, and complete NavMesh paths along approved routes. A missing generated
    Ward fails the route test; it is not skipped or counted as a passing test.
-4. Run the full integrated autoplay, door blocking, restore ×10, tracking-loss and pause suites with seat A.
+4. Run the full integrated autoplay, door blocking, restore Ã—10, tracking-loss and pause suites with seat A.
 5. Perform headphones/localization checks and Quest captures required by TEST_REPORT/PERFORMANCE_REPORT.
    Target remains 72 Hz; no device performance or Unity compilation is claimed by this branch.
 
 No external art/audio has been imported. Licensed upgrades remain subject to the existing asset manifest.
+
+## Round 2 verification
+
+Built-in 3D audio remains the default; no Meta audio dependency was added. All art and audio are
+procedural fallback sources, not externally licensed production assets. The six shadowless fixtures,
+blackout beacon, alarm, zombie loops, occlusion, encounter timing and hand reveal signals remain bound
+through the approved Core interfaces. No additional hard scare or camera movement was introduced.
+
+Unity import, saved NavMesh reload, obstacle traversal, actual door masks, emitter direction and
+standalone desktop play remain NOT TESTED until the pinned editor and both gameplay services exist.
+The default bake agent radius still needs Claude's INT-B-1 configuration (0.25 m); the 0.22 m runtime
+agent radius alone does not change the bake. Do not infer path validity from portable geometry tests.

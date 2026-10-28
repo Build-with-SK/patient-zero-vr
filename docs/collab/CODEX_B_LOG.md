@@ -75,3 +75,30 @@ Action needed: review/save the already-persisted additive `api.github.com` envir
 PR review summary: recover `87bb494`/`72be6d8`; B1 `22d4002`, B2 `4e1fda2`, native-generation/transition hardening `37e8835`; original suite 26 passed; current harness 100 passed, 0 failed; full seat-B branch checker 0 errors/0 warnings. Native Unity compile/generation, six PlayMode tests and device/headphone/performance checks remain unverified. The v1.1 physical-door gate is acknowledged but not coded against before approval/main. Full integration notes are in Environment/INTEGRATION.md.
 
 Timestamp correction (append-only log): earlier manually entered checkpoint headings `15:49`, `16:27` and `16:39` were inaccurate. Authoritative Git UTC times are B1 implementation `15:38:27`, B1 checkpoint `15:38:39`, B2 `16:14:46`, hardening `16:18:48`. The clock was read at `16:19 UTC` before the push/PR attempt. Use those commit times for chronology; no test or commit result is changed by this correction.
+
+## 2026-10-28 · Round 2: approved v1.1 integration and hospital fixes
+Kind: CONTRACT REVIEW v1.1 / PROGRESS
+What:
+- Verified PR #4 is MERGED (head 5202249, main 44ea7b7). Merged origin/main into integration/xr-systems without rebasing. Existing delivery 6bc4c4274aaabd2a265d1625dd543f0d43c33028 remains an ancestor; frozen refs untouched.
+- ACK the exact approved GateId/GateReleased/IExperienceDirector.IsGateReleased contract; no Core files changed. DirectorCore latches Act1Door once after the approved planks/window/lure/four-metre clearance. ExperienceDirector is the sole runtime event writer. The query is true before publication, supports late-enabled doors, closes before ActStarted on restores and clears outside Act 1. Act1_DoorOpened advances to Machinery through the normal director state machine.
+- FIX DONE FIX-B-13: assist floor persists on progress, adaptive restores and mid-act settings changes; progress still resets ordinary hint escalation.
+- FIX DONE FIX-B-14: independent SightBlockers and HearingOccluders; only closed doors attenuate gameplay hearing. HearingOccluders defaults to Nothing until Claude supplies the approved door-only layer. Sight/audio retain geometry blockers. Wall/door radius regression passes.
+- FIX IMPLEMENTED FIX-B-15 (Unity validation pending): bake persists WardNavMesh.asset through AssetDatabase, preserves its GUID on rebuild and rebinds the surface. Navigation PlayMode test now checks the data survives scene loading, as well as complete routes. INT-B-1 bake radius configuration remains Claude-owned and outstanding.
+- FIX DONE FIX-B-16: built-in audio occlusion defaults and builder configuration use geometry mask 1; no optional Meta audio SDK was added. Curves cover the actual darkness anchors and final release/exit distance in portable tests, reaching silence at Max; listening/direction remain NOT TESTED.
+- FIX DONE FIX-B-17: exit emissive retains green with a visible fixed Blackout level.
+- FIX DONE FIX-B-18: wall collider thickness is perpendicular only; longitudinal spans no longer overlap doorway cuts. Regression checks every opening.
+- Hospital: patient bed, operating table/instrument tray dressing in the existing supply-room footprint, emergency corridor sign, existing colliders/door openings, props, markers, saved navigation, six shadowless lights, audio emitters and director encounter commands. No room boundary, puzzle position or approved timing was changed. Functional door leaves and puzzle interactions remain seat A-owned; operating-theatre relocation/design D-4 remains a separate amendment.
+- Kept the approved two-hard-scare timeline, Reduced mode, movement-based sight, catch/recovery rules, bounded searching, sound distraction, obstacle/path failure guards and reveal signal. All visual/audio content remains procedural fallback; no third-party asset import/licence assumption.
+Evidence:
+- python tools/logic_tests/run_logic_tests.py -> Logic tests: 137 passed, 0 failed (8 new regression tests beyond the merged baseline 129).
+- python tools/review/check_rules.py -> 0 error(s), 0 warning(s).
+- python tools/review/check_rules.py --self-test -> SELF-TEST PASSED.
+- python tools/unity/validate_packages.py --quiet -> 0 error(s), 0 warning(s).
+- unity_batch.py validate, editmode-tests, compose, desktop-sim each exit 2: BLOCKED, Unity 6000.3.27f1 executable absent. Local command logs under Game/Logs/PatientZero/Round2 (ignored, not published).
+- PlayMode launch blocked by the same absent editor; no XML results generated. Gate lifecycle/late-door publication test and navigation reload test are source only, NOT TESTED.
+Remaining dependencies:
+- Claude: first pinned Unity import/compile; INT-B-1 bake agent radius (0.25 m); INT-B-2 approved door-only collision mask/layer; generated asset persistence verification and native mixer factory validation.
+- Codex 1: consume GateReleased and query IsGateReleased on enable, keep failing closed without the director, emit Act1_DoorOpened only after the actual door opens. Uses Core only; no dependency on seat-B classes. A-owned code was not edited.
+- Actual full-scene assembly, navigation, emitter direction/occlusion and desktop play are NOT TESTED. A physical Quest profile is still required for the 72 FPS gate.
+Identity: commits use assigned businessteen noreply identity. This machine's existing authenticated transport is Build-with-SK; no authentication or repository security was changed.
+Handoff: existing draft PR #3 tracks integration/xr-systems and will update on push. Do not merge until applicable Unity checks and shared integration review pass.

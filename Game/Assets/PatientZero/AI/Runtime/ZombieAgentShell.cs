@@ -11,7 +11,9 @@ namespace PatientZero.AI
     public sealed class ZombieAgentShell : MonoBehaviour
     {
         public int ZombieId = ZombieIds.Orderly;
-        public LayerMask Occluders = 1;
+        public LayerMask SightBlockers = 1;
+        // Closed door leaves only; no door layer has been approved yet. Nothing is the safe default.
+        public LayerMask HearingOccluders;
         public Transform Head, FootEmitter;
         public ZombieAnimationController Animation;
         private ZombieBrain brain;
@@ -63,7 +65,7 @@ namespace PatientZero.AI
         {
             if (!active || !GameStateRules.IsSimulationLive(state)) return;
             Vector3 ear = Head ? Head.position : transform.position + Vector3.up;
-            float occlusion = Physics.Linecast(ear, noise.Position + Vector3.up * .1f, Occluders, QueryTriggerInteraction.Ignore) ? .5f : 1;
+            float occlusion = Physics.Linecast(ear, noise.Position + Vector3.up * .1f, HearingOccluders, QueryTriggerInteraction.Ignore) ? Hearing.Occlusion(true) : Hearing.Occlusion(false);
             brain.Hear(in noise, transform.position, occlusion, Time.time, true);
         }
         private void Update()
@@ -78,7 +80,7 @@ namespace PatientZero.AI
         private void TickPlayer(IPlayerQuery player, float now, float delta)
         {
             Vector3 eye = Head ? Head.position : transform.position + Vector3.up;
-            bool clear = !Physics.Linecast(eye, player.HeadPosition, Occluders, QueryTriggerInteraction.Ignore);
+            bool clear = !Physics.Linecast(eye, player.HeadPosition, SightBlockers, QueryTriggerInteraction.Ignore);
             var frame = new PerceptionFrame(transform.position, transform.forward, player.FloorPosition,
                 player.HeadSpeed, player.FastestHandSpeed, clear, navigation.PathFailed, lighting);
             brain.Reduced = settings.Scares == ScareIntensity.Reduced;
