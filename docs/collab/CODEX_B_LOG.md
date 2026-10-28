@@ -33,3 +33,19 @@ python tools/review/check_rules.py --seat B --base origin/main --head integratio
 0 error(s), 0 warning(s).
 ```
 No compiler warnings. Includes the Standard/Reduced golden run, catch/LOS/range/timeout cases, exactly-once cue coverage, HRTF voice cap, tracking-loss hint handling, and 10 minutes of flicker/pulse sampled at 1 ms. Not verified in Unity or on a headset. Proceeding with separately committed B2/B3 source under the user's full implementation request; review does not imply merge approval.
+
+## 2026-10-28 16:27 · B2/B3 implementation and integration limits
+Kind: PROGRESS
+What:
+- Continued after B1, porting the 10 Hz phased AI shell/ProfilerMarker, warmed voice pool, rate-limited occlusion and original synthesis formulas from `72be6d8` into owned folders. Current AI uses movement-based vision, radius/occlusion hearing, sniff/snarl telegraphs, path-failure/search recovery, continuous catch timers, vertical/LOS guards, restrained reach and Passive ending behavior. Player input is read only through IPlayerQuery.
+- Added composer build steps for the approved six-room ward geometry, colliders, six doorway headers, medical dressing, chain, sign/monitor/text, sound-guidance strip, six shadowless fixtures, NavMeshSurface bake, four single-material/seven-bone mannequin prefabs, native mixer groups and cue-player/static-emitter bindings. No generated or binary asset files are committed. No operating theatre or unapproved coordinates are added.
+- Added PlayMode sources for real cue-to-hearing boundary/telegraph, mono/rolloff configuration, missing and silent cues, generated-Ward routes and ten director lifetimes. All Unity-facing sources remain `UNVERIFIED IN EDITOR`.
+- Added a tested local window pulse: a regression caught floating-point scheduling producing four edges within a second; sharing the flicker phase corrected it. The ordinary variation and combined two-fixture pulse tests each sample ten minutes at 1 ms. Host AI steady-state allocation test measures before assertions so NUnit's boxing is not counted as gameplay allocation.
+- Integration guide: `Game/Assets/PatientZero/Environment/INTEGRATION.md`. It documents build orders, service/mask bindings, marker ownership, fallback audio, editor-only native mixer factory, tests and blockers.
+- Physical Act 1 door gate still needs the Core response requested above. Scene integration must exclude player colliders from environment/door masks and include closed door leaves in collision/occlusion/carving. Seat A owns XR rig, XRI interaction prefabs and the tracking-safety port; frozen tracking sources/tests remain intact as its reference. Seat A also owns ending fades/title; B drives the infection reveal and state requests.
+Evidence:
+- Activated .NET SDK 8.0.427; `python tools/logic_tests/run_logic_tests.py` → `Logic tests: 100 passed, 0 failed.` No compiler warnings. Separate original suite remains 26/26 passing from recovery.
+- Working-tree static review → `0 error(s), 0 warning(s).` Full branch diff review follows the implementation commit.
+- C# 9 syntax parsing and internal asmdef reference/cycle checks pass. These are **not Unity API/type compilation**.
+Not verified: Unity compile, scene/prefab/mixer generation, the six PlayMode tests, Android build, headphone localization, headset behavior or 72 Hz/device metrics. No Unity Editor/Hub/adb is available and Claude has not reported an integration compile. External asset upgrades and optional Meta XR Audio remain unimported/unlicensed per the manifest.
+Preservation: frozen branches were not pushed, rewritten or removed. Legacy untracked `Tests/Portable/bin` and `obj` outputs are left intact and are not staged. Main/Core/seat-A files are unchanged.

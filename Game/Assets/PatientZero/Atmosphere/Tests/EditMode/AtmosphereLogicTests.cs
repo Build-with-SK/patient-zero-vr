@@ -54,7 +54,7 @@ namespace PatientZero.Atmosphere.Tests
         [Test] public void GoldenRunFollowsApprovedBeatOrderAndTwoHardScares()
         {
             var cues = GoldenRun(ScareIntensity.Standard, out var d);
-            var expected = new[] { CueId.HeartbeatWake, CueId.PaGarbledBreach, CueId.WindowSlam, CueId.DistantCrashLure,
+            var expected = new[] { CueId.HeartbeatWake, CueId.PaGarbledBreach, CueId.ZombieGlassTap, CueId.WindowSlam, CueId.DistantCrashLure,
                 CueId.DistantCrashLure, CueId.PowerThrum, CueId.BreakerOverload, CueId.PaCarrierWarning,
                 CueId.BeaconChirp, CueId.BeaconChirp, CueId.RestraintSnap, CueId.ZombieLunge, CueId.PaPatientZero, CueId.RevealDrone };
             Assert.AreEqual(expected.Length, cues.Count);
@@ -163,6 +163,24 @@ namespace PatientZero.Atmosphere.Tests
             float before = .4f;
             for (int ms = 0; ms <= 600; ms++) { float gain = LightingPresets.Surge(.4f, ms / 1000f); Assert.GreaterOrEqual(gain, before); before = gain; }
             Assert.AreEqual(1.3, before, .0001);
+        }
+        [Test] public void WindowPulseAndCombinedFixturesNeverExceedThreeEdgesInAnySecond()
+        {
+            var pulse = new LocalLightPulse(); var changes = new Queue<double>();
+            float before = pulse.Sample(0, 0, false) + pulse.Sample(0, 1, false);
+            int brightSamples = 0;
+            for (int ms = 1; ms <= 600000; ms++)
+            {
+                double time = ms / 1000.0;
+                if (ms % 12347 == 0) pulse.Request(time, false);
+                float first = pulse.Sample(time, 0, false), second = pulse.Sample(time, 1, false), sum = first + second;
+                if (second > 1) brightSamples++;
+                if (sum != before) { changes.Enqueue(time); before = sum; }
+                while (changes.Count > 0 && time - changes.Peek() > 1) changes.Dequeue();
+                if (changes.Count > 3) Assert.Fail("Pulse at " + time + ": " + string.Join(",", changes));
+            }
+            Assert.Greater(brightSamples, 0);
+            pulse.Request(1000, true); Assert.AreEqual(.8f, pulse.Sample(1000.1, 1, true));
         }
     }
 }

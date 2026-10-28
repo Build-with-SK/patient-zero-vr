@@ -1,0 +1,19 @@
+{
+  "name": "PatientZero.Audio.PlayModeTests",
+  "rootNamespace": "PatientZero.Audio.PlayModeTests",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Audio.Logic",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner",
+    "PatientZero.Audio"
+  ],
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ]
+}

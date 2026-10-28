@@ -134,5 +134,56 @@ namespace PatientZero.AI.Tests
             b.Hear(noise, Vector3.zero, 1, 0, true); b.Tick(.6f, .6f, true, Frame()); b.Tick(.7f, .1f, true, Frame());
             Assert.AreEqual(AlertLevel.Searching, b.Level);
         }
+        [Test] public void PatrolPausesAtBothEndsAndResumes()
+        {
+            var b = Brain(3); b.SetMode(ZombieMode.Patrol);
+            var south = new PerceptionFrame(Vector3.back * 3, Vector3.forward, Vector3.right * 20);
+            b.Tick(.1f, .1f, true, south); Assert.IsFalse(b.HasMoveTarget);
+            b.Tick(3.1f, 3, true, south); b.Tick(3.2f, .1f, true, south);
+            Assert.AreEqual(Vector3.forward * 3, b.Target); Assert.IsTrue(b.HasMoveTarget);
+        }
+        [Test] public void MovingSightEscalationIncludesSnarl()
+        {
+            var b = Brain(); b.Hear(Noise(4), Vector3.zero, 1, 0, true); b.Tick(.6f, .6f, true, Frame());
+            var signals = b.Tick(.7f, .1f, true, Frame(speed: 1));
+            Assert.AreEqual(AlertLevel.Chasing, b.Level); Assert.IsTrue((signals & ZombieSignals.Snarl) != 0);
+        }
+        [Test] public void ChasePathFailureCannotCatchThroughAnObstacle()
+        {
+            var b = Brain(); b.Hear(Noise(1), Vector3.zero, 1, 0, true); b.Tick(.6f, .6f, true, Frame()); b.Tick(.7f, .1f, true, Frame());
+            var output = b.Tick(.8f, .1f, true, Frame(.2f, failed: true));
+            Assert.AreEqual(AlertLevel.Searching, b.Level); Assert.IsFalse((output & ZombieSignals.Caught) != 0);
+        }
+        [Test] public void PlayerOnAnotherHeightCannotBeCaughtFromSameGroundPoint()
+        {
+            var b = Brain(); b.Hear(Noise(1), Vector3.zero, 1, 0, true); b.Tick(.6f, .6f, true, Frame()); b.Tick(.7f, .1f, true, Frame());
+            var high = new PerceptionFrame(Vector3.zero, Vector3.forward, Vector3.up * 4);
+            Assert.IsFalse((b.Tick(1.2f, .5f, true, high) & ZombieSignals.Caught) != 0);
+        }
+        [Test] public void RestrainedPatientCannotCatchOnAnotherHeight()
+        {
+            var b = Brain(4); b.ReleaseRestraint();
+            var high = new PerceptionFrame(Vector3.zero, Vector3.forward, Vector3.up * 4);
+            Assert.IsFalse((b.Tick(1, 1, true, high) & ZombieSignals.Caught) != 0);
+        }
+        [Test] public void APlayerThrownImpactRedirectsTheLastHeardPoint()
+        {
+            var b = Brain(); b.Hear(Noise(1), Vector3.zero, 1, 0, true); b.Tick(.6f, .6f, true, Frame()); b.Tick(.7f, .1f, true, Frame());
+            Assert.IsTrue(b.Hear(Noise(-4, 12, .8f), Vector3.zero, 1, .8f, true));
+            b.Tick(.9f, .1f, true, Frame(8)); Assert.AreEqual(-4, b.Target.x);
+        }
+        [Test] public void AQuietPlayerAtCatchDistanceStillDoesNotTriggerDetection()
+        {
+            var b = Brain(); b.Tick(1, 1, true, Frame(.2f)); Assert.AreEqual(AlertLevel.Unaware, b.Level);
+        }
+        [Test] public void ActiveBrainTicksAllocateZeroBytesAfterWarmup()
+        {
+            var b = Brain(); var f = Frame(8);
+            for (int i = 0; i < 200; i++) { b.Hear(Noise(4, time: i * .1f), Vector3.zero, 1, i * .1f, true); b.Tick(i * .1f, .1f, true, f); }
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 200; i < 10200; i++) { b.Hear(Noise(4, time: i * .1f), Vector3.zero, 1, i * .1f, true); b.Tick(i * .1f, .1f, true, f); }
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            Assert.AreEqual(0L, allocated);
+        }
     }
 }

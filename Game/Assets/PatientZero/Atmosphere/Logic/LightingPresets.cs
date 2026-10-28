@@ -32,7 +32,7 @@ namespace PatientZero.Atmosphere.Logic
             {
                 if (reduceFlicker) return .8f;
                 // Stateless seeded hash is stable across frame rates, with 550 ms between changes.
-                long phase = (long)Math.Floor(Math.Max(0, seconds) / .55);
+                long phase = FlickerStep(seconds);
                 uint hash = unchecked((uint)(phase * 747796405L + seed * 2891336453L));
                 hash = (hash ^ (hash >> 16)) * 2246822519u;
                 return .6f + (hash & 1023) / 1023f * .4f;
@@ -42,5 +42,6 @@ namespace PatientZero.Atmosphere.Logic
             return 1;
         }
         public static float Surge(float from, float seconds) => from + (1.3f - from) * Math.Max(0, Math.Min(1, seconds / .6f));
+        public static long FlickerStep(double seconds) => (long)Math.Floor(Math.Max(0, seconds) / .55 + .000000001);
     }
 }

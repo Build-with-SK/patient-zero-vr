@@ -5,7 +5,7 @@ using UnityEngine;
 namespace PatientZero.Atmosphere.Logic
 {
     // Commands are local to B's director/shell, not a second cross-seat contract or event bus.
-    public enum DirectorCommandKind { Cue, Lighting, Act, Assist, Zombie, Reveal, State, Silence, Tension, StopZombieLoops }
+    public enum DirectorCommandKind { Cue, Lighting, Act, Assist, Zombie, Reveal, State, Silence, Tension, StopZombieLoops, LocalLightPulse }
     public enum ZombieDirection { Hide, WindowApproach, LeaveWindow, Dormant, Investigate, Patrol, Hold, Stun, Restraint, Snap, Passive, Kneel }
     public readonly struct DirectorCommand
     {
@@ -42,6 +42,7 @@ namespace PatientZero.Atmosphere.Logic
         private float actTime, endingTime, scareAt, surgeAt = -1, lastHard = -100, lastAlert = -100, lastAmbient = -100, nextBeacon;
         private bool pass, windowArrived, windowScare, lure, z1Clear, investigate, crossing, snapped, ending, pa, drone, kneel, done;
         private Vector3 z1Position;
+        private bool walkerRemoved;
         public ActId Act { get; private set; }
         public float ExperienceTime => memory.ExperienceTime;
         public float ActTime => actTime;
@@ -64,6 +65,7 @@ namespace PatientZero.Atmosphere.Logic
         {
             Act = act; actTime = 0; surgeAt = -1; nextBeacon = 3;
             pass = windowArrived = windowScare = lure = z1Clear = investigate = crossing = snapped = ending = pa = drone = kneel = done = false;
+            walkerRemoved = false;
             Array.Clear(progress, 0, progress.Length); Array.Clear(lastProgress, 0, lastProgress.Length);
             Array.Clear(hint, 0, hint.Length); Array.Clear(complete, 0, complete.Length);
             Emit(new DirectorCommand(DirectorCommandKind.Act, (int)act, restore ? 1 : 0, memory.Attempt));
@@ -100,7 +102,8 @@ namespace PatientZero.Atmosphere.Logic
         {
             if (id != ZombieIds.Walker || Act != ActId.Awakening) return;
             z1Position = position;
-            if (pass && !lure && WardLayout.HorizontalDistance(position, WardLayout.A1_DoorWindow.Position) <= .5f) windowArrived = true;
+            if (pass && !windowArrived && !lure && WardLayout.HorizontalDistance(position, WardLayout.A1_DoorWindow.Position) <= .5f)
+            { windowArrived = true; Cue(CueId.ZombieGlassTap, WardLayout.A1_DoorWindow.Position); }
             if (lure && WardLayout.HorizontalDistance(position, WardLayout.A1_DoorWindow.Position) >= 4) z1Clear = true;
         }
         public void Alert(int id, AlertLevel level, Vector3 position, Vector3 player)
@@ -128,6 +131,8 @@ namespace PatientZero.Atmosphere.Logic
                     if (complete[0] && windowArrived && !windowScare) WindowScare();
                     if (windowScare && !lure && actTime >= scareAt + 2)
                     { lure = true; Cue(CueId.DistantCrashLure, WardLayout.Z1_WalkTo.Position); Zombie(1, ZombieDirection.LeaveWindow, WardLayout.Z1_WalkTo.Position); }
+                    if (lure && !walkerRemoved && WardLayout.HorizontalDistance(z1Position, WardLayout.Z1_WalkTo.Position) <= .35f)
+                    { walkerRemoved = true; Zombie(1, ZombieDirection.Hide); }
                     break;
                 case ActId.Machinery:
                     if (!investigate && actTime >= 12)
@@ -160,7 +165,11 @@ namespace PatientZero.Atmosphere.Logic
         {
             windowScare = true; scareAt = actTime;
             bool hard = Settings.Scares == ScareIntensity.Standard && !memory.WindowScareUsed;
-            if (hard) { memory.WindowScareUsed = true; Peak(); }
+            if (hard)
+            {
+                memory.WindowScareUsed = true; Peak();
+                if (!Settings.ReduceFlicker) Emit(new DirectorCommand(DirectorCommandKind.LocalLightPulse));
+            }
             Cue(hard ? CueId.WindowSlam : CueId.WindowBreath, WardLayout.A1_DoorWindow.Position);
         }
         private void Snap()

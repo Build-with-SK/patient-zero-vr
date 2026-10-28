@@ -103,7 +103,7 @@ namespace PatientZero.AI.Logic
                 HasMoveTarget = false; Target = spawn; // The root never follows the player beyond the chain.
                 float distance = WardLayout.HorizontalDistance(spawn, frame.Player);
                 if (distance <= 2 && !nearWarning) { nearWarning = true; pending |= ZombieSignals.Snarl; }
-                Catch(delta, released && distance <= WardLayout.FinalPatientReach && frame.LineClear);
+                Catch(delta, released && distance <= WardLayout.FinalPatientReach && frame.LineClear && Math.Abs(spawn.y - frame.Player.y) <= 1.2f);
                 return Flush();
             }
             bool sees = CanSee(in frame);
@@ -140,7 +140,8 @@ namespace PatientZero.AI.Logic
                 case AlertLevel.Chasing:
                     HasMoveTarget = true;
                     if (frame.PathFailed || now - lastPlayerStimulus >= 3) { StartSearch(); catchAge = 0; }
-                    else Catch(delta, frame.LineClear && WardLayout.HorizontalDistance(frame.Zombie, frame.Player) <= (Reduced ? .6f : .8f));
+                    else Catch(delta, frame.LineClear && Math.Abs(frame.Zombie.y - frame.Player.y) <= 1.2f &&
+                        WardLayout.HorizontalDistance(frame.Zombie, frame.Player) <= (Reduced ? .6f : .8f));
                     break;
             }
             return Flush();
