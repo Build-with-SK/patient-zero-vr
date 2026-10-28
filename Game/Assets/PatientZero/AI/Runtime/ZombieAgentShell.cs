@@ -11,7 +11,10 @@ namespace PatientZero.AI
     public sealed class ZombieAgentShell : MonoBehaviour
     {
         public int ZombieId = ZombieIds.Orderly;
-        public LayerMask Occluders = 1;
+        public LayerMask SightBlockers = 1;
+        // Door leaves only. TD/A must assign the approved shared door layer at integration.
+        // No door layer exists in v1.1, so walls and impact props do not attenuate hearing.
+        public LayerMask HearingOccluders = 0;
         public Transform Head, FootEmitter;
         public ZombieAnimationController Animation;
         private ZombieBrain brain;
@@ -49,9 +52,10 @@ namespace PatientZero.AI
             ZombieId == 3 ? WardLayout.Z3_PatrolNorth.Position : WardLayout.Z4_Gurney.Position;
         private void ActStarted(ActStarted e)
         {
-            active = (int)e.Act == ZombieId; StopLoops();
+            active = (int)e.Act == ZombieId; StopLoops(); lastTick = Time.time; nextTick = Time.time + ZombieId * .017f;
             brain.Reset(ZombieId == 4 ? ZombieMode.Restrained : ZombieMode.Dormant);
-            if (navigation) navigation.Warp(Spawn());
+            if (navigation) { navigation.SetSimulationActive(active); if (active) navigation.Warp(Spawn()); }
+            if (Animation) Animation.ResetPose();
             if (Animation) Animation.SetVisible(active && ZombieId != 1);
             if (active && ZombieId != 1) StartBreathing();
         }
@@ -63,7 +67,7 @@ namespace PatientZero.AI
         {
             if (!active || !GameStateRules.IsSimulationLive(state)) return;
             Vector3 ear = Head ? Head.position : transform.position + Vector3.up;
-            float occlusion = Physics.Linecast(ear, noise.Position + Vector3.up * .1f, Occluders, QueryTriggerInteraction.Ignore) ? .5f : 1;
+            float occlusion = Physics.Linecast(ear, noise.Position, HearingOccluders, QueryTriggerInteraction.Ignore) ? .5f : 1;
             brain.Hear(in noise, transform.position, occlusion, Time.time, true);
         }
         private void Update()
@@ -78,7 +82,7 @@ namespace PatientZero.AI
         private void TickPlayer(IPlayerQuery player, float now, float delta)
         {
             Vector3 eye = Head ? Head.position : transform.position + Vector3.up;
-            bool clear = !Physics.Linecast(eye, player.HeadPosition, Occluders, QueryTriggerInteraction.Ignore);
+            bool clear = !Physics.Linecast(eye, player.HeadPosition, SightBlockers, QueryTriggerInteraction.Ignore);
             var frame = new PerceptionFrame(transform.position, transform.forward, player.FloorPosition,
                 player.HeadSpeed, player.FastestHandSpeed, clear, navigation.PathFailed, lighting);
             brain.Reduced = settings.Scares == ScareIntensity.Reduced;
@@ -102,7 +106,10 @@ namespace PatientZero.AI
         /// <summary>Director-only same-seat command; never used by player gameplay.</summary>
         public void SetActiveInAct(bool value)
         {
-            active = value; if (Animation) Animation.SetVisible(value);
+            active = value;
+            navigation.SetSimulationActive(value);
+            if (value) navigation.Warp(transform.position);
+            if (Animation) Animation.SetVisible(value);
             if (!value) { navigation.Stop(); StopLoops(); } else StartBreathing();
         }
         public void SetMode(ZombieMode mode) { brain.SetMode(mode); if (mode == ZombieMode.Passive) { navigation.Stop(); StopLoops(2); } }

@@ -2,6 +2,7 @@
 using PatientZero.Core;
 using PatientZero.Environment.Logic;
 using Unity.AI.Navigation;
+using UnityEditor;
 using UnityEngine;
 
 namespace PatientZero.Environment.Editor
@@ -25,7 +26,7 @@ namespace PatientZero.Environment.Editor
             }
             foreach (var span in geometry.Walls)
             {
-                var size = new Vector3(Mathf.Abs(span.B.x - span.A.x) + .1f, 2.8f, Mathf.Abs(span.B.z - span.A.z) + .1f);
+                var size = span.ColliderSize;
                 WardPrimitives.Box(root, "Wall", (span.A + span.B) * .5f + Vector3.up * 1.4f, size, wall);
             }
             foreach (var door in geometry.Doors)
@@ -56,6 +57,12 @@ namespace PatientZero.Environment.Editor
             var cart = WardPrimitives.Marker(root, WardLayout.A3_Cart);
             Cart(cart, cart.position, metal);
             Gurney(root, metal);
+            foreach (var prop in HospitalDressing.Create())
+                WardPrimitives.Box(root, prop.Name, prop.Position, prop.Size, metal, prop.Collider);
+            Label(root, "OPERATING THEATRE", WardLayout.Z2_Doorway.Position + Vector3.up * 2.45f, .035f);
+            Label(root, "EMERGENCY EXIT →", WardLayout.A3_End.Position + Vector3.up * 2.4f, .035f);
+            // Seat A builds the functional door leaves and puzzle objects at the shared LayoutIds.
+            // Theatre furniture adds no light, dynamic body, camera effect or encounter. All beats remain in DirectorCore.
             Label(root, "THEY HEAR YOU", WardLayout.A1_PlankMid.Position - Vector3.forward * .08f, .04f);
             Label(root, "B-7", WardLayout.A1_DoorWindow.Position + Vector3.up * .45f, .055f);
             foreach (var p in new[] { WardLayout.A1_DoorWindow, WardLayout.A2_Monitor, WardLayout.A3_Drip, WardLayout.A4_ExitDoor })
@@ -68,7 +75,15 @@ namespace PatientZero.Environment.Editor
         public static void BakeNavigation(Transform root)
         {
             var surface = WardPrimitives.FindInScene<NavMeshSurface>(root);
-            if (surface) surface.BuildNavMesh();
+            if (!surface) throw new System.InvalidOperationException("Ward geometry must precede NavMesh baking");
+            const string path = "Assets/PatientZero/Environment/Generated/WardNavMesh.asset";
+            WardPrimitives.GeneratedFolder("Environment");
+            surface.RemoveData(); surface.navMeshData = null;
+            if (AssetDatabase.LoadAssetAtPath<UnityEngine.AI.NavMeshData>(path)) AssetDatabase.DeleteAsset(path);
+            surface.BuildNavMesh();
+            if (!surface.navMeshData) throw new System.InvalidOperationException("Ward NavMesh bake produced no data");
+            AssetDatabase.CreateAsset(surface.navMeshData, path);
+            EditorUtility.SetDirty(surface); AssetDatabase.SaveAssets();
         }
         private static void Cart(Transform root, Vector3 p, Material metal)
         {

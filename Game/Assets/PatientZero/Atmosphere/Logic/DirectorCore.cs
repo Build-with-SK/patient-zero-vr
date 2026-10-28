@@ -5,7 +5,7 @@ using UnityEngine;
 namespace PatientZero.Atmosphere.Logic
 {
     // Commands are local to B's director/shell, not a second cross-seat contract or event bus.
-    public enum DirectorCommandKind { Cue, Lighting, Act, Assist, Zombie, Reveal, State, Silence, Tension, StopZombieLoops, LocalLightPulse }
+    public enum DirectorCommandKind { Cue, Lighting, Act, Assist, Zombie, Reveal, State, Silence, Tension, StopZombieLoops, LocalLightPulse, Gate }
     public enum ZombieDirection { Hide, WindowApproach, LeaveWindow, Dormant, Investigate, Patrol, Hold, Stun, Restraint, Snap, Passive, Kneel }
     public readonly struct DirectorCommand
     {
@@ -42,7 +42,7 @@ namespace PatientZero.Atmosphere.Logic
         private float actTime, endingTime, scareAt, surgeAt = -1, lastHard = -100, lastAlert = -100, lastAmbient = -100, nextBeacon;
         private bool pass, windowArrived, windowScare, lure, z1Clear, investigate, crossing, snapped, ending, pa, drone, kneel, done;
         private Vector3 z1Position;
-        private bool walkerRemoved;
+        private bool walkerRemoved, actOneGateReleased;
         public ActId Act { get; private set; }
         public float ExperienceTime => memory.ExperienceTime;
         public float ActTime => actTime;
@@ -51,7 +51,26 @@ namespace PatientZero.Atmosphere.Logic
         public bool InvestigationStarted => investigate;
         public bool AdaptiveAssist => memory.Catches[(int)Act] >= 2;
         public int HardScares => (memory.WindowScareUsed ? 1 : 0) + (memory.StrapScareUsed ? 1 : 0);
-        public ExperienceSettings Settings { get; set; } = ExperienceSettings.Defaults;
+        private ExperienceSettings settings = ExperienceSettings.Defaults;
+        public ExperienceSettings Settings
+        {
+            get => settings;
+            set { settings = value.Sanitized(); ApplyAssistFloor(); }
+        }
+        private AssistLevel AssistFloor => AdaptiveAssist || settings.PuzzleAssistAlwaysOn ? AssistLevel.Assist : AssistLevel.None;
+        private void ApplyAssistFloor()
+        {
+            if (Act == ActId.None) return;
+            for (int i = 0; i < objectives.Length; i++)
+                if (InAct(objectives[i]) && !complete[i] && hint[i] < (int)AssistFloor) Assist(i, AssistFloor);
+        }
+        public bool IsGateReleased(GateId gate) => gate == GateId.Act1Door && Act == ActId.Awakening && actOneGateReleased;
+        private void ReleaseActOneGate()
+        {
+            if (Act != ActId.Awakening || actOneGateReleased || !CanOpenAct1Door) return;
+            actOneGateReleased = true;
+            Emit(new DirectorCommand(DirectorCommandKind.Gate, (int)GateId.Act1Door));
+        }
         public bool TrackingAvailable { get; private set; } = true;
         public DirectorCore(DirectorMemory memory) { this.memory = memory ?? throw new ArgumentNullException(nameof(memory)); }
         public void StartRun(ActId act, bool restore)
@@ -65,7 +84,7 @@ namespace PatientZero.Atmosphere.Logic
         {
             Act = act; actTime = 0; surgeAt = -1; nextBeacon = 3;
             pass = windowArrived = windowScare = lure = z1Clear = investigate = crossing = snapped = ending = pa = drone = kneel = done = false;
-            walkerRemoved = false;
+            walkerRemoved = actOneGateReleased = false;
             Array.Clear(progress, 0, progress.Length); Array.Clear(lastProgress, 0, lastProgress.Length);
             Array.Clear(hint, 0, hint.Length); Array.Clear(complete, 0, complete.Length);
             Emit(new DirectorCommand(DirectorCommandKind.Act, (int)act, restore ? 1 : 0, memory.Attempt));
@@ -79,21 +98,22 @@ namespace PatientZero.Atmosphere.Logic
                 case ActId.Darkness: Light(LightingState.Blackout); Zombie(3, ZombieDirection.Hold); break;
                 case ActId.Exit: Light(LightingState.EmergencyRed); Zombie(4, ZombieDirection.Restraint); break;
             }
-            if (AdaptiveAssist || Settings.PuzzleAssistAlwaysOn)
-                for (int i = 0; i < objectives.Length; i++) if (InAct(objectives[i])) Assist(i, AssistLevel.Assist);
+            ApplyAssistFloor();
         }
         public void Progress(ObjectiveId objective, float amount)
         {
             int i = Index(objective);
             if (i < 0 || !InAct(objective) || complete[i] || float.IsNaN(amount) || float.IsInfinity(amount) || amount <= progress[i]) return;
-            progress[i] = Math.Min(1, amount); lastProgress[i] = actTime; hint[i] = 0;
-            Emit(new DirectorCommand(DirectorCommandKind.Assist, (int)objective, (int)AssistLevel.None));
+            progress[i] = Math.Min(1, amount); lastProgress[i] = actTime;
+            Assist(i, AssistFloor);
             if (objective == ObjectiveId.Act1_DoorUnbarred && amount > 0) StartPass();
             if (objective == ObjectiveId.Act4_ReleasePulled && amount >= .6f) Snap();
         }
         public void Complete(ObjectiveId objective)
         {
             int i = Index(objective); if (i < 0 || !InAct(objective) || complete[i]) return;
+            // An early/stale door completion cannot be banked to skip the authorised opening.
+            if (objective == ObjectiveId.Act1_DoorOpened && !IsGateReleased(GateId.Act1Door)) return;
             Progress(objective, 1); complete[i] = true;
             if (objective == ObjectiveId.Act4_ReleasePulled) Light(LightingState.ExitDaylight);
             EvaluateGates();
@@ -105,6 +125,7 @@ namespace PatientZero.Atmosphere.Logic
             if (pass && !windowArrived && !lure && WardLayout.HorizontalDistance(position, WardLayout.A1_DoorWindow.Position) <= .5f)
             { windowArrived = true; Cue(CueId.ZombieGlassTap, WardLayout.A1_DoorWindow.Position); }
             if (lure && WardLayout.HorizontalDistance(position, WardLayout.A1_DoorWindow.Position) >= 4) z1Clear = true;
+            ReleaseActOneGate();
         }
         public void Alert(int id, AlertLevel level, Vector3 position, Vector3 player)
         {
@@ -114,7 +135,7 @@ namespace PatientZero.Atmosphere.Logic
         }
         public void Noise(in NoiseEvent noise)
         { if (noise.Origin == NoiseOrigin.Player && noise.RadiusMeters >= 4) Tension = Math.Min(1, Tension + .1f); }
-        public void Caught() { if (!ending && Act != ActId.None) memory.Catches[(int)Act]++; }
+        public void Caught() { if (!ending && Act != ActId.None) { memory.Catches[(int)Act]++; ApplyAssistFloor(); } }
         public void Tracking(InputModality modality, bool left, bool right) => TrackingAvailable = modality != InputModality.Hands || left || right;
         public void Tick(float delta, bool live, Vector3 player)
         {
@@ -185,6 +206,7 @@ namespace PatientZero.Atmosphere.Logic
         { lastHard = ExperienceTime; Emit(new DirectorCommand(DirectorCommandKind.Silence, value: 3)); }
         private void EvaluateGates()
         {
+            ReleaseActOneGate();
             if (Act == ActId.Awakening && complete[1] && CanOpenAct1Door) EnterAct(ActId.Machinery, false);
             else if (Act == ActId.Machinery && complete[4] && complete[2] && complete[3] && investigate && surgeAt < 0)
             {

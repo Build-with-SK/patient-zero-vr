@@ -13,7 +13,7 @@ namespace PatientZero.Audio
         public AudioMixer Mixer;
         public bool BuildPlaceholders = true;
         public bool EnableLicensedSpatializer;
-        public LayerMask Occluders;
+        public LayerMask Occluders = 1;
         private sealed class Voice
         {
             public AudioSource Source;

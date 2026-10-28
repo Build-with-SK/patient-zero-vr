@@ -5,7 +5,8 @@
     "PatientZero.Core",
     "PatientZero.Environment.Logic",
     "UnityEngine.TestRunner",
-    "UnityEditor.TestRunner"
+    "UnityEditor.TestRunner",
+    "Unity.AI.Navigation"
   ],
   "overrideReferences": true,
   "precompiledReferences": [

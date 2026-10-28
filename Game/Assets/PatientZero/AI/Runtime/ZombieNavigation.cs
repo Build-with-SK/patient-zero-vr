@@ -14,12 +14,20 @@ namespace PatientZero.AI
         private Vector3 lastTarget = Vector3.positiveInfinity;
         public bool PathFailed { get; private set; }
         public float Speed => agent && agent.enabled ? agent.velocity.magnitude : 0;
-        private void Awake() => agent = GetComponent<NavMeshAgent>();
+        private void Awake() { agent = GetComponent<NavMeshAgent>(); agent.enabled = false; }
+        public void SetSimulationActive(bool value)
+        {
+            if (!agent) return;
+            if (!value) Stop();
+            agent.enabled = value;
+        }
         public bool Warp(Vector3 position)
         {
             lastTarget = Vector3.positiveInfinity; nextPath = 0;
-            if (!agent || !NavMesh.SamplePosition(position, out var hit, 2, agent.areaMask)) return false;
-            return agent.Warp(hit.position);
+            PathFailed = true;
+            if (!agent || !agent.enabled || !NavMesh.SamplePosition(position, out var hit, 2, agent.areaMask)) return false;
+            PathFailed = !agent.Warp(hit.position);
+            return !PathFailed;
         }
         public void Stop()
         { if (agent && agent.enabled && agent.isOnNavMesh) { agent.isStopped = true; agent.ResetPath(); } }

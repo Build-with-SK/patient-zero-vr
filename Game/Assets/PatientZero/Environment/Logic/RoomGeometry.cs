@@ -10,6 +10,8 @@ namespace PatientZero.Environment.Logic
         public readonly Vector3 A, B;
         public WallSpan(Vector3 a, Vector3 b) { A = a; B = b; }
         public float Length => Vector3.Distance(A, B);
+        // Butt joints overlap at corners; longitudinal padding would intrude into door cuts.
+        public Vector3 ColliderSize => A.x != B.x ? new Vector3(Length, 2.8f, .1f) : new Vector3(.1f, 2.8f, Length);
     }
     public readonly struct DoorOpening
     {

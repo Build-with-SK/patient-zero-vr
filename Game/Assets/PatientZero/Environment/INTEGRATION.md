@@ -1,14 +1,17 @@
 # Seat B integration handoff
 
-Approved base: `origin/main` at `73a3b67`; historical sources remain at frozen `72be6d8`
+Approved base: `origin/main` at `44ea7b7` (PR #4, contract v1.1; merged into this branch); historical sources remain at frozen `72be6d8`
 and its implementation parent `87bb494482a0c00ed40d52eebb2871009c730091`.
 No old package, duplicate Core, SDK imports, handwritten Unity assets or foreign-seat files are introduced.
 
 ## What is built
 
 The approved layout is isolation B-7 → corridor → exit vestibule, with supply/side/linen rooms.
-It has no operating theatre. Adding one requires Claude to change WardLayout/design; this branch
-does not add coordinates outside that contract. The geometry contains six floors/ceilings, deduplicated
+Round 2 dresses the existing SupplyRoom as an operating theatre, as requested by the owner, without
+moving any room, interaction, spawn or doorway. It adds a static operating table, unlit surgical lamp,
+sterile cabinet and instrument shelf/tray, with tested clearance around Z2's doorway route and layout
+points. There are no external assets with verified file licences in the project, so these use the approved
+procedural fallbacks. The geometry contains six floors/ceilings, deduplicated
 walls, six aligned door openings/headers, a monitor, narrative text, exit sign, guidance strip, cart,
 gurney, readable 1.3 m chain and PA/vent dressing. Functional door leaves and cart interactions belong
 to seat A. Text currently uses Unity's built-in legacy font as a generated greybox placeholder.
@@ -16,7 +19,7 @@ to seat A. Text currently uses Unity's built-in legacy font as a generated greyb
 | Scene / order | Builder | Output |
 | --- | --- | --- |
 | Ward 100 | `Environment.Editor.HospitalBuildSteps.Build` | RoomGeometry primitives, colliders, non-puzzle markers, dressing and NavMeshSurface |
-| Ward 150 | `HospitalBuildSteps.BakeNavigation` | Unity-generated NavMesh from Environment child colliders |
+| Ward 150 | `HospitalBuildSteps.BakeNavigation` | Unity-generated NavMesh from Environment child colliders, saved to `Environment/Generated/WardNavMesh.asset` |
 | Ward 200 | `Atmosphere.Editor.AtmosphereBuildStep.Build` | Six shadowless short-range fixtures, emission/fog controller and director |
 | Ward 500 | `AI.Editor.ZombieBuildStep.Build` | Four generated seven-bone, one-material mannequin prefabs and director bindings; one active actor per act |
 | Bootstrap 600 | `Audio.Editor.AudioBuildSteps.Build` | Persistent cue-player service, native-generated Master + World/Voice/Ambience/Music/UI mixer |
@@ -42,16 +45,27 @@ fails scene generation explicitly rather than manufacturing a mixer asset.
   and teleport landings use their dedicated cue ids. B raises Noise only after an accepted audible cue.
   Intensity zero emits no noise; user volume preferences do not reduce gameplay hearing radii.
 - Supply player/held-prop collision layers separately from geometry/doors. **ZombieNavigation.Obstacles**
-  and all occlusion masks default to layer 0 for the greybox. They must include physical walls/closed
-  door leaves and exclude player/zombie colliders. Zombie roots use Ignore Raycast. Seat A's moving
+  and **SightBlockers / AudioCuePlayer.Occluders** default to layer 0 for the greybox; they include walls
+  and closed doors. **HearingOccluders defaults to Nothing** and must be assigned to closed door leaves
+  only: walls and the impact source never halve hearing. The shared door/player/held-prop layer mapping
+  remains TD integration action INT-B-2; it was not included in approved v1.1. Geometry/door masks must
+  exclude player/zombie colliders. Zombie roots use Ignore Raycast. Seat A's moving
   doors require appropriate NavMesh carving or a final bake by Claude, plus the collision-only path
   guard. Do not mark a door traversal/catch test passed before this is verified.
 - Environment creates static tags for all zombie markers and A2.Monitor/A3.Beacon/A3.Cart/A3.Drip.
   Seat A supplies anchor, puzzle and functional-door tags. Do not duplicate LayoutTag ids on dynamic
   actors or secondary audio/visual children. Validate every required tag/coordinate in the composer.
-- Act 1's **physical door gate is pending a Core contract response**: see CODEX_B_LOG. B internally
-  prevents act advance until the window beat and four-metre retreat, but seat A currently has no
-  approved interface for querying that gate. No unapproved property was added to Core.
+- **Act 1 gate, approved Core v1.1:** B's ExperienceDirector is the only `GateReleased` writer. It raises
+  `GateReleased(GateId.Act1Door)` exactly once per Act 1 start after unbarring, the window beat, the lure
+  and Z1's four-metre clearance. `IExperienceDirector.IsGateReleased(GateId.Act1Door)` stays true while
+  Act 1 remains active; it is false for None, other acts and restores/new runs. The latch closes before
+  `ActStarted` is published. Seat A's door subscribes on enable AND queries the service for late load;
+  it fails closed if the service is missing. Door opening still reports `Act1_DoorOpened`, which advances
+  the director to Machinery. An early/stale completion while the gate is closed is ignored; the door must
+  report it after release. Do not have a second component publish GateReleased.
+- Inactive zombies disable their NavMeshAgents as well as their visuals; act starts reset the animation
+  pose and AI clock. The native navigation test unloads/reloads Ward and checks the saved NavMesh asset
+  and complete routes. Agent type 0's bake radius remains TD action INT-B-1 (target 0.25 m).
 - The director owns story beats, hints, tension, adaptive attempt memory and InfectionReveal.
   Seat A owns ending screen fades/title and player hand rendering. Ward reload is the reset mechanism.
 
@@ -84,7 +98,9 @@ python tools/review/check_rules.py --seat B --base origin/main --head integratio
 ```
 
 These compile/test Core and Logic using the approved stand-ins. They do **not** compile Unity shells.
-Unity-facing sources are marked `UNVERIFIED IN EDITOR`. Once Claude provisions the editor/composer:
+Round 2 evidence and actual blocked tool output: [ROUND_2_VALIDATION.md](ROUND_2_VALIDATION.md).
+Unity-facing sources are marked `UNVERIFIED IN EDITOR`. The canonical composer is now on this branch;
+Unity 6000.3.27f1 is still absent. Once Claude provisions the editor:
 
 1. Compile Game in Unity 6.3 and fix all API/type/assembly errors before generating assets.
 2. Generate Bootstrap/Ward, validate tags/services/references, and review native mixer groups and mesh budgets.

@@ -27,7 +27,7 @@ namespace PatientZero.AI.Tests
         {
             CoreStaticReset.ResetStatics();
             var floorRoot = new GameObject("HearingFloor"); var audioRoot = new GameObject("Audio");
-            GameObject actor = null;
+            GameObject actor = null, blocker = null;
             var query = new QuietPlayer(); Services<IPlayerQuery>.Register(query);
             try
             {
@@ -39,20 +39,37 @@ namespace PatientZero.AI.Tests
                 audioRoot.AddComponent<AudioCuePlayer>();
                 actor = new GameObject("Orderly"); actor.SetActive(false); actor.transform.position = WardLayout.Z2_Dormant.Position;
                 actor.AddComponent<NavMeshAgent>(); actor.AddComponent<ZombieNavigation>().Obstacles = 0;
-                var zombie = actor.AddComponent<ZombieAgentShell>(); zombie.ZombieId = ZombieIds.Orderly; zombie.Occluders = 0;
+                var zombie = actor.AddComponent<ZombieAgentShell>(); zombie.ZombieId = ZombieIds.Orderly; zombie.SightBlockers = 1;
                 actor.SetActive(true);
                 GameEvents.StateChanged.Raise(new GameStateChanged(GameState.Boot, GameState.Playing, FailReason.None));
                 GameEvents.ActStarted.Raise(new ActStarted(ActId.Machinery, false, 1));
                 Cues.Play(CueId.ImpactHeavy, WardLayout.Z2_Dormant.Position + Vector3.right * 7, NoiseOrigin.Player);
                 Assert.AreEqual(AlertLevel.Unaware, zombie.Brain.Level);
+                // A wall blocks sight but is not a closed door: full hearing radius survives it.
+                blocker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                blocker.transform.position = WardLayout.Z2_Dormant.Position + Vector3.right * 2 + Vector3.up;
+                blocker.transform.localScale = new Vector3(.15f, 2, 2); Physics.SyncTransforms();
+                Assert.AreEqual(0, zombie.HearingOccluders.value);
+                Assert.IsTrue(Physics.Linecast(actor.transform.position + Vector3.up,
+                    WardLayout.Z2_Dormant.Position + Vector3.right * 4, zombie.SightBlockers, QueryTriggerInteraction.Ignore));
                 Cues.Play(CueId.ImpactHeavy, WardLayout.Z2_Dormant.Position + Vector3.right * 4, NoiseOrigin.Player);
                 Assert.AreEqual(AlertLevel.Suspicious, zombie.Brain.Level);
                 yield return new WaitForSeconds(.75f);
                 Assert.AreEqual(AlertLevel.Investigating, zombie.Brain.Level);
+                // Treat the fixture as a closed door for this test; radius 6 is halved to 3.
+                GameEvents.ActStarted.Raise(new ActStarted(ActId.Machinery, true, 2));
+                zombie.HearingOccluders = 1;
+                Cues.Play(CueId.ImpactHeavy, WardLayout.Z2_Dormant.Position + Vector3.right * 4.1f, NoiseOrigin.Player);
+                Assert.AreEqual(AlertLevel.Unaware, zombie.Brain.Level);
+                GameEvents.ActStarted.Raise(new ActStarted(ActId.Darkness, false, 2));
+                Assert.IsFalse(actor.GetComponent<NavMeshAgent>().enabled, "Invisible actors must not block a puzzle route");
+                GameEvents.ActStarted.Raise(new ActStarted(ActId.Machinery, true, 3));
+                Assert.IsTrue(actor.GetComponent<NavMeshAgent>().enabled);
+                Assert.AreEqual(AlertLevel.Unaware, zombie.Brain.Level);
             }
             finally
             {
-                if (actor) Object.Destroy(actor); Object.Destroy(audioRoot); Object.Destroy(floorRoot);
+                if (actor) Object.Destroy(actor); if (blocker) Object.Destroy(blocker); Object.Destroy(audioRoot); Object.Destroy(floorRoot);
                 Services<IPlayerQuery>.Unregister(query);
             }
         }

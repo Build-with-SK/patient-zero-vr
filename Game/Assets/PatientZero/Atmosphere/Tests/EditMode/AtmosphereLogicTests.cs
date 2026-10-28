@@ -51,6 +51,70 @@ namespace PatientZero.Atmosphere.Tests
         }
         private static void Collect(DirectorCore d, List<CueId> cues)
         { foreach (var c in Drain(d)) if (c.Kind == DirectorCommandKind.Cue) cues.Add(c.Cue); }
+        [Test] public void GateSignalIsOneShotQueryPersistsAndResetClosesBeforeActStart()
+        {
+            var d = New(); Drain(d);
+            Assert.IsFalse(d.IsGateReleased(GateId.None)); Assert.IsFalse(d.IsGateReleased(GateId.Act1Door));
+            Window(d); Drain(d); d.Tick(2, true, WardLayout.A1_Start.Position); Drain(d);
+            d.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position);
+            var released = Drain(d);
+            Assert.AreEqual(1, released.FindAll(c => c.Kind == DirectorCommandKind.Gate && c.Id == (int)GateId.Act1Door).Count);
+            Assert.IsTrue(d.IsGateReleased(GateId.Act1Door)); // Same query used by a late-loaded door.
+            for (int i = 0; i < 20; i++) { d.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position); d.Tick(.1f, true, Vector3.zero); }
+            Assert.IsFalse(Drain(d).Exists(c => c.Kind == DirectorCommandKind.Gate));
+            d.StartRun(ActId.Awakening, true);
+            Assert.IsFalse(d.IsGateReleased(GateId.Act1Door));
+            var reset = Drain(d); Assert.AreEqual(DirectorCommandKind.Act, reset[0].Kind);
+            Window(d); Drain(d); d.Tick(2, true, Vector3.zero); Drain(d); d.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position);
+            Assert.AreEqual(1, Drain(d).FindAll(c => c.Kind == DirectorCommandKind.Gate).Count);
+            d.Complete(ObjectiveId.Act1_DoorOpened);
+            Assert.AreEqual(ActId.Machinery, d.Act); Assert.IsFalse(d.IsGateReleased(GateId.Act1Door));
+            Assert.IsTrue(Contains(Drain(d), DirectorCommandKind.Act, (int)ActId.Machinery));
+            d.StartRun(ActId.Awakening, false); Assert.IsFalse(d.IsGateReleased(GateId.Act1Door));
+        }
+        [Test] public void GateWaitsForPlanksLureAndFullClearanceInReducedModeToo()
+        {
+            foreach (var mode in new[] { ScareIntensity.Standard, ScareIntensity.Reduced })
+            {
+                var d = New(mode); Drain(d); Window(d); Drain(d);
+                d.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position);
+                Assert.IsFalse(d.IsGateReleased(GateId.Act1Door)); // No lure yet.
+                d.Tick(2, true, Vector3.zero); Drain(d);
+                var window = WardLayout.A1_DoorWindow.Position; window.y = 0;
+                d.ReportZombiePosition(1, window + Vector3.right * 3.99f);
+                Assert.IsFalse(d.IsGateReleased(GateId.Act1Door));
+                d.ReportZombiePosition(1, window + Vector3.right * 4);
+                Assert.IsTrue(d.IsGateReleased(GateId.Act1Door));
+                Assert.AreEqual(1, Drain(d).FindAll(c => c.Kind == DirectorCommandKind.Gate).Count);
+            }
+        }
+        private static void AssertAssistFloorSurvivesProgress(DirectorCore d)
+        {
+            Drain(d); d.Progress(ObjectiveId.Act2_ValveVented, .1f);
+            var commands = Drain(d);
+            Assert.IsTrue(commands.Exists(c => c.Kind == DirectorCommandKind.Assist && c.Id == (int)ObjectiveId.Act2_ValveVented && c.Detail == (int)AssistLevel.Assist));
+            Assert.IsFalse(commands.Exists(c => c.Kind == DirectorCommandKind.Assist && c.Detail < (int)AssistLevel.Assist));
+            d.Tick(31, true, Vector3.zero); commands = Drain(d);
+            Assert.IsFalse(commands.Exists(c => c.Kind == DirectorCommandKind.Assist && c.Detail < (int)AssistLevel.Assist));
+        }
+        [Test] public void AlwaysOnAssistSurvivesProgressAndHints()
+        {
+            var d = New(); Drain(d); var settings = d.Settings; settings.PuzzleAssistAlwaysOn = true; d.Settings = settings;
+            d.StartRun(ActId.Machinery, false); AssertAssistFloorSurvivesProgress(d);
+        }
+        [Test] public void AdaptiveAssistSurvivesProgressAfterRestore()
+        {
+            var memory = new DirectorMemory(); memory.Catches[(int)ActId.Machinery] = 2;
+            var d = new DirectorCore(memory); d.StartRun(ActId.Machinery, true); AssertAssistFloorSurvivesProgress(d);
+        }
+        [Test] public void EnablingPuzzleAssistMidActEmitsFloorImmediately()
+        {
+            var d = New(); d.StartRun(ActId.Machinery, false); Drain(d);
+            var settings = d.Settings; settings.PuzzleAssistAlwaysOn = true; d.Settings = settings;
+            var commands = Drain(d);
+            Assert.IsTrue(commands.Exists(c => c.Kind == DirectorCommandKind.Assist && c.Id == (int)ObjectiveId.Act2_ValveVented && c.Detail == (int)AssistLevel.Assist));
+            AssertAssistFloorSurvivesProgress(d);
+        }
         [Test] public void GoldenRunFollowsApprovedBeatOrderAndTwoHardScares()
         {
             var cues = GoldenRun(ScareIntensity.Standard, out var d);
@@ -75,7 +139,10 @@ namespace PatientZero.Atmosphere.Tests
             d.ReportZombiePosition(1, WardLayout.A1_DoorWindow.Position); d.Tick(.1f, true, WardLayout.A1_Start.Position); Drain(d);
             d.Tick(1.9f, true, WardLayout.A1_Start.Position); Assert.IsFalse(d.CanOpenAct1Door); Drain(d);
             d.Tick(.2f, true, WardLayout.A1_Start.Position); d.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position);
-            Assert.IsTrue(d.CanOpenAct1Door); d.Tick(.1f, true, WardLayout.A1_Start.Position); Assert.AreEqual(ActId.Machinery, d.Act);
+            Assert.IsTrue(d.CanOpenAct1Door); d.Tick(.1f, true, WardLayout.A1_Start.Position);
+            Assert.AreEqual(ActId.Awakening, d.Act, "An early door completion must be reported again after release");
+            Assert.IsTrue(d.IsGateReleased(GateId.Act1Door));
+            d.Complete(ObjectiveId.Act1_DoorOpened); Assert.AreEqual(ActId.Machinery, d.Act);
         }
         [Test] public void ActTwoInvestigationIsGuaranteedBeforeSurge()
         {

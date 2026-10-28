@@ -22,8 +22,8 @@ namespace PatientZero.Atmosphere
         private bool pumping;
         public ActId CurrentAct => core == null ? ActId.None : core.Act;
         public float ExperienceTime => core == null ? 0 : core.ExperienceTime;
-        // Local B-side evidence only: seat A cannot depend on this without the pending Core gate contract.
-        public bool ActOneDoorGateReady => core != null && core.CanOpenAct1Door;
+        // Contract v1.1: late-loaded doors query the same latch that produces the one-shot signal.
+        public bool IsGateReleased(GateId gate) => core != null && core.IsGateReleased(gate);
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetRetainedState() => retained = new DirectorMemory();
         private void Awake() { core = new DirectorCore(retained); lastTick = Time.time; }
@@ -51,7 +51,7 @@ namespace PatientZero.Atmosphere
         private void Alert(ZombieAlertChanged e)
         { if (Services<IPlayerQuery>.TryGet(out var player)) core.Alert(e.ZombieId, e.Level, e.Position, player.FloorPosition); }
         private void Caught(PlayerCaught e) => core.Caught();
-        private void SettingsChanged(SettingsChanged e) => core.Settings = e.Settings;
+        private void SettingsChanged(SettingsChanged e) { core.Settings = e.Settings; Pump(); }
         private void StateChanged(GameStateChanged e) { state = e.To; lastTick = Time.time; }
         private void TrackingChanged(TrackingChanged e) => core.Tracking(e.Modality, e.LeftTracked, e.RightTracked);
         private void Update()
@@ -93,6 +93,7 @@ namespace PatientZero.Atmosphere
                             break;
                         case DirectorCommandKind.Lighting: if (Lighting) Lighting.SetState((LightingState)c.Id); break;
                         case DirectorCommandKind.LocalLightPulse: if (Lighting) Lighting.WindowPulse(); break;
+                        case DirectorCommandKind.Gate: GameEvents.GateReleased.Raise(new GateReleased((GateId)c.Id)); break;
                         case DirectorCommandKind.Act: GameEvents.ActStarted.Raise(new ActStarted((ActId)c.Id, c.Detail != 0, (int)c.Value)); break;
                         case DirectorCommandKind.Assist: GameEvents.AssistChanged.Raise(new AssistChanged((ObjectiveId)c.Id, (AssistLevel)c.Detail)); break;
                         case DirectorCommandKind.Zombie: ZombieCommand(c); break;

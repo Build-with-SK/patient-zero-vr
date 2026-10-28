@@ -38,6 +38,8 @@ namespace PatientZero.Environment.Editor
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube); go.name = name; go.transform.SetParent(parent, false);
             go.transform.position = position; go.transform.localScale = size;
             go.GetComponent<Renderer>().sharedMaterial = material;
+            // These are B-owned static dressing meshes, never A's moving doors or held props.
+            GameObjectUtility.SetStaticEditorFlags(go, StaticEditorFlags.BatchingStatic);
             if (!collider) UnityEngine.Object.DestroyImmediate(go.GetComponent<Collider>());
             return go;
         }

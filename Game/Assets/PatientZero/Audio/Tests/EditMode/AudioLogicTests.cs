@@ -30,6 +30,27 @@ namespace PatientZero.Audio.Tests
                 Assert.AreEqual(0, r.GainAt(r.Max + 10));
             }
         }
+        [Test] public void GuidanceAndLureAttenuationCoversActualWardDimensions()
+        {
+            var beacon = Row(CueId.BeaconChirp);
+            foreach (var anchor in new[] { WardLayout.A3_Start, WardLayout.A3_Mid1, WardLayout.A3_Mid2, WardLayout.A3_End })
+            {
+                float distance = Vector3.Distance(anchor.Position + Vector3.up * 1.6f, WardLayout.A3_Beacon.Position);
+                Assert.Greater(beacon.GainAt(distance), .7f, anchor.Id);
+            }
+            var alarm = Row(CueId.AlarmKlaxon);
+            Assert.Greater(alarm.GainAt(Vector3.Distance(WardLayout.A4_Start.Position + Vector3.up * 1.6f, WardLayout.A4_ExitDoor.Position)), .8f);
+            var lure = Row(CueId.DistantCrashLure);
+            float lureDistance = Vector3.Distance(WardLayout.Z1_WalkFrom.Position + Vector3.up, WardLayout.Z2_Dormant.Position);
+            Assert.Greater(lure.GainAt(lureDistance), .5f);
+            Assert.GreaterOrEqual(lure.NoiseRadius * .5f, lureDistance, "Act 2 fallback reaches Z2 even through a closed door");
+            foreach (var point in WardLayout.Points)
+            {
+                float distance = Vector3.Distance(WardLayout.A3_Beacon.Position, point.Position);
+                float gain = beacon.GainAt(distance);
+                Assert.GreaterOrEqual(gain, 0); Assert.LessOrEqual(gain, 1);
+            }
+        }
         [Test] public void ZombieCuesAreAudibleBeforeCommonPlayerNoise()
         {
             for (int i = 0; i < CueTable.Count; i++)
