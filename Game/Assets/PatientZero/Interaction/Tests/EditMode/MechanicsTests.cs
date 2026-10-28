@@ -1,0 +1,24 @@
+using System;
+using NUnit.Framework;
+using PatientZero.Core;
+using PatientZero.Interaction.Logic;
+using UnityEngine;
+namespace PatientZero.Interaction.Tests
+{
+    public class MechanicsTests
+    {
+        private static Vector3 Radial(float angle)=>new Vector3((float)Math.Cos(angle*Math.PI/180),(float)Math.Sin(angle*Math.PI/180),0);
+        [Test] public void ValveFullTurnsInEitherDirection(){foreach(float sign in new[]{1f,-1f}){var v=new ValveMath();v.BeginGrip(Radial(0),Vector3.forward);for(int i=1;i<=6;i++)v.Sample(Radial(i*90*sign),Vector3.forward,1);Assert.AreEqual(540,v.Degrees,.01);Assert.IsTrue(v.Complete);}}
+        [Test] public void ValveRegripDoesNotJump(){var v=new ValveMath();v.BeginGrip(Radial(0),Vector3.forward);v.Sample(Radial(90),Vector3.forward,1);v.EndGrip();v.BeginGrip(Radial(-90),Vector3.forward);v.Sample(Radial(-90),Vector3.forward,1);Assert.AreEqual(90,v.Degrees,.001);v.Sample(Radial(0),Vector3.forward,1);Assert.AreEqual(180,v.Degrees,.001);}
+        [Test] public void ValveWrapsAndRejectsAxialGrab(){var v=new ValveMath();v.BeginGrip(Radial(170),Vector3.forward);v.Sample(Radial(-170),Vector3.forward,1);Assert.AreEqual(20,v.Degrees,.001);v.BeginGrip(Vector3.forward,Vector3.forward);v.Sample(Radial(30),Vector3.forward,1);Assert.AreEqual(20,v.Degrees,.001);v.BeginGrip(Radial(0),Vector3.zero);Assert.AreEqual(0,v.Sample(Radial(90),Vector3.zero,1));}
+        [Test] public void ValveAssistMidTurnAndIntensityCurve(){var v=new ValveMath();v.BeginGrip(Radial(0),Vector3.forward);v.Sample(Radial(30),Vector3.forward,1);Assert.AreEqual(0,v.Intensity,.001);v.Sample(Radial(135),Vector3.forward,1);Assert.AreEqual(.5,v.Intensity,.001);v.Sample(Radial(225),Vector3.forward,.5f);Assert.AreEqual(1,v.Intensity,.001);v.Sample(Radial(315),Vector3.forward,1);Assert.IsFalse(v.Complete);v.SetAssist(true);Assert.IsTrue(v.Complete);}
+        [Test] public void PlankThresholdAndSpringBack(){var p=new PlankLogic();Assert.IsFalse(p.Pull(.079f));p.Release();Assert.AreEqual(0,p.PullMeters);Assert.IsFalse(p.Pull(-1));Assert.IsTrue(p.Pull(.08f));p.Release();Assert.IsTrue(p.Popped);Assert.IsFalse(p.Pull(1));}
+        [Test] public void AssistedPlankPopsAtFourCentimeters(){var p=new PlankLogic{Assisted=true};Assert.IsFalse(p.Pull(.039f));Assert.IsTrue(p.Pull(.04f));}
+        [Test] public void SocketThresholdsAndInvalidInputs(){Assert.IsTrue(SocketLogic.CanSnap(.06f,35,false));Assert.IsFalse(SocketLogic.CanSnap(.0601f,35,false));Assert.IsFalse(SocketLogic.CanSnap(.06f,35.1f,false));Assert.IsTrue(SocketLogic.CanSnap(.12f,60,true));Assert.IsFalse(SocketLogic.CanSnap(.121f,60,true));Assert.IsFalse(SocketLogic.CanSnap(float.NaN,0,true));Assert.IsFalse(SocketLogic.CanSnap(0,-1,true));}
+        [Test] public void LeverDecaysOneProgressPerSecondAndCanRehold(){var l=new LeverLogic();l.Tick(true,1);Assert.AreEqual(.5,l.Progress,.001);l.Tick(false,.2f);Assert.AreEqual(.3,l.Progress,.001);l.Tick(true,1.4f);Assert.IsTrue(l.Complete);Assert.IsFalse(l.Tick(false,10));}
+        [Test] public void LeverAssistAndFivePercentThrottle(){var l=new LeverLogic();Assert.IsFalse(l.Tick(true,.09f));Assert.IsTrue(l.Tick(true,.01f));Assert.IsFalse(l.Tick(true,.01f));l.SetAssist(true);l.Tick(true,.89f);Assert.IsTrue(l.Complete);}
+        [Test] public void ObjectivesDeduplicateAndPowerWorksInEitherOrder(){foreach(bool reverse in new[]{false,true}){var t=new ObjectiveTracker();int events=0;t.Completed+=id=>events++;Assert.IsTrue(t.Complete(reverse?ObjectiveId.Act2_CablePlugged:ObjectiveId.Act2_ValveVented));Assert.AreEqual(1,events);t.Complete(reverse?ObjectiveId.Act2_ValveVented:ObjectiveId.Act2_CablePlugged);Assert.IsTrue(t.IsComplete(ObjectiveId.Act2_PowerRestored));Assert.AreEqual(3,events);Assert.IsFalse(t.Complete(ObjectiveId.Act2_ValveVented));Assert.IsFalse(t.Complete(ObjectiveId.None));Assert.AreEqual(3,events);}}
+        [Test] public void RestoreSilentlySetsPastActsAndResetsCurrent(){var t=new ObjectiveTracker();int count=0;t.Completed+=id=>count++;t.Complete(ObjectiveId.Act2_CablePlugged);t.Reset(ActId.Machinery);Assert.IsTrue(t.IsComplete(ObjectiveId.Act1_DoorOpened));Assert.IsFalse(t.IsComplete(ObjectiveId.Act2_CablePlugged));Assert.AreEqual(1,count);t.Reset(ActId.Darkness);Assert.IsTrue(t.IsComplete(ObjectiveId.Act2_PowerRestored));t.Reset(ActId.Awakening);Assert.IsFalse(t.IsComplete(ObjectiveId.Act1_DoorOpened));}
+        [Test] public void UnsafeReleaseHasZeroVelocityAndNormalThrowIsClamped(){Assert.AreEqual(Vector3.zero,HeldObjectSafety.ReleaseVelocity(Vector3.one,false,false));Assert.AreEqual(Vector3.zero,HeldObjectSafety.ReleaseVelocity(Vector3.one,true,true));Assert.AreEqual(Vector3.zero,HeldObjectSafety.ReleaseVelocity(new Vector3(float.NaN,0,0),true,false));Assert.AreEqual(8,HeldObjectSafety.ReleaseVelocity(Vector3.forward*20,true,false).magnitude,.001);}
+    }
+}
