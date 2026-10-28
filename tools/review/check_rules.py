@@ -45,6 +45,7 @@ EVENT_WRITERS = {
     "ActStarted": {"Atmosphere"},
     "ObjectiveProgress": {"Interaction"},
     "ObjectiveCompleted": {"Interaction"},
+    "GateReleased": {"Atmosphere"},  # contract v1.1
     "AssistChanged": {"Atmosphere"},
     "Noise": {"Audio"},
     "ZombieAlert": {"AI"},

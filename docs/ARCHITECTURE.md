@@ -125,6 +125,8 @@ A seat edits only its own paths. That includes "one-line fixes" elsewhere: you r
 
 ## 5. Contracts (all in `Core/Contracts`)
 
+**Versions.** v1: approved 2026-10-28 (`b3bab8b`). v1.1: approved by the owner 2026-10-28, additive only: `GateId`, the `GateReleased` channel and `IExperienceDirector.IsGateReleased`, so the Act 1 door can open on the director's gate (requested by Codex 1, acknowledged by Codex 2).
+
 ### 5.1 Events: `GameEvents`
 
 Allocation-free typed channels (`EventChannel<T>`). Subscribe in `OnEnable` and unsubscribe in `OnDisable`, because the channels are static and outlive scene reloads. **Every channel has exactly one writer seat.**
@@ -136,6 +138,7 @@ Allocation-free typed channels (`EventChannel<T>`). Subscribe in `OnEnable` and 
 | `ActStarted` | act, isRestore, attempt | B · director | everyone with act state | at run start and on every act start or restore |
 | `ObjectiveProgress` | objective, 0..1 | A · puzzles | B · director (hint timers) | progress changes by ≥ 5 % |
 | `ObjectiveCompleted` | objective | A · puzzles | B · director | once per objective per attempt |
+| `GateReleased` (v1.1) | gate id | B · director | A · gated components (Act 1 door) | a gate's conditions are met; at most once per gate per act start. Gates close again at their act's `ActStarted` |
 | `AssistChanged` | objective, level | B · director | A · puzzles and hint UI | the hint ladder steps up |
 | `Noise` | position, radius, cue, origin, time | B · cue player | B · zombies, director | every cue with noise radius > 0 |
 | `ZombieAlert` | zombie id, level, position | B · AI | B · director, A · haptics/UI debug | the alert level changes |
@@ -157,11 +160,11 @@ Register in `OnEnable` and unregister in `OnDisable`. A second live registration
 | `IPlayerQuery` | A · Player | Bootstrap | B · AI, director |
 | `IScreenFader` | A · Player | Bootstrap | A · GameFlow, B · director (ending) |
 | `ISettingsProvider` | A · Flow | Bootstrap | everyone |
-| `IExperienceDirector` | B · Atmosphere | Ward | A · GameFlow (`StartRun`), UI debug |
+| `IExperienceDirector` | B · Atmosphere | Ward | A · GameFlow (`StartRun`), gated components (`IsGateReleased`, v1.1), UI debug |
 
 ### 5.3 Identifiers: `Ids.cs`
 
-`GameState`, `ActId`, `ObjectiveId`, `CueId`, `LightingState`, `AlertLevel`, `NoiseOrigin`, `AssistLevel`, settings enums and `ZombieIds`. **Append-only with explicit numbers.** `check_rules.py` fails any branch that renumbers or removes a value. Need a new cue or objective? Request it, then use it once it lands.
+`GameState`, `ActId`, `ObjectiveId`, `GateId` (v1.1), `CueId`, `LightingState`, `AlertLevel`, `NoiseOrigin`, `AssistLevel`, settings enums and `ZombieIds`. **Append-only with explicit numbers.** `check_rules.py` fails any branch that renumbers or removes a value. Need a new cue or objective? Request it, then use it once it lands.
 
 ### 5.4 Layout: `WardLayout`
 

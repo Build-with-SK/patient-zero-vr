@@ -75,3 +75,35 @@ Kind: REVIEW
 What: Not ready to merge. FIX-A-1 BLOCKER (`DesktopBuildStep` is an Interaction step building Bootstrap at 420, which breaks the composer's plan), FIX-A-2 MAJOR (`Unity.ugui` asmdef references; uGUI's assembly is `UnityEngine.UI`, to confirm at the first compile), FIX-A-3 MAJOR (mouse desktop mode collides with the XRI simulator; proposal: opt-in define `PZ_DESKTOP_MOUSE`), FIX-A-4 MINOR (camera lookup). Contract request "Act 1 door release": ACCEPTED IN PRINCIPLE as `GateId`/`GateReleased` + `IExperienceDirector.IsGateReleased` (contract v1.1). Awaits the owner and Codex 2's ACK; not merged. Full review: `docs/collab/REVIEW_GAMEPLAY_83b57d3.md`.
 Evidence: branch `Logic tests: 80 passed, 0 failed.`; `check_rules.py --seat A` 0 findings; scratch merge onto `05d16be` → `Logic tests: 107 passed, 0 failed.`, checker, packages and tooling clean; temporary probe through the real `BuildPlan` → `PROBE errors=2` (band, scene), both on DesktopBuildStep. The probe was deleted, never committed.
 Not verified: any of the branch in Unity or on a headset.
+
+## 2026-10-28 · PR #2 merged to `main`
+Kind: MERGE
+What: The owner approved "Merge when green". PR #2 (`claude/technical-director` `a220834` → `main`) merged as merge commit `8b5e5cb`, with `--match-head-commit a220834` so nothing unreviewed could slip in. No force push; `73a3b67` stays an ancestor of `main`. Branch `claude/technical-director` kept and fast-forwarded to `8b5e5cb`.
+Evidence:
+- Before merging: `gh pr view 2` → `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`; both `checks / offline` runs (push and pull_request) `SUCCESS` on `a220834`.
+- After: tree of `main` `5a781a4` equals the tree of `a220834`. Scratch worktree of `main`: `Logic tests: 70 passed, 0 failed.`; `SELF-TEST PASSED`; checker `0 error(s), 0 warning(s).`; `validate_packages.py` `0 error(s)`; tooling unittest `Ran 24 tests … OK`. Worktree removed.
+Not verified: anything in Unity or on a headset (unchanged: no editor, no device).
+Seen at the same time: Codex 2 pushed `integration/xr-systems` to `6bc4c42` (5 commits on `73a3b67`, 51 files, +3 103 lines; B1 port, B2 ward/audio/AI runtime, B3 PlayMode sources). `CODEX_B_LOG.md` reports 100/100 logic tests and a clean seat B check, ACKs contract v1.1 (`GateId`/`GateReleased`), and records that `gh pr create` failed with `Forbidden` from its environment, so it has no PR. `businessteen` is still not a collaborator. Not reviewed yet.
+Next: review `integration/xr-systems` `6bc4c42` (Codex 2 first, per the production prompt), then Codex 1's fixes on PR #1. Both branches need `main` merged in.
+
+## 2026-10-28 · Review of Codex 2 delivery (`integration/xr-systems` `6bc4c42`), draft PR #3
+Kind: REVIEW
+What: Not ready to merge: 0 BLOCKER, 3 MAJOR, 3 MINOR. All 12 findings of the first review (FIX-B-1…12) are resolved. New: FIX-B-13 MAJOR (assist always-on and adaptive assist switch off at the first progress), FIX-B-14 MAJOR (one mask for sight and hearing, so walls halve hearing; design: only closed doors), FIX-B-15 MAJOR (script-baked NavMesh not saved as an asset; verify at the first run), FIX-B-16 MINOR (audio occlusion mask empty), FIX-B-17 MINOR (exit sign loses its green in Blackout), FIX-B-18 MINOR (walls overhang door openings by 5 cm). Integration actions for Claude: INT-B-1 NavMesh agent radius (default 0.5 m vs 1.1 m openings), INT-B-2 shared physics layers proposed for contract v1.1, INT-B-3 first-run checks. Codex 2's ACK of v1.1 recorded; v1.1 now waits only for the owner. Opened draft PR #3 for the branch because Codex 2's `gh pr create` returned `Forbidden`. Full review: `docs/collab/REVIEW_XR_SYSTEMS_6bc4c42.md`.
+Evidence:
+- Branch: `Logic tests: 100 passed, 0 failed.`; `check_rules.py --seat B --base 73a3b67 --head 6bc4c42` and whole tree `0 error(s), 0 warning(s).`
+- Scratch merge onto `main` `8b5e5cb`: no conflicts, `Logic tests: 127 passed, 0 failed.`, checker, `validate_packages.py` and tooling tests clean. Adding `codex/gameplay` `83b57d3`: no conflicts, `164 passed, 0 failed.`
+- Temporary `BuildPlan` probe (not committed): seat B steps `PROBE errors=0`; with seat A, only FIX-A-1's 2 errors.
+- Temporary director probe (not committed): `PROBE alwaysOn: start=Assist afterProgress=None | adaptive: start=Assist afterProgress=None`.
+- Old-finding patterns in the diff: 0; Unity asset files committed: 0. Frozen refs `72be6d8` / `87bb494` unchanged.
+Not verified: any of the branch in Unity (compile, generated scenes, mixer, the 6 PlayMode tests) or on a headset.
+Next: Codex 2 merges `main` and fixes FIX-B-13…18; Codex 1 fixes FIX-A-1…4; owner decides contract v1.1.
+
+## 2026-10-28 · Contract v1.1: Act 1 gate
+Kind: CONTRACT CHANGE
+What: The owner approved v1.1 in chat ("Approve v1.1", with the instruction to add it to Core and merge to `main` once CI is green). Added, additive only: `GateId { None = 0, Act1Door = 1 }` (`Ids.cs`), `GateReleased` payload (`Payloads.cs`), `GameEvents.GateReleased` (writer Atmosphere; at most once per gate per act start; gates close again at their act's `ActStarted`) and in `ResetAll`, `IExperienceDirector.IsGateReleased(GateId)` (`Interfaces.cs`). Checker writer table: `GateReleased: {Atmosphere}`. Docs: `AGENTS.md`, `ARCHITECTURE.md` section 5, both seat briefs, `WORK_PLAN.md` (what each seat does next), release checklist, test report, task board. Requested by Codex 1 (`CODEX_A_LOG.md`), answered in `REVIEW_GAMEPLAY_83b57d3.md`, ACKed by Codex 2 (`CODEX_B_LOG.md` at `6bc4c42`).
+Evidence:
+- `run_logic_tests.py` → `Logic tests: 72 passed, 0 failed.` (Core 45 + Integration 27).
+- Mutations: `GateReleased.Clear()` removed → `GateReleased is missing from GameEvents.ResetAll`; Interaction file raising `GateReleased` → `ERROR event-writer … Interaction may not raise GameEvents.GateReleased (writers: Atmosphere).` Both restored.
+- `check_rules.py --self-test` → `SELF-TEST PASSED`; `check_rules.py` → `0 error(s), 0 warning(s).`
+Impact: nothing on `main` implements `IExperienceDirector`, so `main` is unaffected. Seat B's `ExperienceDirector` must implement `IsGateReleased` when it merges `main`; seat A's door can now wait on the gate. Shared physics layer names (INT-B-2) are not part of v1.1.
+Not verified: Unity compile of the Core change (no editor).

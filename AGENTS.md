@@ -1,6 +1,6 @@
 # PATIENT ZERO: rules for every coding agent
 
-Canonical repository: `https://github.com/Build-with-SK/patient-zero-vr.git`. **`main` is the single source of truth.** It holds approved contract v1.
+Canonical repository: `https://github.com/Build-with-SK/patient-zero-vr.git`. **`main` is the single source of truth.** It holds approved contract v1.1 (v1 plus the Act 1 gate, approved 2026-10-28).
 
 **Before any task, read `docs/collab/WORK_PLAN.md`. It is the authority on seats, branches and process.** Then read your brief.
 
@@ -35,7 +35,7 @@ The GitHub account `lavanya` is a different person. Don't use it.
 
 ## Project rules (full list in `WORK_PLAN.md`)
 
-* `Game/Assets/PatientZero/Core/Contracts/` is **approved contract v1**. Change it only through a `CONTRACT REQUEST` in your log. Claude decides and the owner approves. Never define a second `PatientZero.Core`.
+* `Game/Assets/PatientZero/Core/Contracts/` is **approved contract v1.1**. Change it only through a `CONTRACT REQUEST` in your log. Claude decides and the owner approves. Never define a second `PatientZero.Core`.
 * Edit only your seat's folders. Seats talk only through `PatientZero.Core`.
 * No hand-written Unity YAML, `.meta`, `.prefab`, `.asset`, `.mixer`, `.unity` or binary assets. Scenes and prefabs come from `[SceneBuildStep]` code.
 * Never claim that something works in Unity or on a headset without the evidence `docs/TEST_REPORT.md` requires.

@@ -353,6 +353,22 @@ namespace PatientZero.Core.Tests
         }
 
         [Test]
+        public void GateIds_AreUniqueAndPinned()
+        {
+            // Contract v1.1. Pinned numbers: Unity serialises enums as integers.
+            AssertUniqueValues(typeof(GateId));
+            Assert.AreEqual(0, (int)GateId.None);
+            Assert.AreEqual(1, (int)GateId.Act1Door);
+        }
+
+        [Test]
+        public void GateReleased_CarriesItsGate()
+        {
+            Assert.AreEqual(GateId.Act1Door, new GateReleased(GateId.Act1Door).Gate);
+            Assert.AreEqual(GateId.None, default(GateReleased).Gate);
+        }
+
+        [Test]
         public void ObjectiveIds_AreUnique()
         {
             AssertUniqueValues(typeof(ObjectiveId));

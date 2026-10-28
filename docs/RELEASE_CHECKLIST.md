@@ -14,6 +14,7 @@ A release candidate is approved only when every **critical** box is checked and 
 - [ ] Headset in developer mode; `adb devices` lists it; model recorded
 - [ ] Meta XR Audio licence accepted, or the built-in fallback chosen
 - [x] Contract v1 approved and `main` created (owner approval in chat, 2026-10-28)
+- [x] Contract v1.1 approved: Act 1 gate (`GateId`, `GateReleased`, `IsGateReleased`) (owner approval in chat, 2026-10-28)
 - [x] `main` published to `github.com/Build-with-SK/patient-zero-vr` at `b3bab8b` (2026-10-28; no force-push, and Codex 2's branches were untouched)
 - [x] `main` is the default branch and protected by a ruleset against force-push and deletion (owner approval in chat, 2026-10-28)
 - [ ] Codex 2's first delivery migrated onto `main`'s history (`docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md` section 5): approved and `integration/xr-systems` created on 2026-10-28; port not started
