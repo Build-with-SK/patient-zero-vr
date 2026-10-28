@@ -85,3 +85,15 @@ Evidence:
 Not verified: anything in Unity or on a headset (unchanged: no editor, no device).
 Seen at the same time: Codex 2 pushed `integration/xr-systems` to `6bc4c42` (5 commits on `73a3b67`, 51 files, +3 103 lines; B1 port, B2 ward/audio/AI runtime, B3 PlayMode sources). `CODEX_B_LOG.md` reports 100/100 logic tests and a clean seat B check, ACKs contract v1.1 (`GateId`/`GateReleased`), and records that `gh pr create` failed with `Forbidden` from its environment, so it has no PR. `businessteen` is still not a collaborator. Not reviewed yet.
 Next: review `integration/xr-systems` `6bc4c42` (Codex 2 first, per the production prompt), then Codex 1's fixes on PR #1. Both branches need `main` merged in.
+
+## 2026-10-28 · Review of Codex 2 delivery (`integration/xr-systems` `6bc4c42`), draft PR #3
+Kind: REVIEW
+What: Not ready to merge: 0 BLOCKER, 3 MAJOR, 3 MINOR. All 12 findings of the first review (FIX-B-1…12) are resolved. New: FIX-B-13 MAJOR (assist always-on and adaptive assist switch off at the first progress), FIX-B-14 MAJOR (one mask for sight and hearing, so walls halve hearing; design: only closed doors), FIX-B-15 MAJOR (script-baked NavMesh not saved as an asset; verify at the first run), FIX-B-16 MINOR (audio occlusion mask empty), FIX-B-17 MINOR (exit sign loses its green in Blackout), FIX-B-18 MINOR (walls overhang door openings by 5 cm). Integration actions for Claude: INT-B-1 NavMesh agent radius (default 0.5 m vs 1.1 m openings), INT-B-2 shared physics layers proposed for contract v1.1, INT-B-3 first-run checks. Codex 2's ACK of v1.1 recorded; v1.1 now waits only for the owner. Opened draft PR #3 for the branch because Codex 2's `gh pr create` returned `Forbidden`. Full review: `docs/collab/REVIEW_XR_SYSTEMS_6bc4c42.md`.
+Evidence:
+- Branch: `Logic tests: 100 passed, 0 failed.`; `check_rules.py --seat B --base 73a3b67 --head 6bc4c42` and whole tree `0 error(s), 0 warning(s).`
+- Scratch merge onto `main` `8b5e5cb`: no conflicts, `Logic tests: 127 passed, 0 failed.`, checker, `validate_packages.py` and tooling tests clean. Adding `codex/gameplay` `83b57d3`: no conflicts, `164 passed, 0 failed.`
+- Temporary `BuildPlan` probe (not committed): seat B steps `PROBE errors=0`; with seat A, only FIX-A-1's 2 errors.
+- Temporary director probe (not committed): `PROBE alwaysOn: start=Assist afterProgress=None | adaptive: start=Assist afterProgress=None`.
+- Old-finding patterns in the diff: 0; Unity asset files committed: 0. Frozen refs `72be6d8` / `87bb494` unchanged.
+Not verified: any of the branch in Unity (compile, generated scenes, mixer, the 6 PlayMode tests) or on a headset.
+Next: Codex 2 merges `main` and fixes FIX-B-13…18; Codex 1 fixes FIX-A-1…4; owner decides contract v1.1.

@@ -103,10 +103,12 @@ A gate that cannot run is written as BLOCKED with its reason, never as PASS.
 
 | # | Task | Owner | Status |
 |---|---|---|---|
-| 1 | Contract review v1 (ACK or CONTRACT REQUESTs) | Codex 2, then Codex 1 | NOT STARTED: no log entries on GitHub |
-| 2 | B1 port onto `integration/xr-systems` (`REVIEW_XR_SYSTEMS_72be6d8.md` section 5) | Codex 2 | NOT STARTED |
-| 3 | A1 on `codex/gameplay` (`CODEX_A_BRIEF.md`) | Codex 1 | NOT STARTED: branch not created |
-| 4 | Integration logic, editor tooling, package pins, CI | Claude | DONE offline; Unity-side UNVERIFIED |
+| 1 | Contract review v1 (ACK or CONTRACT REQUESTs) | Codex 2, then Codex 1 | DONE: Codex 1 raised the Act 1 gate request; Claude answered with v1.1 (`GateId`/`GateReleased`); Codex 2 ACKed it (`CODEX_B_LOG.md`, `6bc4c42`) |
+| 2 | B1 port onto `integration/xr-systems` (`REVIEW_XR_SYSTEMS_72be6d8.md` section 5) | Codex 2 | DELIVERED `6bc4c42` (B1–B3), draft PR #3. Review `REVIEW_XR_SYSTEMS_6bc4c42.md`: FIX-B-13…18 open (3 MAJOR, 3 MINOR) |
+| 3 | A1 on `codex/gameplay` (`CODEX_A_BRIEF.md`) | Codex 1 | DELIVERED `83b57d3`, draft PR #1. Review `REVIEW_GAMEPLAY_83b57d3.md`: FIX-A-1…4 open |
+| 4 | Integration logic, editor tooling, package pins, CI | Claude | DONE offline, on `main` since `8b5e5cb` (PR #2); Unity-side UNVERIFIED |
 | 5 | First Unity run (section 6) | Claude, after owner step 1 | BLOCKED: no editor |
 | 6 | Design amendments D-1…D-4 (`DESIGN_RECONCILIATION.md`) | owner decides | WAITING |
+| 8 | Contract v1.1: `GateId`/`GateReleased` + `IExperienceDirector.IsGateReleased` (both seats ACK); proposed addition: shared physics layer names (INT-B-2) | owner decides | WAITING |
+| 9 | INT-B-1 NavMesh agent radius 0.25 m in `ProjectSettings`; INT-B-2 layers in `TagManager`; seat B PlayMode tests | Claude, at the first Unity run | BLOCKED: no editor |
 | 7 | Install Unity 6000.3.27f1 + Android; connect the headset and name its model; Meta XR Audio licence; invite `businessteen`; confirm Codex 1 is `lavanyahd`; repository public or private (asset rule 7) | owner | WAITING |
