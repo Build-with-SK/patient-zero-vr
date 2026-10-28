@@ -1,0 +1,7 @@
+{
+  "name": "PatientZero.Flow.Logic",
+  "references": [
+    "PatientZero.Core"
+  ],
+  "autoReferenced": true
+}
