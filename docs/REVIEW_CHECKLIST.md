@@ -11,8 +11,8 @@ Findings are written into the agent's log as `FIX-<seat>-<n>`. Each one has a fi
 
 ```bash
 python tools/logic_tests/run_logic_tests.py
-python tools/review/check_rules.py --seat A --base main --head codex/a-player-interaction
-python tools/review/check_rules.py --seat B --base main --head codex/b-ai-atmosphere
+python tools/review/check_rules.py --seat A --base origin/main --head origin/codex/gameplay
+python tools/review/check_rules.py --seat B --base origin/main --head origin/integration/xr-systems
 ```
 
 Any ERROR from either tool is a BLOCKER.

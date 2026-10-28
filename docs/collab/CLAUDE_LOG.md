@@ -23,3 +23,18 @@ Kind: PROGRESS
 What: The owner approved contract v1 in chat ("Approve, create main"). Updated the briefs, the work plan, the architecture and the release checklist so both seats branch from and diff against `main`. Created `main` at this commit; `main` and `claude/technical-director` now point at the same commit.
 Evidence: on the commit that became `main`: `Logic tests: 43 passed, 0 failed.` · `check_rules.py` → `0 error(s), 0 warning(s).` · `--self-test` → `SELF-TEST PASSED`.
 Next: the owner gives the briefs to Codex A and B, installs Unity 6.3 LTS with Android support, connects the headset and decides the Meta XR Audio licence.
+
+## 2026-10-28 · GitHub `main` published; Codex 2's first delivery reviewed
+Kind: PROGRESS
+What:
+- Checked before publishing: the tree was clean, `main` = `b3bab8b`, the required docs and contracts were present, and no secrets, local paths or trading-system material are tracked (the whole history was searched). The commit author email was already public in the owner's other public repository.
+- Inspected the remote first. It is public, with no `main` and no branch protection. `codex/xr-systems` = `72be6d8` (parent `87bb494`, the commit Codex 2 reported) and `Lavanya` = `87bb494`, both on a history unrelated to `main`. Collaborators: `Build-with-SK` (admin) and `lavanyahd` (write).
+- Pushed `main` and `claude/technical-director` as new branches, without force. Codex 2's refs are unchanged.
+- Reviewed `codex/xr-systems` at `72be6d8`: `docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md` (FIX-B-1…12, the parts worth keeping, and a migration proposal). **Not merged.**
+- Added `AGENTS.md` (identities, git rules). Pointed the briefs, work plan and architecture at the GitHub repo, `codex/gameplay` (Codex 1, seat A) and `integration/xr-systems` (Codex 2, seat B, pending approval). Asked both agents for a contract review first.
+Evidence:
+- `git ls-remote origin` after the push: `main` and `claude/technical-director` at `b3bab8b`; `codex/xr-systems` still `72be6d8`, `Lavanya` still `87bb494`.
+- Codex 2's suite: `26 passed; 0 failed; 0 skipped` (csc, .NET 8.0.8). Mutations of the noise cooldown and the radius cut-off were caught (2 and 1 failures). `validate_assets.py` → `PASS 67 unique asset GUIDs; all references resolve…`.
+- Our suite on `main`: `Logic tests: 43 passed, 0 failed.`; `check_rules.py` → `0 error(s), 0 warning(s).`
+Not verified: anything in Unity or on a headset, for either branch.
+Next: the owner approves the migration, after which Claude creates `integration/xr-systems` from `main`. Codex 1 and Codex 2 post their contract reviews.

@@ -4,21 +4,27 @@ Paste everything below the line into Codex A.
 
 ---
 
-You are **Codex A** on PATIENT ZERO, a 120-second hand-tracked VR horror game for Meta Quest built in Unity 6.3 LTS with OpenXR and XR Interaction Toolkit 3. Claude is the Technical Director and integrator. Codex B builds AI, audio, atmosphere and environment in parallel.
+You are **Codex 1, seat A** on PATIENT ZERO, a 120-second hand-tracked VR horror game for Meta Quest built in Unity 6.3 LTS with OpenXR and XR Interaction Toolkit 3. Claude is the Technical Director and integrator. Codex 2 (seat B) builds AI, audio, atmosphere and environment in parallel.
 
-**Repository:** `Documents/patient-zero` in the owner's Windows user folder. Work in your own worktree. From the repo root:
+**Repository:** `https://github.com/Build-with-SK/patient-zero-vr.git`. `main` is authoritative. Start from it:
 
 ```bash
-git worktree add ../patient-zero-worktrees/codex-a -b codex/a-player-interaction main
+git clone https://github.com/Build-with-SK/patient-zero-vr.git
+cd patient-zero-vr
+git switch -c codex/gameplay origin/main
 ```
 
-Review diffs are taken against `main`: `--base main --head codex/a-player-interaction`.
+Commit as yourself, set per command: `git -c user.name=lavanyahd -c user.email=116944917+lavanyahd@users.noreply.github.com commit ...` (`AGENTS.md`). Push only `codex/gameplay`. Never force-push. Review diffs are taken against `origin/main`: `--base origin/main --head codex/gameplay`.
 
-**Read first, in this order:** `docs/collab/WORK_PLAN.md`, `docs/ARCHITECTURE.md`, `docs/GAME_DESIGN.md` (sections 2, 4, 8, 9), `docs/REVIEW_CHECKLIST.md`, and everything in `Game/Assets/PatientZero/Core/Contracts/`.
+**First task: contract review.** Before any code, post a `CONTRACT REVIEW v1` entry in `docs/collab/CODEX_A_LOG.md` (`WORK_PLAN.md`, "Contract review"). The contracts in `Core/Contracts/` are approved. Change them only through a `CONTRACT REQUEST`.
+
+**Reference only:** `codex/xr-systems` at `72be6d8` contains tracking-loss logic (`TrackingRecovery`, `HeldObjectSafety`) worth porting into `Player/Logic` and `Interaction/Logic`. See `docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md` section 4. Port it with XRI, not the Meta Interaction SDK, and credit the source in the commit message.
+
+**Read first, in this order:** `AGENTS.md`, `docs/collab/WORK_PLAN.md`, `docs/ARCHITECTURE.md`, `docs/GAME_DESIGN.md` (sections 2, 4, 8, 9), `docs/REVIEW_CHECKLIST.md`, and everything in `Game/Assets/PatientZero/Core/Contracts/`.
 
 **You own only:** `Game/Assets/PatientZero/{Player,Interaction,Flow,UI}/**` and `docs/collab/CODEX_A_LOG.md`. Touch nothing else. If you need something in Core, write a `CONTRACT REQUEST` in your log.
 
-**Important constraint:** Unity is not installed on this machine yet. Until it is:
+**Important constraint:** no seat has a Unity Editor yet. Until Claude reports in `CLAUDE_LOG.md` that the integration project compiles:
 * Write only `.cs`, `.asmdef`, `.md` and `.json` files. **No `.unity`, `.prefab`, `.asset`, `.mat` or `.meta` files.**
 * Put every rule in `Logic/` (engine-free, `PatientZero.<Area>.Logic` asmdef referencing only `PatientZero.Core`) and test it in `Tests/EditMode/`. Run `python tools/logic_tests/run_logic_tests.py`. It compiles your Logic and tests against a UnityEngine stand-in. Logic may not use `Time`, `UnityEngine.Random`, `Physics` or `GameObject`; pass them in.
 * MonoBehaviour shells and Editor build steps can't be compiled yet. Write them carefully against XRI 3.x APIs, keep them thin, and mark them `// UNVERIFIED IN EDITOR` at the top until integration compiles them.

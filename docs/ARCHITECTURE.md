@@ -254,12 +254,15 @@ See section 7.
 
 ## 9. Branches, review and merging
 
-| Branch | Seat | Worktree (suggested) |
+Canonical repository: `https://github.com/Build-with-SK/patient-zero-vr.git` (public). Identities: `AGENTS.md`.
+
+| Branch | Seat | Notes |
 |---|---|---|
-| `claude/technical-director` | Claude | `Documents/patient-zero` (this checkout) |
-| `codex/a-player-interaction` | Codex A | `Documents/patient-zero-worktrees/codex-a` |
-| `codex/b-ai-atmosphere` | Codex B | `Documents/patient-zero-worktrees/codex-b` |
-| `main` | — | created 2026-10-28 from approved contract v1. Only Claude merges into it |
+| `main` | — | created 2026-10-28 from approved contract v1 and published to GitHub at `b3bab8b`. Only Claude merges into it |
+| `claude/technical-director` | Claude (`Build-with-SK`) | contracts, docs, tools, integration |
+| `codex/gameplay` | Codex 1, seat A (`lavanyahd`) | cut from `origin/main` |
+| `integration/xr-systems` | Codex 2, seat B (`businessteen`) | cut from `origin/main` once the owner approves the migration (`docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md`) |
+| `codex/xr-systems`, `Lavanya` | — | frozen records of Codex 2's first delivery (`72be6d8`, unrelated history). Never pushed to, rebased or deleted |
 
 **Ready for review:** the agent appends to its log `READY FOR REVIEW <commit>` with its logic-harness output and `check_rules.py --seat <X> --base main --head <branch>` output, both clean.
 
@@ -268,8 +271,8 @@ See section 7.
 **Merge order** (the seats share no files, so conflicts can only come from Core, Packages or ProjectSettings, which only Claude edits):
 
 1. `claude/technical-director` → `main` (done for contract v1 on 2026-10-28; later contract changes follow the same path)
-2. `codex/b-ai-atmosphere` → `main` (the world exists first)
-3. `codex/a-player-interaction` → `main`
+2. `integration/xr-systems` (seat B) → `main` (the world exists first)
+3. `codex/gameplay` (seat A) → `main`
 4. Integration commit by Claude: generated scenes, `.meta` files, package lock, settings
 
 After every merge: the logic harness, `check_rules.py`, and, once Unity exists, an Editor compile, EditMode and PlayMode tests, the scene build and its validation. A merge that fails any of these is reverted, not patched in place.

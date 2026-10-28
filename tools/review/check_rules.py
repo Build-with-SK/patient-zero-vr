@@ -4,7 +4,7 @@ Runs without Unity. It catches contract breaches early; it does not replace comp
 the Unity Editor or testing on a headset.
 
   python tools/review/check_rules.py                       # code rules on the working tree
-  python tools/review/check_rules.py --seat A --base main --head codex/a-player-interaction
+  python tools/review/check_rules.py --seat A --base origin/main --head codex/gameplay
   python tools/review/check_rules.py --self-test           # prove each rule fires
 
 Exit code 1 if any ERROR. Rules are documented in docs/REVIEW_CHECKLIST.md.

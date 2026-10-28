@@ -33,6 +33,7 @@ Last updated 2026-10-28 by Claude · Build under test: **none exists** · Repo c
 | 2026-10-28 | 1 | contract v1 | mutation check: dropped one channel from `GameEvents.ResetAll`; made `EventChannel` remove handlers immediately during a raise | both caught (`ResetAll_ClearsEveryChannel`, `Unsubscribe_EarlierHandlerDuringRaise_LaterHandlersStillRun`) |
 | 2026-10-28 | 2 | contract v1 | `python tools/review/check_rules.py --self-test` | every rule fired on its planted violation; 0 false positives from comments or strings |
 | 2026-10-28 | 2 | contract v1 | `python tools/review/check_rules.py` | 0 errors, 0 warnings |
+| 2026-10-28 | review | `codex/xr-systems` `72be6d8` (not on `main`) | Codex 2's portable suite: Roslyn csc against the .NET 8.0.8 runtime (C# 9, warnings as errors), run with `dotnet` | 26 passed, 0 failed, 0 skipped; 2 mutations caught; `validate_assets.py` PASS. **Not counted toward acceptance:** not on `main`, and Unity import was not run. Details: `docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md` |
 
 ## Feature acceptance (Mission 6)
 

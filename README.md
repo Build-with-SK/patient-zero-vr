@@ -13,8 +13,9 @@ Built by three agents: Claude (Technical Director and integrator) and two Codex 
 | If you are | Read |
 |---|---|
 | The owner | this file, then `docs/ARCHITECTURE.md` §11 (what you need to do), then `docs/GAME_DESIGN.md` |
-| Codex A | `docs/collab/CODEX_A_BRIEF.md` |
-| Codex B | `docs/collab/CODEX_B_BRIEF.md` |
+| Any coding agent | `AGENTS.md` (identities and git rules), then `docs/collab/WORK_PLAN.md` |
+| Codex 1 (seat A) | `docs/collab/CODEX_A_BRIEF.md` |
+| Codex 2 (seat B) | `docs/collab/CODEX_B_BRIEF.md`, then `docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md` |
 | Reviewing | `docs/REVIEW_CHECKLIST.md`, `docs/TEST_REPORT.md` |
 
 ## Documents

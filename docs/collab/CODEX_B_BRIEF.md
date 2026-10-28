@@ -4,21 +4,28 @@ Paste everything below the line into Codex B.
 
 ---
 
-You are **Codex B** on PATIENT ZERO, a 120-second hand-tracked VR horror game for Meta Quest built in Unity 6.3 LTS with OpenXR and XR Interaction Toolkit 3. Claude is the Technical Director and integrator. Codex A builds the player rig, interactions, game flow and UI in parallel.
+You are **Codex 2, seat B** on PATIENT ZERO, a 120-second hand-tracked VR horror game for Meta Quest built in Unity 6.3 LTS with OpenXR and XR Interaction Toolkit 3. Claude is the Technical Director and integrator. Codex 1 (seat A) builds the player rig, interactions, game flow and UI in parallel.
 
-**Repository:** `Documents/patient-zero` in the owner's Windows user folder. Work in your own worktree. From the repo root:
+**Repository:** `https://github.com/Build-with-SK/patient-zero-vr.git`. `main` is authoritative and holds approved contract v1.
+
+**Your first delivery** (`codex/xr-systems` at `72be6d8`) has been reviewed: `docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md`. Its 26 portable tests reproduce, and much of it is worth keeping. It is on a history unrelated to `main`, though, and it conflicts with contract v1 (FIX-B-1…12). That branch is now a **frozen record**: don't push to it, rebase it or delete it.
+
+**Your branch** is `integration/xr-systems`, cut from `main`. Claude creates it once the owner approves the migration. Then:
 
 ```bash
-git worktree add ../patient-zero-worktrees/codex-b -b codex/b-ai-atmosphere main
+git fetch origin
+git switch -c integration/xr-systems origin/integration/xr-systems
 ```
 
-Review diffs are taken against `main`: `--base main --head codex/b-ai-atmosphere`.
+Commit as yourself, set per command: `git -c user.name=businessteen -c user.email=192131711+businessteen@users.noreply.github.com commit ...` (`AGENTS.md`). Never force-push. Review diffs are taken against `origin/main`: `--base origin/main --head integration/xr-systems`.
 
-**Read first, in this order:** `docs/collab/WORK_PLAN.md`, `docs/ARCHITECTURE.md`, `docs/GAME_DESIGN.md` (all of it: you implement the timeline), `docs/ASSET_MANIFEST.md`, `docs/REVIEW_CHECKLIST.md`, and everything in `Game/Assets/PatientZero/Core/Contracts/`.
+**First task, now: contract review.** Post a `CONTRACT REVIEW v1` entry in `docs/collab/CODEX_B_LOG.md` (`WORK_PLAN.md`, "Contract review"). For each part of your first delivery you believe is better than contract v1, raise a `CONTRACT REQUEST` rather than keeping a parallel Core; review section 6 lists them. Then port the section 4 rows marked B into your folders as milestone B1. Each port commit names its source: `Port of <path>@72be6d8`.
+
+**Read first, in this order:** `AGENTS.md`, `docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md`, `docs/collab/WORK_PLAN.md`, `docs/ARCHITECTURE.md`, `docs/GAME_DESIGN.md` (all of it: you implement the timeline), `docs/ASSET_MANIFEST.md`, `docs/REVIEW_CHECKLIST.md`, and everything in `Game/Assets/PatientZero/Core/Contracts/`.
 
 **You own only:** `Game/Assets/PatientZero/{AI,Audio,Atmosphere,Environment}/**` and `docs/collab/CODEX_B_LOG.md`. Touch nothing else. If you need something in Core, write a `CONTRACT REQUEST` in your log.
 
-**Important constraint:** Unity is not installed on this machine yet. Until it is:
+**Important constraint:** no seat has a Unity Editor yet. Until Claude reports in `CLAUDE_LOG.md` that the integration project compiles:
 * Write only `.cs`, `.asmdef`, `.md` and `.json` files. **No `.unity`, `.prefab`, `.asset`, `.mat`, `.mixer` or `.meta` files.**
 * Put every rule in `Logic/` (engine-free, `PatientZero.<Area>.Logic` asmdef referencing only `PatientZero.Core`) and test it in `Tests/EditMode/`. Run `python tools/logic_tests/run_logic_tests.py`. Logic may not use `Time`, `UnityEngine.Random`, `Physics` or `GameObject`; pass time and a seeded `System.Random` in.
 * MonoBehaviour shells and Editor build steps can't be compiled yet. Write them carefully, keep them thin, and mark them `// UNVERIFIED IN EDITOR` until integration compiles them.

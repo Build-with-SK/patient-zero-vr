@@ -4,14 +4,20 @@ Owner of this file: Claude (Technical Director). **Read this before every task.*
 
 ## Seats
 
-| Seat | Agent | Branch | Owns | Log |
+| Seat | Agent (GitHub) | Branch | Owns | Log |
 |---|---|---|---|---|
-| TD | Claude | `claude/technical-director` | Core contracts, layout, Integration, Packages, ProjectSettings, docs, tools, merges, builds | `docs/collab/CLAUDE_LOG.md` |
-| A | Codex A | `codex/a-player-interaction` | `Player/`, `Interaction/`, `Flow/`, `UI/` under `Game/Assets/PatientZero/` | `docs/collab/CODEX_A_LOG.md` |
-| B | Codex B | `codex/b-ai-atmosphere` | `AI/`, `Audio/`, `Atmosphere/`, `Environment/` under `Game/Assets/PatientZero/` | `docs/collab/CODEX_B_LOG.md` |
+| TD | Claude (`Build-with-SK`) | `claude/technical-director` | Core contracts, layout, Integration, Packages, ProjectSettings, docs, tools, root files, CI, merges, builds | `docs/collab/CLAUDE_LOG.md` |
+| A | Codex 1 (`lavanyahd`) | `codex/gameplay` | `Player/`, `Interaction/`, `Flow/`, `UI/` under `Game/Assets/PatientZero/` | `docs/collab/CODEX_A_LOG.md` |
+| B | Codex 2 (`businessteen`) | `integration/xr-systems`, created from `main` once the owner approves the migration (`REVIEW_XR_SYSTEMS_72be6d8.md` section 5) | `AI/`, `Audio/`, `Atmosphere/`, `Environment/` under `Game/Assets/PatientZero/` | `docs/collab/CODEX_B_LOG.md` |
 
-Branch from `main`. The owner approved contract v1 on 2026-10-28, and `main` was created from it.
-Full ownership table: `docs/ARCHITECTURE.md` section 3.
+Branch from `origin/main`. The owner approved contract v1 on 2026-10-28, and `main` was created from it.
+Full ownership table: `docs/ARCHITECTURE.md` section 3. Identities and commit emails: `AGENTS.md`.
+
+## Repository
+
+* Canonical: `https://github.com/Build-with-SK/patient-zero-vr.git`. **`main` is authoritative.** It was published 2026-10-28 at `b3bab8b` (contract v1).
+* Frozen records (read them, never push to them): `codex/xr-systems` at `72be6d8`, Codex 2's first delivery, which is on a separate history; and `Lavanya` at `87bb494`, the same work with nothing added.
+* Never force-push. Never delete, reset or rebase a pushed branch. Only Claude merges into `main`.
 
 ## Invariants no seat may weaken
 
@@ -41,13 +47,28 @@ Evidence: (command + result lines, or "none")
 
 ```bash
 python tools/logic_tests/run_logic_tests.py
-python tools/review/check_rules.py --seat <A|B> --base <your base> --head <your branch>
+python tools/review/check_rules.py --seat <A|B> --base origin/main --head <your branch>
 ```
 
 **Review findings** come back in `CLAUDE_LOG.md` as `FIX-<seat>-<n>`, with a file and line, the defect, the exact fix, and a severity (BLOCKER/MAJOR/MINOR). Reply `FIX DONE` with the commit.
 
+## Contract review (requested 2026-10-28, first task for both Codex agents)
+
+Before writing new code, read everything in `Game/Assets/PatientZero/Core/Contracts/` and `docs/ARCHITECTURE.md` section 5. Then post one entry in your log:
+
+```
+## <date time> · Contract review v1
+Kind: CONTRACT REVIEW v1
+What: ACK, or one CONTRACT REQUEST per change (file, exact addition, why)
+Evidence: python tools/logic_tests/run_logic_tests.py → <result line>
+```
+
+No agent redefines a shared contract on its own: no second `PatientZero.Core`, no private event bus, ids or payloads. Claude answers each request in `CLAUDE_LOG.md`, and the owner approves any change before it merges.
+
 ## Current state (2026-10-28)
 
-* Contract v1 is **approved and on `main`**: 43 logic tests pass, the checker is clean, the docs are written.
-* **Waiting on the owner:** install Unity 6.3 LTS with Android support, connect the headset, and decide on the Meta XR Audio licence (`ARCHITECTURE.md` section 11).
-* **Seat A and seat B can start now** on their `Logic/` milestones. These need no Unity. See your brief.
+* Contract v1 is **approved and on GitHub `main`** (`b3bab8b`): 43 logic tests pass, and the checker is clean.
+* **Codex 2's first delivery** (`codex/xr-systems` at `72be6d8`) was reviewed and **not merged**. Its 26 portable tests reproduce. It is on an unrelated history and conflicts with contract v1 (FIX-B-1…12). The parts worth keeping and the migration plan are in `docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md`. **Waiting on the owner:** approval of the migration.
+* **Codex 1:** clone `main`, create `codex/gameplay`, do the contract review, then milestone A1 (`CODEX_A_BRIEF.md`).
+* **Codex 2:** do the contract review now. Code starts on `integration/xr-systems` once it exists.
+* **Waiting on the owner:** install Unity 6.3 LTS with Android support, connect the headset, decide on the Meta XR Audio licence (`ARCHITECTURE.md` section 11), and invite `businessteen` as a collaborator if Codex 2 should push under its own account.
