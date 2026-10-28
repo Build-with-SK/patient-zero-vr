@@ -69,3 +69,9 @@ Evidence:
 - `unity_batch.py validate` → `BLOCKED: Unity 6000.3.27f1 not found`, exit 2.
 Not verified: every Unity API call in `Integration/Editor/`, scene composition, desktop simulation, the APK, anything on a headset.
 Next: review Codex 1's draft PR #1 (`codex/gameplay`), then the PR for this work. Codex 2 has pushed nothing since `73a3b67`.
+
+## 2026-10-28 · Review of Codex 1 draft PR #1 (`codex/gameplay` `83b57d3`)
+Kind: REVIEW
+What: Not ready to merge. FIX-A-1 BLOCKER (`DesktopBuildStep` is an Interaction step building Bootstrap at 420, which breaks the composer's plan), FIX-A-2 MAJOR (`Unity.ugui` asmdef references; uGUI's assembly is `UnityEngine.UI`, to confirm at the first compile), FIX-A-3 MAJOR (mouse desktop mode collides with the XRI simulator; proposal: opt-in define `PZ_DESKTOP_MOUSE`), FIX-A-4 MINOR (camera lookup). Contract request "Act 1 door release": ACCEPTED IN PRINCIPLE as `GateId`/`GateReleased` + `IExperienceDirector.IsGateReleased` (contract v1.1). Awaits the owner and Codex 2's ACK; not merged. Full review: `docs/collab/REVIEW_GAMEPLAY_83b57d3.md`.
+Evidence: branch `Logic tests: 80 passed, 0 failed.`; `check_rules.py --seat A` 0 findings; scratch merge onto `05d16be` → `Logic tests: 107 passed, 0 failed.`, checker, packages and tooling clean; temporary probe through the real `BuildPlan` → `PROBE errors=2` (band, scene), both on DesktopBuildStep. The probe was deleted, never committed.
+Not verified: any of the branch in Unity or on a headset.
