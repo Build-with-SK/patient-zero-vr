@@ -52,6 +52,16 @@ namespace PatientZero.Core
         public const int FinalPatient = 4;  // Z4, Act 4, restrained by a 1.3 m chain
     }
 
+    /// <summary>
+    /// Scripted gates the director opens when a beat's conditions are met (contract v1.1).
+    /// Written by the ExperienceDirector (Codex B); read by the gated components (Codex A).
+    /// </summary>
+    public enum GateId
+    {
+        None = 0,
+        Act1Door = 1,  // all planks off and Z1 at least 4 m from the door window (GAME_DESIGN.md, Act 1 "Unlatch")
+    }
+
     public enum FailReason
     {
         None = 0,

@@ -28,6 +28,15 @@ namespace PatientZero.Core
         public static readonly EventChannel<ObjectiveCompleted> ObjectiveCompleted =
             new EventChannel<ObjectiveCompleted>(nameof(ObjectiveCompleted));
 
+        /// <summary>
+        /// Writer: ExperienceDirector (B). Reader: gated components (A), e.g. the Act 1 door.
+        /// Raised at most once per gate per act start. Every gate of an act is closed again at
+        /// its ActStarted, including a restore. A component enabled after the raise asks
+        /// IExperienceDirector.IsGateReleased instead of waiting for the event (contract v1.1).
+        /// </summary>
+        public static readonly EventChannel<GateReleased> GateReleased =
+            new EventChannel<GateReleased>(nameof(GateReleased));
+
         /// <summary>Writer: ExperienceDirector (B). Reader: puzzles and hint UI (A).</summary>
         public static readonly EventChannel<AssistChanged> AssistChanged =
             new EventChannel<AssistChanged>(nameof(AssistChanged));
@@ -80,6 +89,7 @@ namespace PatientZero.Core
             ActStarted.Clear();
             ObjectiveProgress.Clear();
             ObjectiveCompleted.Clear();
+            GateReleased.Clear();
             AssistChanged.Clear();
             Noise.Clear();
             ZombieAlert.Clear();
