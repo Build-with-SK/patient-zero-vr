@@ -1,0 +1,12 @@
+{
+  "name": "PatientZero.Interaction.Editor",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Interaction",
+    "PatientZero.Player",
+    "Unity.XR.Interaction.Toolkit"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

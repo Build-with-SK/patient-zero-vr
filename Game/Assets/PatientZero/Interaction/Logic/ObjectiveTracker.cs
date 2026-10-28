@@ -10,6 +10,7 @@ namespace PatientZero.Interaction.Logic
         public bool IsComplete(ObjectiveId id) { int index=Index(id);return index>=0 && complete[index]; }
         public bool Complete(ObjectiveId id)
         {
+            if(id==ObjectiveId.Act2_PowerRestored && (!IsComplete(ObjectiveId.Act2_ValveVented) || !IsComplete(ObjectiveId.Act2_CablePlugged)))return false;
             int index=Index(id);if(index<0 || complete[index])return false;
             complete[index]=true;Completed?.Invoke(id);
             if((id==ObjectiveId.Act2_ValveVented || id==ObjectiveId.Act2_CablePlugged) && IsComplete(ObjectiveId.Act2_ValveVented) && IsComplete(ObjectiveId.Act2_CablePlugged))Complete(ObjectiveId.Act2_PowerRestored);

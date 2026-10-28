@@ -32,6 +32,7 @@ namespace PatientZero.Flow.Logic
             if(State==GameState.Complete && next==GameState.Playing)return Restart(false);
             if(stage!=Stage.Idle){Emit(new FlowCommand(FlowCommandKind.Rejected,from:State,to:next));return false;}
             Transition(next,reason);
+            if(next==GameState.Calibration)Emit(new FlowCommand(FlowCommandKind.Fade,0,.15f));
             if(next==GameState.Playing && !loaded)BeginReload(ActId.Awakening,false,false);
             return true;
         }
@@ -69,7 +70,7 @@ namespace PatientZero.Flow.Logic
         private void Unload(){if(loaded){stage=Stage.Unload;Emit(new FlowCommand(FlowCommandKind.UnloadWard));}else Load();}
         public void WardUnloaded(){if(stage!=Stage.Unload)return;loaded=false;Load();}
         private void Load(){stage=Stage.Load;Emit(new FlowCommand(FlowCommandKind.LoadWard));}
-        public void WardLoaded(){if(stage!=Stage.Load)return;loaded=true;if(State==GameState.Paused && (!completeToPlaying || focusLostDuringLoad)){stage=Stage.AwaitResume;return;}FinishLoad();}
+        public void WardLoaded(){if(stage!=Stage.Load)return;loaded=true;if(focusLostDuringLoad && (State==GameState.Caught || State==GameState.Complete)){Transition(GameState.Playing);Pause();stage=Stage.AwaitResume;return;}if(State==GameState.Paused && (!completeToPlaying || focusLostDuringLoad)){stage=Stage.AwaitResume;return;}FinishLoad();}
         private void FinishLoad()
         {
             CurrentAct=reloadAct;stage=Stage.FadeIn;
@@ -81,7 +82,7 @@ namespace PatientZero.Flow.Logic
         {
             var from=State;if(!GameStateRules.CanTransition(from,next))throw new InvalidOperationException("Illegal internal flow transition");State=next;
             bool freeze=!GameStateRules.IsSimulationLive(next);
-            Emit(new FlowCommand(FlowCommandKind.TimeScale,freeze?0:1));Emit(new FlowCommand(FlowCommandKind.AudioPause,freeze?1:0));
+            Emit(new FlowCommand(FlowCommandKind.TimeScale,freeze?0:1));Emit(new FlowCommand(FlowCommandKind.AudioPause,next==GameState.Paused?1:0));
             Emit(new FlowCommand(FlowCommandKind.StateChanged,from:from,to:next,reason:reason));
         }
         private void Emit(FlowCommand command){if(CommandCount==commands.Length)throw new InvalidOperationException("Shell did not drain flow commands");commands[CommandCount++]=command;}
