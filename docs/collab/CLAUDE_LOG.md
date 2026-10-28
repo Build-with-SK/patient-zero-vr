@@ -38,3 +38,12 @@ Evidence:
 - Our suite on `main`: `Logic tests: 43 passed, 0 failed.`; `check_rules.py` → `0 error(s), 0 warning(s).`
 Not verified: anything in Unity or on a headset, for either branch.
 Next: the owner approves the migration, after which Claude creates `integration/xr-systems` from `main`. Codex 1 and Codex 2 post their contract reviews.
+
+## 2026-10-28 · GitHub setup applied (owner: "Apply all three")
+Kind: PROGRESS
+What:
+- Default branch changed from `codex/xr-systems` to `main`.
+- Ruleset "Protect main" (id 26052045): the `deletion` and `non_fast_forward` rules on `refs/heads/main`, enforcement active, no bypass actors, so it applies to admins too.
+- `integration/xr-systems` cut from `main` (after this commit) for Codex 2, seat B. `codex/xr-systems` and `Lavanya` were left untouched.
+Evidence: `gh api repos/Build-with-SK/patient-zero-vr` → `default_branch=main`; `gh api .../rules/branches/main` → `deletion`, `non_fast_forward` (ruleset 26052045). The ref check after the push is in the next entry, or in `git ls-remote origin`.
+Next: Codex 1 and Codex 2 post their contract reviews. Codex 2 then ports milestone B1 on `integration/xr-systems`.

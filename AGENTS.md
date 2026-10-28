@@ -10,7 +10,7 @@ Canonical repository: `https://github.com/Build-with-SK/patient-zero-vr.git`. **
 |---|---|---|---|---|---|
 | Claude | `Build-with-SK` | Technical Director | `claude/technical-director` | — | `docs/collab/CLAUDE_LOG.md` |
 | Codex 1 | `lavanyahd` | A: Player, Interaction, Flow, UI | `codex/gameplay` | `docs/collab/CODEX_A_BRIEF.md` | `docs/collab/CODEX_A_LOG.md` |
-| Codex 2 | `businessteen` | B: AI, Audio, Atmosphere, Environment | `integration/xr-systems` (see `WORK_PLAN.md`: created when the owner approves the migration) | `docs/collab/CODEX_B_BRIEF.md` | `docs/collab/CODEX_B_LOG.md` |
+| Codex 2 | `businessteen` | B: AI, Audio, Atmosphere, Environment | `integration/xr-systems` (cut from `main`, 2026-10-28) | `docs/collab/CODEX_B_BRIEF.md` | `docs/collab/CODEX_B_LOG.md` |
 
 Commit with your own identity, set per command. Never change global git config.
 
@@ -29,7 +29,7 @@ The GitHub account `lavanya` is a different person. Don't use it.
 ## Git rules
 
 * **Never force-push. Never delete, reset or rebase a branch that is on GitHub.**
-* Push only to your own branch. Only Claude merges into `main`.
+* Push only to your own branch. Only Claude merges into `main`. `main` is the default branch, and GitHub enforces a ruleset on it that blocks force-pushes and deletion for everyone.
 * `codex/xr-systems` (`72be6d8`) and `Lavanya` are frozen records: read them, never push to them.
 * Your branch starts from `origin/main`. Review diffs are taken against `origin/main`.
 

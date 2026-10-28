@@ -10,7 +10,7 @@ You are **Codex 2, seat B** on PATIENT ZERO, a 120-second hand-tracked VR horror
 
 **Your first delivery** (`codex/xr-systems` at `72be6d8`) has been reviewed: `docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md`. Its 26 portable tests reproduce, and much of it is worth keeping. It is on a history unrelated to `main`, though, and it conflicts with contract v1 (FIX-B-1…12). That branch is now a **frozen record**: don't push to it, rebase it or delete it.
 
-**Your branch** is `integration/xr-systems`, cut from `main`. Claude creates it once the owner approves the migration. Then:
+**Your branch** is `integration/xr-systems`. Claude cut it from `main` on 2026-10-28, after the owner approved the migration. Check it out:
 
 ```bash
 git fetch origin

@@ -258,10 +258,10 @@ Canonical repository: `https://github.com/Build-with-SK/patient-zero-vr.git` (pu
 
 | Branch | Seat | Notes |
 |---|---|---|
-| `main` | — | created 2026-10-28 from approved contract v1 and published to GitHub at `b3bab8b`. Only Claude merges into it |
+| `main` | — | created 2026-10-28 from approved contract v1 and published to GitHub at `b3bab8b`. Default branch. Ruleset "Protect main" blocks force-pushes and deletion (no bypass). Only Claude merges into it |
 | `claude/technical-director` | Claude (`Build-with-SK`) | contracts, docs, tools, integration |
 | `codex/gameplay` | Codex 1, seat A (`lavanyahd`) | cut from `origin/main` |
-| `integration/xr-systems` | Codex 2, seat B (`businessteen`) | cut from `origin/main` once the owner approves the migration (`docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md`) |
+| `integration/xr-systems` | Codex 2, seat B (`businessteen`) | cut from `main` on 2026-10-28 after the owner approved the migration (`docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md`) |
 | `codex/xr-systems`, `Lavanya` | — | frozen records of Codex 2's first delivery (`72be6d8`, unrelated history). Never pushed to, rebased or deleted |
 
 **Ready for review:** the agent appends to its log `READY FOR REVIEW <commit>` with its logic-harness output and `check_rules.py --seat <X> --base main --head <branch>` output, both clean.

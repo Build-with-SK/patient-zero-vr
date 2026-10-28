@@ -64,7 +64,7 @@ These are good and should not be lost. Each port commit names its source: `Port 
 | `TrackingRecovery` (0.25 s settle, cancel on switch or focus loss), `HeldObjectSafety` (release-velocity suppression) | Sound comfort and safety logic | `Player/Logic`, `Interaction/Logic` (reference for Codex 1; XRI instead of the Interaction SDK) | A |
 | `QuestPerformanceRecorder` | Useful capture helper | Integration perf tooling (reference for Claude) | TD |
 
-## 5. Migration proposal (awaits the owner)
+## 5. Migration proposal (the owner approved the recommended path on 2026-10-28; `integration/xr-systems` is created)
 
 **Recommended: a new integration branch from `main`.**
 
