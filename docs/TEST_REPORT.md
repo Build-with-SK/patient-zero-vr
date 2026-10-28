@@ -17,7 +17,7 @@ Last updated 2026-10-28 by Claude · Build under test: **none exists** · Repo c
 
 | Layer | Tool | Runs without Unity | Status today |
 |---|---|---|---|
-| 1. Contract and logic tests | `python tools/logic_tests/run_logic_tests.py` | yes | runs: 70/70 PASS (Core 43 + Integration 27; no seat code on `main` yet) |
+| 1. Contract and logic tests | `python tools/logic_tests/run_logic_tests.py` | yes | runs: 72/72 PASS (Core 45 + Integration 27; no seat code on `main` yet) |
 | 2. Static rules | `python tools/review/check_rules.py` (+ `--self-test`) | yes | runs: 0 findings; self-test PASS |
 | 2b. Package policy and tooling tests | `python tools/unity/validate_packages.py` (+ `--online`); `python -m unittest discover -s tools/unity -p "test_*.py"` | yes | runs: 0 errors; 24/24 PASS |
 | 2c. CI | GitHub Actions `checks` runs layers 1, 2 and 2b on every push and PR | yes | see the evidence log |
@@ -42,13 +42,15 @@ Last updated 2026-10-28 by Claude · Build under test: **none exists** · Repo c
 | 2026-10-28 | 2b | same | `validate_packages.py --online` (packages.unity.com) | 7 non-core pins published and support Unity 6000.x; 2 core pins fixed by the editor |
 | 2026-10-28 | — | same | Roslyn parse of the 5 Integration editor scripts with no Unity references | 0 syntax errors; 64 expected missing-type errors (CS0246/CS0234). **Not a compile check** |
 | 2026-10-28 | 3–6 | same | `python tools/unity/unity_batch.py validate` | BLOCKED, exit 2: `C:\Program Files\Unity\Hub\Editor\6000.3.27f1\Editor\Unity.exe` not found |
+| 2026-10-28 | 1 | contract v1.1 | `python tools/logic_tests/run_logic_tests.py` | 72 passed, 0 failed (new: `GateIds_AreUniqueAndPinned`, `GateReleased_CarriesItsGate`; `ResetAll_ClearsEveryChannel` now covers `GateReleased`) |
+| 2026-10-28 | 1–2 | contract v1.1 | mutations: dropped `GateReleased.Clear()` from `ResetAll`; planted an Interaction file raising `GateReleased` | both caught: `GateReleased is missing from GameEvents.ResetAll`; `event-writer … Interaction may not raise GameEvents.GateReleased (writers: Atmosphere)` |
 | 2026-10-28 | review | `codex/xr-systems` `72be6d8` (not on `main`) | Codex 2's portable suite: Roslyn csc against the .NET 8.0.8 runtime (C# 9, warnings as errors), run with `dotnet` | 26 passed, 0 failed, 0 skipped; 2 mutations caught; `validate_assets.py` PASS. **Not counted toward acceptance:** not on `main`, and Unity import was not run. Details: `docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md` |
 
 ## Quality gates (Full Production Director prompt, Mission 6)
 
 | # | Gate | Status | Evidence / blocker |
 |---|---|---|---|
-| Q-01 | Contract tests | PASS | layer 1: 70/70 on `claude/technical-director`; mutations caught |
+| Q-01 | Contract tests | PASS | layer 1: 72/72 with contract v1.1; mutations caught |
 | Q-02 | Compile (outside Unity) | PASS for Core and every `Logic/` assembly | Roslyn csc, C# 9, 0 warnings. Editor scripts: parse only, NOT TESTED as a compile |
 | Q-03 | Unity compile | BLOCKED | no Unity 6000.3.27f1 on any seat |
 | Q-04 | Scene assembly | BLOCKED | composer written (UNVERIFIED IN EDITOR); no seat build steps exist yet, so it is expected to fail with `layout-missing` and `service-count` |

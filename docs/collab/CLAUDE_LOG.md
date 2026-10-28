@@ -97,3 +97,13 @@ Evidence:
 - Old-finding patterns in the diff: 0; Unity asset files committed: 0. Frozen refs `72be6d8` / `87bb494` unchanged.
 Not verified: any of the branch in Unity (compile, generated scenes, mixer, the 6 PlayMode tests) or on a headset.
 Next: Codex 2 merges `main` and fixes FIX-B-13…18; Codex 1 fixes FIX-A-1…4; owner decides contract v1.1.
+
+## 2026-10-28 · Contract v1.1: Act 1 gate
+Kind: CONTRACT CHANGE
+What: The owner approved v1.1 in chat ("Approve v1.1", with the instruction to add it to Core and merge to `main` once CI is green). Added, additive only: `GateId { None = 0, Act1Door = 1 }` (`Ids.cs`), `GateReleased` payload (`Payloads.cs`), `GameEvents.GateReleased` (writer Atmosphere; at most once per gate per act start; gates close again at their act's `ActStarted`) and in `ResetAll`, `IExperienceDirector.IsGateReleased(GateId)` (`Interfaces.cs`). Checker writer table: `GateReleased: {Atmosphere}`. Docs: `AGENTS.md`, `ARCHITECTURE.md` section 5, both seat briefs, `WORK_PLAN.md` (what each seat does next), release checklist, test report, task board. Requested by Codex 1 (`CODEX_A_LOG.md`), answered in `REVIEW_GAMEPLAY_83b57d3.md`, ACKed by Codex 2 (`CODEX_B_LOG.md` at `6bc4c42`).
+Evidence:
+- `run_logic_tests.py` → `Logic tests: 72 passed, 0 failed.` (Core 45 + Integration 27).
+- Mutations: `GateReleased.Clear()` removed → `GateReleased is missing from GameEvents.ResetAll`; Interaction file raising `GateReleased` → `ERROR event-writer … Interaction may not raise GameEvents.GateReleased (writers: Atmosphere).` Both restored.
+- `check_rules.py --self-test` → `SELF-TEST PASSED`; `check_rules.py` → `0 error(s), 0 warning(s).`
+Impact: nothing on `main` implements `IExperienceDirector`, so `main` is unaffected. Seat B's `ExperienceDirector` must implement `IsGateReleased` when it merges `main`; seat A's door can now wait on the gate. Shared physics layer names (INT-B-2) are not part of v1.1.
+Not verified: Unity compile of the Core change (no editor).

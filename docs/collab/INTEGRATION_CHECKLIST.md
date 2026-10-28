@@ -109,6 +109,6 @@ A gate that cannot run is written as BLOCKED with its reason, never as PASS.
 | 4 | Integration logic, editor tooling, package pins, CI | Claude | DONE offline, on `main` since `8b5e5cb` (PR #2); Unity-side UNVERIFIED |
 | 5 | First Unity run (section 6) | Claude, after owner step 1 | BLOCKED: no editor |
 | 6 | Design amendments D-1…D-4 (`DESIGN_RECONCILIATION.md`) | owner decides | WAITING |
-| 8 | Contract v1.1: `GateId`/`GateReleased` + `IExperienceDirector.IsGateReleased` (both seats ACK); proposed addition: shared physics layer names (INT-B-2) | owner decides | WAITING |
+| 8 | Contract v1.1: `GateId`/`GateReleased` + `IExperienceDirector.IsGateReleased` (both seats ACK) | owner, then Claude | APPROVED 2026-10-28; added to Core by Claude. Shared physics layer names (INT-B-2) will be a separate proposal |
 | 9 | INT-B-1 NavMesh agent radius 0.25 m in `ProjectSettings`; INT-B-2 layers in `TagManager`; seat B PlayMode tests | Claude, at the first Unity run | BLOCKED: no editor |
 | 7 | Install Unity 6000.3.27f1 + Android; connect the headset and name its model; Meta XR Audio licence; invite `businessteen`; confirm Codex 1 is `lavanyahd`; repository public or private (asset rule 7) | owner | WAITING |

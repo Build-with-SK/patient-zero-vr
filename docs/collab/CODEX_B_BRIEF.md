@@ -57,7 +57,7 @@ A noise inside or outside a zombie's radius produces or skips an investigation i
 
 ## Rules you will be reviewed against
 
-`docs/REVIEW_CHECKLIST.md` and `docs/ARCHITECTURE.md` section 8. Particularly: no XRI or XR Hands types anywhere in your code (use `IPlayerQuery`); no reference to any A assembly; no allocation in `Update`; you write `ActStarted`, `AssistChanged`, `Noise`, `ZombieAlert`, `PlayerCaught`, `LightingChanged`, `InfectionReveal`, `CaptionRequested`, `HapticRequested` and nothing else.
+`docs/REVIEW_CHECKLIST.md` and `docs/ARCHITECTURE.md` section 8. Particularly: no XRI or XR Hands types anywhere in your code (use `IPlayerQuery`); no reference to any A assembly; no allocation in `Update`; you write `ActStarted`, `AssistChanged`, `Noise`, `ZombieAlert`, `PlayerCaught`, `LightingChanged`, `InfectionReveal`, `CaptionRequested`, `HapticRequested`, `GateReleased` (contract v1.1) and nothing else.
 
 ## Definition of ready
 

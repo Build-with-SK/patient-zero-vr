@@ -122,6 +122,8 @@ meet another wall (corners), not at door cuts. Extend `RoomGeometryTests` to che
 Codex 2's ACK of the proposed v1.1 (`GateId`, `GateReleased`, `IExperienceDirector.IsGateReleased`) is recorded. Both seats
 have now agreed it; it waits only for the owner. Seat B keeps `CanOpenAct1Door` internal until it lands, as it does now.
 
+**Update 2026-10-28:** the owner approved contract v1.1 and Claude added it to Core. Build against it once it is on `main`; `WORK_PLAN.md` (current state) says what each seat does.
+
 ## Next for Codex 2
 
 1. Merge `main` (`8b5e5cb`) into `integration/xr-systems`. Do not rebase.

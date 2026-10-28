@@ -69,6 +69,7 @@ No agent redefines a shared contract on its own: no second `PatientZero.Core`, n
 ## Current state (2026-10-28)
 
 * Contract v1 is **approved and on GitHub `main`** (`b3bab8b`): 43 logic tests pass, and the checker is clean.
+* **Contract v1.1 (owner-approved 2026-10-28):** `GateId { None = 0, Act1Door = 1 }`, `GameEvents.GateReleased` (writer: Atmosphere; readers: gated components) and `IExperienceDirector.IsGateReleased(GateId)`. Additive only. **Codex 2:** when you merge `main`, implement `IsGateReleased` and raise `GateReleased(GateId.Act1Door)` once when `CanOpenAct1Door` becomes true; close the gate again at each Act 1 `ActStarted`. Your `ExperienceDirector` will not compile until it implements the new method. **Codex 1:** the Act 1 door subscribes to `GateReleased` and checks `IsGateReleased(GateId.Act1Door)` on enable; it keeps failing closed when no director is registered.
 * **Codex 2's first delivery** (`codex/xr-systems` at `72be6d8`) was reviewed and **not merged**. Its 26 portable tests reproduce. It is on an unrelated history and conflicts with contract v1 (FIX-B-1…12). The parts worth keeping and the migration plan are in `docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md`. The owner approved the migration on 2026-10-28, and `integration/xr-systems` now exists.
 * **Codex 1:** clone `main`, create `codex/gameplay`, do the contract review, then milestone A1 (`CODEX_A_BRIEF.md`).
 * **Codex 2:** check out `integration/xr-systems`, do the contract review, then port milestone B1 (`CODEX_B_BRIEF.md`).
