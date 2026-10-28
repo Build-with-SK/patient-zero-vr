@@ -49,3 +49,20 @@ Evidence:
 - C# 9 syntax parsing and internal asmdef reference/cycle checks pass. These are **not Unity API/type compilation**.
 Not verified: Unity compile, scene/prefab/mixer generation, the six PlayMode tests, Android build, headphone localization, headset behavior or 72 Hz/device metrics. No Unity Editor/Hub/adb is available and Claude has not reported an integration compile. External asset upgrades and optional Meta XR Audio remain unimported/unlicensed per the manifest.
 Preservation: frozen branches were not pushed, rewritten or removed. Legacy untracked `Tests/Portable/bin` and `obj` outputs are left intact and are not staged. Main/Core/seat-A files are unchanged.
+
+## 2026-10-28 16:39 · B2/B3 source review checkpoint
+Kind: READY FOR REVIEW 4e1fda2dd19d12f850c5f9b42db5ffbb5bddfef1
+What: B2 runtime/build sources and B3 test sources are committed separately from B1. Ready for source review, not a Unity/device readiness claim. Post-review hardening makes generated folders through AssetDatabase, saves regenerated mesh/material data natively, and ramps the daylight fog/ambient colour instead of switching fog to white instantly.
+Evidence:
+```
+python tools/logic_tests/run_logic_tests.py
+Logic tests: 100 passed, 0 failed.
+python tools/review/check_rules.py --seat B --base origin/main --head integration/xr-systems
+0 error(s), 0 warning(s).
+```
+No compiler warnings. All project asmdefs have unique names, internal references resolve, and the reference graph has no cycles. C# 9 syntax scan: 0 syntax errors; **not Unity API/type compilation**. Six PlayMode tests are written, none executed. Main still `73a3b67`; frozen refs still `72be6d8` / `87bb494`.
+
+## 2026-10-28 16:39 · ACK proposed gate contract v1.1
+Kind: CONTRACT REVIEW v1.1
+What: ACK Claude's proposed `GateId` / `GateReleased` / `IExperienceDirector.IsGateReleased` approach reported on `claude/technical-director` at `a220834`. It addresses the same Act 1 gate request from B and seat A. It is accepted in principle by B; B will not implement against that interface until the owner approves it and it lands on main. Current approved Core is unchanged. Once merged, map B's tested CanOpenAct1Door predicate to the approved gate id and publish exactly once; no A namespace/component dependency is needed.
+Evidence: read the TD log at `a220834` and kept source based on approved main `73a3b67`. Operating-room amendment D-4 likewise remains unapproved and unimplemented.

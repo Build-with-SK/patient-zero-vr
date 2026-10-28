@@ -1,6 +1,5 @@
 // UNVERIFIED IN EDITOR
 using System;
-using System.IO;
 using System.Reflection;
 using PatientZero.Atmosphere;
 using PatientZero.Core;
@@ -50,7 +49,7 @@ namespace PatientZero.Audio.Editor
             var master = controller?.GetProperty("masterGroup", flags | BindingFlags.Instance);
             if (factory == null || createGroup == null || add == null || master == null)
                 throw new InvalidOperationException("Unity audio mixer factory API unavailable; integration must generate the five groups through the Unity Editor.");
-            Directory.CreateDirectory(Path.Combine(Application.dataPath, "PatientZero/Audio/Generated"));
+            WardPrimitives.GeneratedFolder("Audio");
             var mixer = (AudioMixer)factory.Invoke(null, new object[] { path });
             object parent = master.GetValue(mixer);
             foreach (string name in new[] { "World", "Voice", "Ambience", "Music", "UI" })

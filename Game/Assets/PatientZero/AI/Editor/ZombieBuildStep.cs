@@ -1,6 +1,5 @@
 // UNVERIFIED IN EDITOR
 using System;
-using System.IO;
 using PatientZero.Atmosphere;
 using PatientZero.Core;
 using PatientZero.Environment.Editor;
@@ -33,8 +32,7 @@ namespace PatientZero.AI.Editor
                 var animation = actor.AddComponent<ZombieAnimationController>(); Mannequin(actor.transform, animation, material);
                 var shell = actor.AddComponent<ZombieAgentShell>(); shell.ZombieId = id; shell.Animation = animation;
                 shell.Head = animation.Head; shell.FootEmitter = animation.FootEmitter; actors[i] = shell;
-                string folder = "Assets/PatientZero/AI/Generated";
-                Directory.CreateDirectory(Path.Combine(Application.dataPath, "PatientZero/AI/Generated"));
+                string folder = WardPrimitives.GeneratedFolder("AI");
                 PrefabUtility.SaveAsPrefabAsset(actor, folder + "/Zombie_" + id + ".prefab");
             }
             director.Zombies = actors;
@@ -73,14 +71,16 @@ namespace PatientZero.AI.Editor
             }
             UnityEngine.Object.DestroyImmediate(cube);
             const string path = "Assets/PatientZero/AI/Generated/Mannequin.asset";
-            Directory.CreateDirectory(Path.Combine(Application.dataPath, "PatientZero/AI/Generated"));
+            WardPrimitives.GeneratedFolder("AI");
             var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(path);
             if (!mesh)
             {
-                mesh = new Mesh { name = "GeneratedSevenBonePatient" }; mesh.vertices = vertices; mesh.triangles = triangles;
-                mesh.boneWeights = weights; mesh.bindposes = bindposes; mesh.RecalculateNormals(); mesh.RecalculateBounds();
+                mesh = new Mesh { name = "GeneratedSevenBonePatient" };
                 AssetDatabase.CreateAsset(mesh, path);
             }
+            mesh.Clear(); mesh.vertices = vertices; mesh.triangles = triangles;
+            mesh.boneWeights = weights; mesh.bindposes = bindposes; mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            EditorUtility.SetDirty(mesh); AssetDatabase.SaveAssets();
             var skin = visual.gameObject.AddComponent<SkinnedMeshRenderer>(); skin.sharedMesh = mesh; skin.sharedMaterial = material;
             skin.bones = bones; skin.rootBone = body; skin.enabled = false;
             skin.localBounds = new Bounds(Vector3.up, new Vector3(2, 3, 2));

@@ -16,6 +16,7 @@ namespace PatientZero.Atmosphere
         private LightingPreset target;
         private ExperienceSettings settings = ExperienceSettings.Defaults;
         private float entered, fromAmbient, fromGain, gain;
+        private Color fromFog, fromAmbientColour;
         private readonly LocalLightPulse pulse = new LocalLightPulse();
         private float beaconUntil;
         private static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
@@ -32,6 +33,7 @@ namespace PatientZero.Atmosphere
         public void SetState(LightingState state)
         {
             fromAmbient = RenderSettings.ambientIntensity; fromGain = gain; current = state; entered = Time.time;
+            fromFog = RenderSettings.fogColor; fromAmbientColour = RenderSettings.ambientLight;
             pulse.Reset();
             target = LightingPresets.Get(state, settings.DarknessBrightness01);
             RenderSettings.fog = true; RenderSettings.fogMode = target.ExponentialFog ? FogMode.Exponential : FogMode.Linear;
@@ -49,7 +51,8 @@ namespace PatientZero.Atmosphere
             gain = Mathf.Lerp(fromGain, target.FixtureGain, blend);
             bool red = current == LightingState.EmergencyRed;
             Color colour = red ? new Color(1, .08f, .05f) : current == LightingState.ExitDaylight ? Color.white : new Color(.65f, .8f, 1);
-            RenderSettings.ambientLight = colour; RenderSettings.fogColor = colour * (current == LightingState.ExitDaylight ? 1 : .05f);
+            RenderSettings.ambientLight = Color.Lerp(fromAmbientColour, colour, blend);
+            RenderSettings.fogColor = Color.Lerp(fromFog, colour * (current == LightingState.ExitDaylight ? 1 : .05f), blend);
             for (int i = 0; i < Fixtures.Length; i++)
             {
                 var fixture = Fixtures[i]; if (!fixture) continue;

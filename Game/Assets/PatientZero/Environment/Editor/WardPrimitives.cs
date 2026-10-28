@@ -1,6 +1,5 @@
 // UNVERIFIED IN EDITOR
 using System;
-using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -11,8 +10,7 @@ namespace PatientZero.Environment.Editor
     {
         public static Material Material(string name, Color colour)
         {
-            const string folder = "Assets/PatientZero/Environment/Generated";
-            Directory.CreateDirectory(Path.Combine(Application.dataPath, "PatientZero/Environment/Generated"));
+            string folder = GeneratedFolder("Environment");
             string path = folder + "/" + name + ".mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (!material)
@@ -21,7 +19,19 @@ namespace PatientZero.Environment.Editor
                 if (!shader) throw new InvalidOperationException("A supported render pipeline shader is required");
                 material = new Material(shader); AssetDatabase.CreateAsset(material, path);
             }
-            material.color = colour; return material;
+            material.color = colour; EditorUtility.SetDirty(material); AssetDatabase.SaveAssets(); return material;
+        }
+        /// <summary>Creates native Unity folder metadata through AssetDatabase before saving generated assets.</summary>
+        public static string GeneratedFolder(string area)
+        {
+            string folder = "Assets";
+            foreach (string part in new[] { "PatientZero", area, "Generated" })
+            {
+                string child = folder + "/" + part;
+                if (!AssetDatabase.IsValidFolder(child)) AssetDatabase.CreateFolder(folder, part);
+                folder = child;
+            }
+            return folder;
         }
         public static GameObject Box(Transform parent, string name, Vector3 position, Vector3 size, Material material, bool collider = true)
         {
