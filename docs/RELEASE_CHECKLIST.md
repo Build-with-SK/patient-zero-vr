@@ -7,7 +7,10 @@ A release candidate is approved only when every **critical** box is checked and 
 ## Gate 0: Project exists (owner actions, `ARCHITECTURE.md` section 11)
 
 - [ ] Unity 6.3 LTS with Android Build Support installed; owner signed in
-- [ ] `Game/` opened as a project; packages pinned; `Packages/` and `ProjectSettings/` committed by Claude
+- [ ] `Game/` opened as a project with 6000.3.27f1; packages resolved; generated `ProjectSettings/`, `packages-lock.json` and `Assets/XR/` committed by Claude
+- [x] Editor and package versions pinned and checked against official sources: `ProjectVersion.txt`, `Packages/manifest.json`, `tools/unity/package_policy.json` (2026-10-28; `validate_packages.py --online` PASS)
+- [x] Offline CI (`.github/workflows/checks.yml`) runs the rules, logic, package and tooling checks on every push and PR
+- [ ] Owner decisions on design amendments D-1…D-4 (`docs/collab/DESIGN_RECONCILIATION.md`) and on keeping the repository public (asset rule 7)
 - [ ] Headset in developer mode; `adb devices` lists it; model recorded
 - [ ] Meta XR Audio licence accepted, or the built-in fallback chosen
 - [x] Contract v1 approved and `main` created (owner approval in chat, 2026-10-28)
@@ -29,7 +32,8 @@ A release candidate is approved only when every **critical** box is checked and 
 
 ## Gate 2: Android development build
 
-- [ ] Batchmode build succeeds: arm64, IL2CPP, Vulkan, multiview, OpenXR with Meta Quest feature
+- [ ] Batchmode build succeeds (`python tools/unity/unity_batch.py build-apk`): arm64, IL2CPP, Vulkan, multiview, OpenXR with Meta Quest feature, min API 32 / target API 34
+- [ ] `unity_batch.py validate` clean: no forbidden package resolved, OpenXR project validation has 0 errors
 - [ ] The APK manifest contains the hand-tracking permission and feature, and no unwanted permissions (internet off unless needed)
 - [ ] Installs and launches on the headset (`adb install`, app reaches Calibration). Evidence: log + screenshot
 

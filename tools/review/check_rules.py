@@ -33,7 +33,8 @@ OWNERSHIP = {
     "B": [f"{PZ}/{a}/*" for a in SEAT_B_AREAS] + ["docs/collab/CODEX_B_LOG.md"],
     "claude": [
         f"{PZ}/Core/*", f"{PZ}/Integration/*", "Game/Packages/*", "Game/ProjectSettings/*",
-        "tools/*", "docs/*", "README.md", ".gitignore", ".gitattributes", "*.meta",
+        "Game/Assets/XR/*",  # XR Plug-in Management settings, written by QuestBuild.Configure
+        "tools/*", "docs/*", "README.md", "AGENTS.md", ".gitignore", ".gitattributes", ".github/*", "*.meta",
     ],
 }
 

@@ -27,15 +27,17 @@ The owner actions that unblock the rest are in section 11.
 
 | Decision | Choice | Why | Revisit if |
 |---|---|---|---|
-| Engine | **Unity 6.3 LTS** (6000.3.x). The exact patch gets pinned by `ProjectVersion.txt` when the project is first opened | The current LTS for Quest 2/3/3S/Pro. XR hand simulation in the Editor recommends 6.3 or newer | A newer LTS ships before integration starts |
-| XR runtime | **Unity OpenXR plugin** + **OpenXR: Meta** (`com.unity.xr.meta-openxr`) | Meta's recommended path. The Oculus XR plugin is deprecated and marked for removal from Unity 6.5 | — |
-| Interaction | **XR Interaction Toolkit 3.x (≥ 3.5)** + **XR Hands (≥ 1.8)** + Input System | One stack covers hands and controllers (XR Input Modality Manager switches between them). It includes Editor hand simulation for testing without a headset, and every package comes from the Unity registry | On-device hand testing of the valve or cable fails the acceptance bar. Then evaluate the Meta Interaction SDK **for those two interactables only** |
+| Engine | **Unity 6.3 LTS, pinned to 6000.3.27f1** (revision `672d562a42a7`) in `ProjectVersion.txt` and `tools/unity/package_policy.json` (checked 2026-10-28) | The current LTS for Quest 2/3/3S/Pro. XR hand simulation in the Editor recommends 6.3 or newer | A newer LTS ships before integration starts |
+| XR runtime | **Unity OpenXR plugin** 1.19.0 + **OpenXR: Meta** (`com.unity.xr.meta-openxr`) 2.7.0 + XR Management 4.7.0 | Meta's recommended path. The Oculus XR plugin is deprecated and marked for removal from Unity 6.5 | — |
+| Interaction | **XR Interaction Toolkit 3.x (≥ 3.5; pinned 3.7.0)** + **XR Hands (≥ 1.8; pinned 1.10.0)** + Input System 1.20.1 | One stack covers hands and controllers (XR Input Modality Manager switches between them). It includes Editor hand simulation for testing without a headset, and every package comes from the Unity registry | On-device hand testing of the valve or cable fails the acceptance bar. Then evaluate the Meta Interaction SDK **for those two interactables only** |
 | Spatial audio | **Meta XR Audio SDK** spatializer (free; Meta SDK licence the owner must accept). Fallback: Unity built-in 3D panning | Gives HRTF on Quest. The fallback keeps the game playable if the package is rejected | Licence review fails |
 | Rendering | URP, Forward, Vulkan, multiview, linear colour, MSAA 4×, HDR off, no post-processing, fixed foveated rendering | The standard Quest configuration | — |
 | Lighting | **Realtime only, no shadows.** At most 6 lights in the Ward and 3 affecting any one object. Ambient and fog set through `RenderSettings` | Surge, blackout and emergency-red must switch at runtime. Switching baked lightmaps is out of scope for v1 | The performance budget is missed. Then bake static lighting and add lightmap scenarios |
 | Navigation | AI Navigation package (`NavMeshSurface`), baked by a scene build step | — | — |
 | Device | Quest 3/3S primary, Quest 2 best effort, 72 Hz | The owner's headset model is unknown | The owner names the device |
-| Android | arm64, IL2CPP, minimum API level set by the template and Meta's current requirement | Store and runtime requirements | — |
+| Android | arm64, IL2CPP, **min API 32, target API 34** (`QuestBuildConfig`) | Meta: Android 14 (API 34) required for apps from 1 March 2026; API 32 is the floor in Meta's manifest guidance | Meta raises the target API |
+
+Every pin, with its source, is in `docs/collab/INTEGRATION_CHECKLIST.md` section 2. `python tools/unity/validate_packages.py` fails CI if the manifest drifts from it.
 
 **Not used:** the Meta XR Core SDK or Interaction SDK (`OVR*`, `Oculus.*`, `Meta.XR.*` outside audio), Asset Store packages, and paid assets. `tools/review/check_rules.py` rejects any SDK namespace from that list.
 
@@ -297,7 +299,7 @@ git config merge.unityyamlmerge.driver "'<Unity install>/Editor/Data/Tools/Unity
 | # | Action | Who | Unblocks |
 |---|---|---|---|
 | 1 | Install Unity Hub and **Unity 6.3 LTS** with **Android Build Support** (OpenJDK, Android SDK and NDK). Sign in to your Unity account (I can't create accounts or sign in for you) | Owner | All Editor compilation, scenes, builds |
-| 2 | Open `Game/` as a project: Unity Hub → *Add project from disk* → `Documents/patient-zero/Game` → choose 6000.3. If Hub refuses because `ProjectSettings` is missing, run `Unity.exe -projectPath "<path>\Game"` once. Then tell Claude, who adds the packages, writes the composer and commits `Packages/` and `ProjectSettings/` | Owner, then Claude | Integration |
+| 2 | Open `Game/` as a project: Unity Hub → *Add project from disk* → `Documents/patient-zero/Game`. Hub reads 6000.3.27f1 from `ProjectVersion.txt`; packages are already pinned in `Packages/manifest.json` and the composer is written. Then tell Claude, who runs `docs/collab/INTEGRATION_CHECKLIST.md` section 6 and commits the generated settings | Owner, then Claude | Integration |
 | 3 | Headset: enable developer mode (Meta Horizon app), connect over USB, allow USB debugging. `adb devices` must list it | Owner | Every device check |
 | 4 | Say which headset model you have (Quest 2, 3 or 3S) | Owner | Performance targets |
 | 5 | Read and accept the Meta XR Audio SDK licence, or choose the built-in panning fallback | Owner | Spatial audio |
