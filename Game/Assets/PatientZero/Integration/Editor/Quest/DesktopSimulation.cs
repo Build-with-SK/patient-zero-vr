@@ -1,13 +1,10 @@
 // UNVERIFIED IN EDITOR: written 2026-10-28 before a Unity 6.3 Editor existed on any seat. First compiled at integration.
 // XR Interaction Toolkit types are reached by name so a renamed field is a reported warning, not a compile error.
 using System;
-using System.Collections.Generic;
 using PatientZero.Integration.Editor;
 using UnityEditor;
-using UnityEditor.PackageManager.UI;
 using UnityEngine;
 using Object = UnityEngine.Object;
-using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
 namespace PatientZero.Integration.Editor.Quest
 {
@@ -63,42 +60,7 @@ namespace PatientZero.Integration.Editor.Quest
 
         private static void ImportSamples(EditorReport report)
         {
-            string version = null;
-            foreach (PackageInfo info in PackageInfo.GetAllRegisteredPackages())
-            {
-                if (info.name == XriPackage) version = info.version;
-            }
-
-            if (version == null)
-            {
-                report.Error("simulation: " + XriPackage + " is not installed.");
-                return;
-            }
-
-            var found = new HashSet<string>(StringComparer.Ordinal);
-            foreach (Sample sample in Sample.FindByPackage(XriPackage, version))
-            {
-                if (Array.IndexOf(Samples, sample.displayName) < 0) continue;
-                found.Add(sample.displayName);
-                if (sample.isImported)
-                {
-                    report.Pass("sample '" + sample.displayName + "' already imported");
-                }
-                else if (sample.Import(Sample.ImportOptions.HideImportWindow))
-                {
-                    report.Pass("sample '" + sample.displayName + "' imported to " + sample.importPath);
-                }
-                else
-                {
-                    report.Error("simulation: importing sample '" + sample.displayName + "' failed.");
-                }
-            }
-
-            foreach (string wanted in Samples)
-            {
-                if (!found.Contains(wanted)) report.Error("simulation: XRI " + version + " has no sample named '" + wanted + "'.");
-            }
-
+            foreach (string sample in Samples) PackageSamples.Import(report, XriPackage, sample, required: true);
             AssetDatabase.Refresh();
         }
 

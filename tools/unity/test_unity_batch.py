@@ -60,6 +60,49 @@ class UnityBatchTests(unittest.TestCase):
             self.assertIn(f"class {cls}", source, command)
             self.assertRegex(source, rf"public static void {member}\(\)", command)
 
+    def test_open_resolves_and_quits(self):
+        cmd = ub.command_line(Path("Unity.exe"), "open", Path("l.log"), Path("r.xml"))
+        self.assertIn("-quit", cmd)
+        self.assertNotIn("-executeMethod", cmd)
+        self.assertNotIn("-runTests", cmd)
+
+    def test_playmode_command_and_results_file(self):
+        cmd = ub.command_line(Path("Unity.exe"), "playmode-tests", Path("l.log"), ub.results_path("playmode-tests"))
+        self.assertEqual(cmd[cmd.index("-testPlatform") + 1], "PlayMode")
+        self.assertEqual(ub.results_path("playmode-tests").name, "playmode-results.xml")
+        self.assertEqual(ub.results_path("editmode-tests").name, "editmode-results.xml")
+
+    def test_first_run_order(self):
+        self.assertEqual(set(ub.FIRST_RUN) - set(ub.COMMANDS), set())
+        order = ub.FIRST_RUN
+        self.assertEqual(order[0], "open")
+        self.assertLess(order.index("import-samples"), order.index("compose"))  # samples compile before compose uses them
+        self.assertLess(order.index("build-apk"), order.index("validate"))      # validate reads what configure wrote
+        self.assertTrue({"configure", "build-apk", "validate"} <= ub.NEEDS_ANDROID)
+
+    def test_android_module_paths(self):
+        win = ub.android_module_paths(Path(r"C:\Program Files\Unity\Hub\Editor\6000.3.27f1\Editor\Unity.exe"))
+        self.assertEqual(win[0], Path(r"C:\Program Files\Unity\Hub\Editor\6000.3.27f1\Editor\Data\PlaybackEngines\AndroidPlayer"))
+        mac = ub.android_module_paths(Path("/Applications/Unity/Hub/Editor/6000.3.27f1/Unity.app/Contents/MacOS/Unity"))
+        self.assertIn(Path("/Applications/Unity/Hub/Editor/6000.3.27f1/PlaybackEngines/AndroidPlayer"), mac)
+
+    def test_overall_status(self):
+        def steps(*statuses):
+            return [{"status": s} for s in statuses]
+        self.assertEqual(ub.overall(steps("PASS", "PASS")), 0)
+        self.assertEqual(ub.overall(steps("PASS", "BLOCKED")), ub.BLOCKED)
+        self.assertEqual(ub.overall(steps("PASS", "FAIL", "BLOCKED")), 1)
+        self.assertEqual(ub.overall(steps("BLOCKED", "SKIPPED")), ub.BLOCKED)  # licence missing: nothing after open ran
+        self.assertEqual(ub.overall(steps("FAIL", "SKIPPED")), 1)
+
+    def test_compile_errors_and_licence(self):
+        log = ("Assets/A.cs(3,7): error CS0246: The type or namespace name 'Foo' could not be found\n"
+               "Assets/A.cs(3,7): error CS0246: The type or namespace name 'Foo' could not be found\n"
+               "warning CS0168: unused\n")
+        self.assertEqual(len(ub.compile_errors(log)), 1)
+        self.assertIsNone(ub.licence_problem(log))
+        self.assertIsNotNone(ub.licence_problem("[Licensing::Module] Error: No valid Unity Editor license found.\n"))
+
     def test_pz_lines(self):
         log = "noise\n[PZ] PASS  saved Ward\nUnityEngine.Debug:Log\n2026 [PZ] FAIL  layout-missing: x\n"
         self.assertEqual(ub.pz_lines(log), ["PASS  saved Ward", "FAIL  layout-missing: x"])

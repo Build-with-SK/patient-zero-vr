@@ -40,6 +40,14 @@ namespace PatientZero.Integration.Editor
         public static EditorReport BuildAll()
         {
             var report = new EditorReport("compose");
+            // Preconditions, checked before any scene is touched (round 2 integration).
+            if (!PackageSamples.RequiredAreImported(report) | !NavigationSettings.EnsureZombieAgentRadius(report))
+            {
+                report.Line("Preconditions failed: no scene was touched.");
+                report.Finish();
+                return report;
+            }
+
             var methods = new Dictionary<string, MethodInfo>(StringComparer.Ordinal);
             BuildPlan plan = BuildPlan.Create(DiscoverSteps(methods, report));
             ListPlan(plan, report);
