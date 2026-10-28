@@ -16,13 +16,17 @@ namespace PatientZero.Environment.Logic
     {
         public static DressingBox[] Create()
         {
-            RoomRect theatre = default;
-            foreach (var room in WardLayout.Rooms) if (room.Id == "SupplyRoom") theatre = room;
+            RoomRect theatre = default, patient = default;
+            foreach (var room in WardLayout.Rooms)
+            { if (room.Id == "SupplyRoom") theatre = room; if (room.Id == "IsolationB7") patient = room; }
+            var bed = new Vector3(patient.MinX + .65f, .65f, patient.MinZ + .8f);
             // Keep the doorway-to-spawn route clear; static furniture occupies the west perimeter only.
             var table = new Vector3(theatre.MinX + .55f, .85f, (theatre.MinZ + theatre.MaxZ) / 2);
             var cabinet = new Vector3(theatre.MaxX - .45f, 1, theatre.MinZ + .3f);
             return new[]
             {
+                new DressingBox("PatientBed", bed, new Vector3(.8f, .12f, 1.4f)),
+                new DressingBox("PatientMattress", bed + Vector3.up * .1f, new Vector3(.75f, .1f, 1.35f), false),
                 new DressingBox("OperatingTable", table, new Vector3(.8f, .15f, 1.7f)),
                 new DressingBox("OperatingTableBase", table - Vector3.up * .45f, new Vector3(.35f, .75f, .8f)),
                 new DressingBox("SurgicalLampArm_Unlit", table + Vector3.up * 1.5f, new Vector3(.05f, .5f, .05f), false),

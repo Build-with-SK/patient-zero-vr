@@ -85,5 +85,25 @@ namespace PatientZero.Environment.Tests
                         Assert.IsTrue(covered, room.Id + " edge " + edge + " t=" + t);
                     }
         }
+        [Test] public void ColliderLongitudinalExtentNeverShrinksDoorOpenings()
+        {
+            var geometry = new RoomGeometry();
+            foreach (var span in geometry.Walls)
+            {
+                var size = span.ColliderSize;
+                Assert.AreEqual(span.Length, System.Math.Max(size.x, size.z), .001);
+                foreach (var door in geometry.Doors)
+                {
+                    bool horizontal = System.Math.Abs(span.B.x - span.A.x) > .001;
+                    if (horizontal != door.AlongX) continue;
+                    float axis = horizontal ? span.A.z : span.A.x;
+                    if (System.Math.Abs(axis - (horizontal ? door.Centre.z : door.Centre.x)) > .001) continue;
+                    float centre = horizontal ? door.Centre.x : door.Centre.z;
+                    float min = System.Math.Min(horizontal ? span.A.x : span.A.z, horizontal ? span.B.x : span.B.z);
+                    float max = System.Math.Max(horizontal ? span.A.x : span.A.z, horizontal ? span.B.x : span.B.z);
+                    Assert.IsTrue(max <= centre - door.Width / 2 + .001 || min >= centre + door.Width / 2 - .001);
+                }
+            }
+        }
     }
 }

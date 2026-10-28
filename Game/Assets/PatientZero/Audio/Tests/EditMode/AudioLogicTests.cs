@@ -132,5 +132,16 @@ namespace PatientZero.Audio.Tests
         }
         [Test] public void MissingCueHasNoDefinitionAndNoneIsSilent()
         { Assert.IsFalse(CueTable.TryGet((CueId)999999, out _)); Assert.AreEqual(0, Row(CueId.None).NoiseRadius); }
+        [Test] public void GuidanceCurvesCoverApprovedWardAnchorsAndSilenceBeyondTheirRange()
+        {
+            var beacon = Row(CueId.BeaconChirp);
+            foreach (var p in WardLayout.CriticalPath)
+                if (p.Act == ActId.Darkness)
+                    Assert.Greater(beacon.GainAt(Vector3.Distance(p.Position, WardLayout.A3_Beacon.Position)), 0, p.Id);
+            var alarm = Row(CueId.AlarmKlaxon);
+            Assert.Greater(alarm.GainAt(Vector3.Distance(WardLayout.A4_Release.Position, WardLayout.A4_ExitDoor.Position)), 0);
+            foreach (var p in WardLayout.Points)
+                Assert.AreEqual(0, beacon.GainAt(beacon.Max + Vector3.Distance(p.Position, WardLayout.A3_Beacon.Position) + 1));
+        }
     }
 }

@@ -76,14 +76,19 @@ namespace PatientZero.Environment.Editor
         {
             var surface = WardPrimitives.FindInScene<NavMeshSurface>(root);
             if (!surface) throw new System.InvalidOperationException("Ward geometry must precede NavMesh baking");
-            const string path = "Assets/PatientZero/Environment/Generated/WardNavMesh.asset";
-            WardPrimitives.GeneratedFolder("Environment");
-            surface.RemoveData(); surface.navMeshData = null;
-            if (AssetDatabase.LoadAssetAtPath<UnityEngine.AI.NavMeshData>(path)) AssetDatabase.DeleteAsset(path);
             surface.BuildNavMesh();
-            if (!surface.navMeshData) throw new System.InvalidOperationException("Ward NavMesh bake produced no data");
-            AssetDatabase.CreateAsset(surface.navMeshData, path);
-            EditorUtility.SetDirty(surface); AssetDatabase.SaveAssets();
+            if (!surface.navMeshData) throw new System.InvalidOperationException("Ward bake produced no NavMeshData");
+            string path = WardPrimitives.GeneratedFolder("Environment") + "/WardNavMesh.asset";
+            var previous = AssetDatabase.LoadAssetAtPath<UnityEngine.AI.NavMeshData>(path);
+            if (previous)
+            {
+                // Preserve the GUID referenced by existing generated scenes.
+                EditorUtility.CopySerialized(surface.navMeshData, previous);
+                surface.RemoveData(); surface.navMeshData = previous; surface.AddData();
+                EditorUtility.SetDirty(previous);
+            }
+            else AssetDatabase.CreateAsset(surface.navMeshData, path);
+            AssetDatabase.SaveAssets();
         }
         private static void Cart(Transform root, Vector3 p, Material metal)
         {

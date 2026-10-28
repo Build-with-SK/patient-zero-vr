@@ -55,7 +55,19 @@ namespace PatientZero.Atmosphere.Logic
         public ExperienceSettings Settings
         {
             get => settings;
-            set { settings = value.Sanitized(); ApplyAssistFloor(); }
+            set
+            {
+                bool wasForced = settings.PuzzleAssistAlwaysOn;
+                settings = value.Sanitized();
+                if (Act == ActId.None) return;
+                if (wasForced != settings.PuzzleAssistAlwaysOn)
+                {
+                    // Honour both enabling and disabling the menu setting, retaining adaptive assist.
+                    for (int i = 0; i < objectives.Length; i++)
+                        if (InAct(objectives[i]) && !complete[i]) { lastProgress[i] = actTime; Assist(i, AssistFloor); }
+                }
+                else ApplyAssistFloor();
+            }
         }
         private AssistLevel AssistFloor => AdaptiveAssist || settings.PuzzleAssistAlwaysOn ? AssistLevel.Assist : AssistLevel.None;
         private void ApplyAssistFloor()
@@ -125,7 +137,6 @@ namespace PatientZero.Atmosphere.Logic
             if (pass && !windowArrived && !lure && WardLayout.HorizontalDistance(position, WardLayout.A1_DoorWindow.Position) <= .5f)
             { windowArrived = true; Cue(CueId.ZombieGlassTap, WardLayout.A1_DoorWindow.Position); }
             if (lure && WardLayout.HorizontalDistance(position, WardLayout.A1_DoorWindow.Position) >= 4) z1Clear = true;
-            ReleaseActOneGate();
         }
         public void Alert(int id, AlertLevel level, Vector3 position, Vector3 player)
         {

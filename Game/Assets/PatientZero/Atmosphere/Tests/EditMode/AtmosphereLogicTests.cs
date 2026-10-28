@@ -25,7 +25,7 @@ namespace PatientZero.Atmosphere.Tests
         }
         private static void Machinery(DirectorCore d)
         {
-            Window(d); d.Tick(2, true, WardLayout.A1_Start.Position); d.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position);
+            Window(d); d.Tick(2, true, WardLayout.A1_Start.Position); d.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position); d.Tick(.01f, true, WardLayout.A1_Start.Position);
             d.Complete(ObjectiveId.Act1_DoorOpened); Assert.AreEqual(ActId.Machinery, d.Act);
         }
         private static List<CueId> GoldenRun(ScareIntensity scares, out DirectorCore d)
@@ -56,7 +56,7 @@ namespace PatientZero.Atmosphere.Tests
             var d = New(); Drain(d);
             Assert.IsFalse(d.IsGateReleased(GateId.None)); Assert.IsFalse(d.IsGateReleased(GateId.Act1Door));
             Window(d); Drain(d); d.Tick(2, true, WardLayout.A1_Start.Position); Drain(d);
-            d.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position);
+            d.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position); d.Tick(.01f, true, Vector3.zero);
             var released = Drain(d);
             Assert.AreEqual(1, released.FindAll(c => c.Kind == DirectorCommandKind.Gate && c.Id == (int)GateId.Act1Door).Count);
             Assert.IsTrue(d.IsGateReleased(GateId.Act1Door)); // Same query used by a late-loaded door.
@@ -65,7 +65,7 @@ namespace PatientZero.Atmosphere.Tests
             d.StartRun(ActId.Awakening, true);
             Assert.IsFalse(d.IsGateReleased(GateId.Act1Door));
             var reset = Drain(d); Assert.AreEqual(DirectorCommandKind.Act, reset[0].Kind);
-            Window(d); Drain(d); d.Tick(2, true, Vector3.zero); Drain(d); d.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position);
+            Window(d); Drain(d); d.Tick(2, true, Vector3.zero); Drain(d); d.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position); d.Tick(.01f, true, Vector3.zero);
             Assert.AreEqual(1, Drain(d).FindAll(c => c.Kind == DirectorCommandKind.Gate).Count);
             d.Complete(ObjectiveId.Act1_DoorOpened);
             Assert.AreEqual(ActId.Machinery, d.Act); Assert.IsFalse(d.IsGateReleased(GateId.Act1Door));
@@ -83,7 +83,7 @@ namespace PatientZero.Atmosphere.Tests
                 var window = WardLayout.A1_DoorWindow.Position; window.y = 0;
                 d.ReportZombiePosition(1, window + Vector3.right * 3.99f);
                 Assert.IsFalse(d.IsGateReleased(GateId.Act1Door));
-                d.ReportZombiePosition(1, window + Vector3.right * 4);
+                d.ReportZombiePosition(1, window + Vector3.right * 4); d.Tick(.01f, true, Vector3.zero);
                 Assert.IsTrue(d.IsGateReleased(GateId.Act1Door));
                 Assert.AreEqual(1, Drain(d).FindAll(c => c.Kind == DirectorCommandKind.Gate).Count);
             }
@@ -248,6 +248,63 @@ namespace PatientZero.Atmosphere.Tests
             }
             Assert.Greater(brightSamples, 0);
             pulse.Request(1000, true); Assert.AreEqual(.8f, pulse.Sample(1000.1, 1, true));
+        }
+        [Test] public void GateEventOccursOnceAndLateDoorCanQueryUntilActChanges()
+        {
+            var d = New(); Drain(d);
+            Assert.IsFalse(d.IsGateReleased(GateId.Act1Door));
+            Window(d); Drain(d); d.Tick(2, true, WardLayout.A1_Start.Position); Drain(d);
+            d.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position);
+            d.Tick(.1f, true, WardLayout.A1_Start.Position);
+            var events = Drain(d);
+            Assert.AreEqual(1, events.FindAll(c => c.Kind == DirectorCommandKind.Gate && c.Id == (int)GateId.Act1Door).Count);
+            Assert.IsTrue(d.IsGateReleased(GateId.Act1Door));
+            Assert.IsFalse(d.IsGateReleased(GateId.None));
+            for (int n = 0; n < 20; n++) { d.Tick(.1f, true, Vector3.zero); Assert.IsFalse(Drain(d).Exists(c => c.Kind == DirectorCommandKind.Gate)); }
+            // Models a door enabled after the signal: the query remains true without replaying an event.
+            Assert.IsTrue(d.IsGateReleased(GateId.Act1Door));
+            d.Complete(ObjectiveId.Act1_DoorOpened);
+            Assert.AreEqual(ActId.Machinery, d.Act); Assert.IsFalse(d.IsGateReleased(GateId.Act1Door));
+        }
+        [Test] public void RestoreClosesGateAndAllowsExactlyOneFreshRelease()
+        {
+            var d = New(); Drain(d);
+            for (int attempt = 0; attempt < 2; attempt++)
+            {
+                if (attempt != 0) { d.StartRun(ActId.Awakening, true); Drain(d); }
+                Assert.IsFalse(d.IsGateReleased(GateId.Act1Door));
+                Window(d); Drain(d); d.Tick(2, true, Vector3.zero); Drain(d);
+                d.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position); d.Tick(.1f, true, Vector3.zero);
+                Assert.AreEqual(1, Drain(d).FindAll(c => c.Kind == DirectorCommandKind.Gate).Count);
+                Assert.IsTrue(d.IsGateReleased(GateId.Act1Door));
+            }
+            d.StartRun(ActId.Awakening, false); Assert.IsFalse(d.IsGateReleased(GateId.Act1Door));
+        }
+        [Test] public void GateCannotReleaseBeforeFourMetreClearanceOrWhilePaused()
+        {
+            var d = New(); Drain(d); Window(d); Drain(d); d.Tick(2, true, Vector3.zero); Drain(d);
+            d.ReportZombiePosition(1, WardLayout.A1_DoorWindow.Position + Vector3.right * 3.99f);
+            d.Tick(.1f, true, Vector3.zero); Assert.IsFalse(d.IsGateReleased(GateId.Act1Door)); Drain(d);
+            d.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position);
+            d.Tick(20, false, Vector3.zero); Assert.IsFalse(d.IsGateReleased(GateId.Act1Door));
+            d.Tick(.1f, true, Vector3.zero); Assert.IsTrue(d.IsGateReleased(GateId.Act1Door));
+        }
+        [Test] public void AlwaysOnAssistSurvivesProgressAndAppliesImmediatelyMidAct()
+        {
+            var d = New(); Drain(d); var s = d.Settings; s.PuzzleAssistAlwaysOn = true; d.Settings = s;
+            Assert.IsTrue(Drain(d).Exists(c => c.Kind == DirectorCommandKind.Assist && c.Detail == (int)AssistLevel.Assist));
+            d.Progress(ObjectiveId.Act1_DoorUnbarred, .1f);
+            var c = Drain(d); Assert.IsTrue(c.Exists(x => x.Kind == DirectorCommandKind.Assist && x.Detail == (int)AssistLevel.Assist));
+            Assert.IsFalse(c.Exists(x => x.Kind == DirectorCommandKind.Assist && x.Detail == 0));
+        }
+        [Test] public void AdaptiveAssistSurvivesProgressAndSettingChanges()
+        {
+            var m = new DirectorMemory(); m.Catches[2] = 2; var d = new DirectorCore(m);
+            d.StartRun(ActId.Machinery, true); Drain(d); d.Progress(ObjectiveId.Act2_ValveVented, .1f);
+            Assert.IsTrue(Drain(d).Exists(c => c.Kind == DirectorCommandKind.Assist && c.Detail == (int)AssistLevel.Assist));
+            var s = d.Settings; s.PuzzleAssistAlwaysOn = true; d.Settings = s; Drain(d);
+            s.PuzzleAssistAlwaysOn = false; d.Settings = s;
+            Assert.IsFalse(Drain(d).Exists(c => c.Kind == DirectorCommandKind.Assist && c.Detail == 0));
         }
     }
 }

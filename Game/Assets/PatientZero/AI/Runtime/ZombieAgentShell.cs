@@ -67,7 +67,7 @@ namespace PatientZero.AI
         {
             if (!active || !GameStateRules.IsSimulationLive(state)) return;
             Vector3 ear = Head ? Head.position : transform.position + Vector3.up;
-            float occlusion = Physics.Linecast(ear, noise.Position, HearingOccluders, QueryTriggerInteraction.Ignore) ? .5f : 1;
+            float occlusion = Hearing.Occlusion(Physics.Linecast(ear, noise.Position, HearingOccluders, QueryTriggerInteraction.Ignore));
             brain.Hear(in noise, transform.position, occlusion, Time.time, true);
         }
         private void Update()

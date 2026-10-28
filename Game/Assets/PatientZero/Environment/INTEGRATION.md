@@ -9,7 +9,7 @@ No old package, duplicate Core, SDK imports, handwritten Unity assets or foreign
 The approved layout is isolation B-7 → corridor → exit vestibule, with supply/side/linen rooms.
 Round 2 dresses the existing SupplyRoom as an operating theatre, as requested by the owner, without
 moving any room, interaction, spawn or doorway. It adds a static operating table, unlit surgical lamp,
-sterile cabinet and instrument shelf/tray, with tested clearance around Z2's doorway route and layout
+sterile cabinet and instrument shelf/tray, plus patient-room bed/mattress dressing, with tested clearance around Z2's doorway route and layout
 points. There are no external assets with verified file licences in the project, so these use the approved
 procedural fallbacks. The geometry contains six floors/ceilings, deduplicated
 walls, six aligned door openings/headers, a monitor, narrative text, exit sign, guidance strip, cart,
@@ -19,7 +19,7 @@ to seat A. Text currently uses Unity's built-in legacy font as a generated greyb
 | Scene / order | Builder | Output |
 | --- | --- | --- |
 | Ward 100 | `Environment.Editor.HospitalBuildSteps.Build` | RoomGeometry primitives, colliders, non-puzzle markers, dressing and NavMeshSurface |
-| Ward 150 | `HospitalBuildSteps.BakeNavigation` | Unity-generated NavMesh from Environment child colliders, saved to `Environment/Generated/WardNavMesh.asset` |
+| Ward 150 | `HospitalBuildSteps.BakeNavigation` | Unity-generated NavMesh from Environment child colliders, saved to `Environment/Generated/WardNavMesh.asset` (GUID retained on rebuild) |
 | Ward 200 | `Atmosphere.Editor.AtmosphereBuildStep.Build` | Six shadowless short-range fixtures, emission/fog controller and director |
 | Ward 500 | `AI.Editor.ZombieBuildStep.Build` | Four generated seven-bone, one-material mannequin prefabs and director bindings; one active actor per act |
 | Bootstrap 600 | `Audio.Editor.AudioBuildSteps.Build` | Persistent cue-player service, native-generated Master + World/Voice/Ambience/Music/UI mixer |

@@ -37,7 +37,7 @@ namespace PatientZero.Atmosphere.Tests
                 GameEvents.ObjectiveCompleted.Raise(new ObjectiveCompleted(ObjectiveId.Act1_DoorUnbarred));
                 core.ReportZombiePosition(1, WardLayout.A1_DoorWindow.Position);
                 core.Tick(.1f, true, WardLayout.A1_Start.Position); core.Tick(2, true, WardLayout.A1_Start.Position);
-                core.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position);
+                core.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position); core.Tick(.01f, true, Vector3.zero);
                 // Any public event drains the director queue; the duplicate completion is harmless.
                 GameEvents.ObjectiveCompleted.Raise(new ObjectiveCompleted(ObjectiveId.Act1_DoorUnbarred));
                 Assert.AreEqual(1, releases); Assert.IsTrue(queriedAtSignal);
@@ -74,6 +74,44 @@ namespace PatientZero.Atmosphere.Tests
                 }
             }
             finally { Services<IAudioCuePlayer>.Unregister(audio); }
+        }
+        [UnityTest]
+        public IEnumerator GateIsQueryableDuringSignalAndByLateDoorThenResetsBeforeActStarted()
+        {
+            CoreStaticReset.ResetStatics(); var audio = new AudioStub(); Services<IAudioCuePlayer>.Register(audio);
+            var root = new GameObject("GateLifecycle");
+            int signals = 0; bool queriedDuringSignal = false, closedDuringRestart = false;
+            var director = root.AddComponent<ExperienceDirector>();
+            System.Action<GateReleased> onGate = e => { signals++; queriedDuringSignal = director.IsGateReleased(e.Gate); };
+            System.Action<ActStarted> onAct = e => { if (e.Act == ActId.Awakening) closedDuringRestart = !director.IsGateReleased(GateId.Act1Door); };
+            GameEvents.GateReleased.Subscribe(onGate); GameEvents.ActStarted.Subscribe(onAct);
+            try
+            {
+                director.StartRun(ActId.Awakening, false);
+                var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+                // Supply deterministic positions/time instead of requiring a NavMesh for this service test.
+                var core = (Logic.DirectorCore)typeof(ExperienceDirector).GetField("core", flags).GetValue(director);
+                GameEvents.ObjectiveCompleted.Raise(new ObjectiveCompleted(ObjectiveId.Act1_DoorUnbarred));
+                core.ReportZombiePosition(ZombieIds.Walker, WardLayout.A1_DoorWindow.Position);
+                core.Tick(.1f, true, Vector3.zero); core.Tick(2, true, Vector3.zero);
+                core.ReportZombiePosition(ZombieIds.Walker, WardLayout.Z1_WalkTo.Position);
+                core.Tick(.1f, true, Vector3.zero);
+                typeof(ExperienceDirector).GetMethod("Pump", flags).Invoke(director, null);
+                Assert.AreEqual(1, signals); Assert.IsTrue(queriedDuringSignal);
+                GameEvents.GateReleased.Unsubscribe(onGate); // A door loaded now has missed the original event.
+                Assert.IsTrue(Services<IExperienceDirector>.Instance.IsGateReleased(GateId.Act1Door));
+                GameEvents.ObjectiveCompleted.Raise(new ObjectiveCompleted(ObjectiveId.Act1_DoorOpened));
+                Assert.AreEqual(ActId.Machinery, director.CurrentAct);
+                Assert.IsFalse(director.IsGateReleased(GateId.Act1Door));
+                director.StartRun(ActId.Awakening, true);
+                Assert.IsTrue(closedDuringRestart); Assert.IsFalse(director.IsGateReleased(GateId.Act1Door));
+            }
+            finally
+            {
+                GameEvents.GateReleased.Unsubscribe(onGate); GameEvents.ActStarted.Unsubscribe(onAct);
+                Object.DestroyImmediate(root); Services<IAudioCuePlayer>.Unregister(audio);
+            }
+            yield return null;
         }
     }
 }
