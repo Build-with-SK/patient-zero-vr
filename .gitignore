@@ -1,0 +1,42 @@
+# Unity (project root is Game/)
+/Game/[Ll]ibrary/
+/Game/[Tt]emp/
+/Game/[Oo]bj/
+/Game/[Bb]uild/
+/Game/[Bb]uilds/
+/Game/[Ll]ogs/
+/Game/[Uu]ser[Ss]ettings/
+/Game/[Mm]emoryCaptures/
+/Game/[Rr]ecordings/
+/Game/.vs/
+/Game/.idea/
+/Game/.vscode/
+/Game/*.csproj
+/Game/*.sln
+/Game/*.slnx
+/Game/*.user
+/Game/*.pidb
+/Game/*.booproj
+/Game/*.svd
+/Game/*.pdb
+/Game/*.mdb
+/Game/*.opendb
+/Game/*.VC.db
+/Game/*.apk
+/Game/*.aab
+/Game/*.unitypackage
+/Game/crashlytics-build.properties
+/Game/Assets/StreamingAssets/aa.meta
+/Game/Assets/StreamingAssets/aa/*
+
+# Tool output
+/tools/logic_tests/out/
+__pycache__/
+*.pyc
+
+# Large local evidence (screen recordings, profiler captures); reference them from the reports
+/evidence/local/
+
+# OS
+.DS_Store
+Thumbs.db
