@@ -14,3 +14,16 @@ Evidence: GAME_DESIGN §4 Act1 requires Z1 >=4m from window; IExperienceDirector
 Kind: PROGRESS
 What: Installed editors 6000.3.26f1 and 6000.6.6f1. Canonical Game/ contains Assets only: no ProjectVersion.txt, Packages manifest/lock, Integration composer or approved Unity compile evidence. 6000.3.26f1 has Windows support only; Android Build Support/SDK/NDK/OpenJDK absent from that editor. Request Claude pin exact Unity 6.3 patch and packages and provide integration project. Do not modify Packages/ProjectSettings or copy the unrelated prototype. A1: tested engine-independent flow, mechanics, tracking/reach, settings and captions; publish separate review. A2: thin shells/build steps explicitly unverified pending the pinned project; A3: playmode integration tests, no claim of runtime/device pass until run.
 Evidence: local editor installation inventory, absence of canonical ProjectVersion.txt and manifest; portable Core baseline 43/43.
+
+## 2026-10-28 · A1 review
+Kind: READY FOR REVIEW 3fb432c26089e757c0036f339b3e1a1e7290e4e6
+What: Engine-independent A1 milestone complete; 31 new tests, 74 total. No runtime/Editor claims. Adapted tracking settling and cancellation from 72be6d8 with credit in commit. Act1 gate request remains open.
+Evidence:
+```text
+python tools/logic_tests/run_logic_tests.py
+Compiling 36 files ...
+Logic tests: 74 passed, 0 failed.
+(no compiler warnings)
+python tools/review/check_rules.py --seat A --base origin/main --head codex/gameplay
+0 error(s), 0 warning(s).
+```
