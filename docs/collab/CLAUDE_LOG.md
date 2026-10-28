@@ -47,3 +47,25 @@ What:
 - `integration/xr-systems` cut from `main` (after this commit) for Codex 2, seat B. `codex/xr-systems` and `Lavanya` were left untouched.
 Evidence: `gh api repos/Build-with-SK/patient-zero-vr` → `default_branch=main`; `gh api .../rules/branches/main` → `deletion`, `non_fast_forward` (ruleset 26052045). The ref check after the push is in the next entry, or in `git ls-remote origin`.
 Next: Codex 1 and Codex 2 post their contract reviews. Codex 2 then ports milestone B1 on `integration/xr-systems`.
+
+## 2026-10-28 · Full Production Director: integration tooling, pins, CI
+Kind: PROGRESS
+What:
+- Verified the baseline before starting: `main`, `claude/technical-director` and `integration/xr-systems` at `73a3b67`; `codex/xr-systems` `72be6d8` and `Lavanya` `87bb494` untouched; ruleset "Protect main" active.
+- Ownership under the production prompt maps onto contract v1 with no path moved (`INTEGRATION_CHECKLIST.md` section 1). No amendment needed.
+- Integration logic (`Integration/Logic/`, engine-free, 27 tests): `BuildPlan` (order bands, target scene, signature, duplicate orders), `PlacementCheck` (every required `WardLayout` id once, within 5 cm), `ServiceCensus` (one implementer per Core service in its home scene), `QuestBuildConfig` (editor pin, API 32/34, OpenXR features, forbidden SDKs).
+- Editor tooling (`Integration/Editor/`, all marked UNVERIFIED IN EDITOR): `SceneComposer` (menu and batchmode; refuses to touch scenes if the plan is invalid), `ProjectValidator`, `QuestBuild` (configure, validate, dev APK), `DesktopSimulation` (XRI Interaction Simulator; Standalone XR off in desktop mode, Android untouched). XR and URP code sits in its own assembly, so the composer depends on Core only.
+- Pins: `ProjectVersion.txt` 6000.3.27f1 (`672d562a42a7`); `Packages/manifest.json`; single source `tools/unity/package_policy.json`; `validate_packages.py` (offline and `--online`); `unity_batch.py` (BLOCKED exit 2 without the editor).
+- CI: `.github/workflows/checks.yml` runs checker self-test, whole-tree checker, logic harness, package policy and tooling tests on every push and PR, plus the seat diff check on PRs.
+- Checker ownership table aligned with this plan (`.github/*`, `AGENTS.md`, `Game/Assets/XR/*` are Claude's). No Codex path changed.
+- Design: `DESIGN_RECONCILIATION.md`. The prompt's beats match the approved acts in 7 of 11 points; flashlight, trolley, player-made lure and operating room are amendments D-1…D-4 for the owner. GAME_DESIGN.md is unchanged.
+- Assets: site-level licence check (Poly Haven, ambientCG, Kenney CC0; Quaternius CC0 per pack; Freesound per sound; Sonniss forbids redistribution; Mixamo page 403, unverified). New rule 7: the repository is public, so Mixamo, Asset Store, Sonniss and Soundly files stay out. New rows E-09…E-11 (lights, decals, affordances), all generated.
+Evidence:
+- `run_logic_tests.py` → `Logic tests: 70 passed, 0 failed.` Mutations (Flow building Ward; missing-point check removed) each caught by one test.
+- `check_rules.py --self-test` → `SELF-TEST PASSED`; `check_rules.py` → `0 error(s), 0 warning(s).`
+- `validate_packages.py` → `0 error(s)`; tooling unittest `Ran 24 tests … OK`; mutation (forbidden checks off) → 2 failures.
+- `validate_packages.py --online` → 7 non-core pins published, all need Unity 6000.0 or 2022.3; `com.unity.xr.management` `latest` tag reads 4.6.1, while OpenXR: Meta 2.7.0 requires 4.7.0.
+- Roslyn parse of the editor scripts: 0 syntax errors (64 expected missing-type errors). Not a compile check.
+- `unity_batch.py validate` → `BLOCKED: Unity 6000.3.27f1 not found`, exit 2.
+Not verified: every Unity API call in `Integration/Editor/`, scene composition, desktop simulation, the APK, anything on a headset.
+Next: review Codex 1's draft PR #1 (`codex/gameplay`), then the PR for this work. Codex 2 has pushed nothing since `73a3b67`.

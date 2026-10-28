@@ -1,0 +1,35 @@
+{
+  "checked": "2026-10-28",
+  "editor": "6000.3.27f1",
+  "editorRevision": "672d562a42a7",
+  "registry": "https://packages.unity.com",
+  "required": [
+    { "name": "com.unity.render-pipelines.universal", "version": "17.3.0", "editorLocked": true, "role": "URP Forward renderer (core package, version fixed by the 6000.3 editor)" },
+    { "name": "com.unity.test-framework", "version": "1.6.0", "editorLocked": true, "role": "EditMode and PlayMode tests (core package, version fixed by the 6000.3 editor)" },
+    { "name": "com.unity.inputsystem", "version": "1.20.1", "editorLocked": false, "role": "input for XRI, hands and the desktop simulator" },
+    { "name": "com.unity.xr.management", "version": "4.7.0", "editorLocked": false, "role": "XR Plug-in Management (loader per platform)" },
+    { "name": "com.unity.xr.openxr", "version": "1.19.0", "editorLocked": false, "role": "OpenXR runtime plugin, Meta Quest Support feature, controller and hand interaction profiles" },
+    { "name": "com.unity.xr.meta-openxr", "version": "2.7.0", "editorLocked": false, "role": "Unity OpenXR: Meta (Meta Quest features on the Unity OpenXR path)" },
+    { "name": "com.unity.xr.interaction.toolkit", "version": "3.7.0", "editorLocked": false, "role": "interaction, rig, XR Interaction Simulator (desktop simulation)" },
+    { "name": "com.unity.xr.hands", "version": "1.10.0", "editorLocked": false, "role": "hand tracking subsystem and OpenXR hand features" },
+    { "name": "com.unity.ai.navigation", "version": "2.0.16", "editorLocked": false, "role": "NavMesh baking for zombie navigation" }
+  ],
+  "forbiddenPrefixes": [
+    "com.unity.xr.oculus",
+    "com.meta.xr.sdk.core",
+    "com.meta.xr.sdk.interaction",
+    "com.meta.xr.sdk.all",
+    "com.meta.xr.sdk.platform"
+  ],
+  "heldBack": [
+    { "name": "com.meta.xr.sdk.audio", "version": "85.0.0", "reason": "Meta registry, Meta SDK licence: owner decision needed before it may enter a public repository" }
+  ],
+  "allowedScopedRegistries": [],
+  "sources": [
+    "Unity release API (6000.3.27f1, revision 672d562a42a7, Android module listed), checked 2026-10-28",
+    "packages.unity.com package documents for each non-core pin, checked 2026-10-28",
+    "Unity 6.3 manual: URP and Test Framework are core packages; XRI, XR Hands, OpenXR, OpenXR: Meta, Input System and AI Navigation are released packages",
+    "https://developers.meta.com/vr/blog/meta-quest-apps-android-14-march-1/ (target API 34)",
+    "https://developers.meta.com/vr/documentation/native/android/mobile-native-manifest/ (min API 32)"
+  ]
+}

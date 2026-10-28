@@ -1,0 +1,26 @@
+{
+    "name": "PatientZero.Integration.Editor.Quest",
+    "rootNamespace": "PatientZero.Integration.Editor.Quest",
+    "references": [
+        "PatientZero.Core",
+        "PatientZero.Integration.Logic",
+        "PatientZero.Integration.Editor",
+        "Unity.XR.Management",
+        "Unity.XR.Management.Editor",
+        "Unity.XR.OpenXR",
+        "Unity.XR.OpenXR.Editor",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
