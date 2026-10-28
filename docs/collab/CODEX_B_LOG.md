@@ -75,3 +75,58 @@ Action needed: review/save the already-persisted additive `api.github.com` envir
 PR review summary: recover `87bb494`/`72be6d8`; B1 `22d4002`, B2 `4e1fda2`, native-generation/transition hardening `37e8835`; original suite 26 passed; current harness 100 passed, 0 failed; full seat-B branch checker 0 errors/0 warnings. Native Unity compile/generation, six PlayMode tests and device/headphone/performance checks remain unverified. The v1.1 physical-door gate is acknowledged but not coded against before approval/main. Full integration notes are in Environment/INTEGRATION.md.
 
 Timestamp correction (append-only log): earlier manually entered checkpoint headings `15:49`, `16:27` and `16:39` were inaccurate. Authoritative Git UTC times are B1 implementation `15:38:27`, B1 checkpoint `15:38:39`, B2 `16:14:46`, hardening `16:18:48`. The clock was read at `16:19 UTC` before the push/PR attempt. Use those commit times for chronology; no test or commit result is changed by this correction.
+
+
+## 2026-10-28 23:06 GMT · Round 2 synchronisation and contract v1.1
+Kind: CONTRACT REVIEW v1.1
+What: ACK. Fetched all branch heads and PR #4's head (`5202249`), inspected the approved work plan, B brief, review and exact Core diff. Main `44ea7b742fd4305c01cadd2cd026d417792db69b` contains the PR #4 merge. Merged main into this branch as `3130bbc`, preserving every earlier B commit. No rebase, force push or frozen-branch changes. Canonical composer/package pins are now included. Implemented only the approved GateId/GateReleased/IsGateReleased additions; shared physics layers remain an integration request, not part of v1.1.
+Evidence: `git log origin/main` shows `44ea7b7 Merge PR #4`; `git ls-remote origin refs/pull/3/head` confirms existing PR #3 points at this branch's original delivery. GitHub GraphQL still returns HTTP 403, so CLI PR inspection/editing is unavailable; the merged Git graph and main's review identify the PRs. Existing PR #3: https://github.com/Build-with-SK/patient-zero-vr/pull/3.
+
+## 2026-10-28 23:06 GMT · Gate and hospital integration
+Kind: READY FOR REVIEW 8b7f7de8135c8470a4474aba7dd3c6c1c0304de7
+What: Contract v1.1 gate release is emitted once after the planks/window/lure/4 m retreat conditions, remains queryable for late doors while Act 1 is active, and closes before ActStarted on a restore/new run. None/other-act queries are false. Early/stale door completion is ignored until release; authorised DoorOpened completes Act 1 and enters Machinery. ExperienceDirector alone raises the channel. To Codex 1: subscribe to GateReleased and query IExperienceDirector on door enable; fail closed without a service, then report ObjectiveCompleted(Act1_DoorOpened) after opening. No A assembly, rig, scene or file was edited.
+What: Per the owner's Round 2 operating-theatre request, dressed the existing supply footprint with static procedural table, unlit surgical lamp, cabinet, shelf and tray. No room/marker/puzzle/doorway or encounter timing moved. Furniture clearance is tested against layout points and Z2's route. The patient-room/corridor/vestibule greybox, AI, audio, props and timed director were retained. Fixture housings and static batching flags add no dynamic lights. Inactive zombie agents are disabled to avoid blocking puzzles; act starts reset pose and the AI tick clock.
+Evidence:
+```
+PATH=/workspace/tools/dotnet:$PATH DOTNET_CLI_HOME=/workspace/tools/dotnet-home python tools/logic_tests/run_logic_tests.py
+Logic tests: 137 passed, 0 failed.
+python tools/review/check_rules.py --seat B --base origin/main --head integration/xr-systems
+0 error(s), 0 warning(s).
+python tools/review/check_rules.py
+0 error(s), 0 warning(s).
+python tools/unity/validate_packages.py
+0 error(s), 0 warning(s).
+```
+Also: review checker SELF-TEST PASSED; assembly graph has unique names, present internal references and no cycles; supplementary Roslyn C# 9 parse: 56 files, 0 syntax errors (not Unity API/type compilation). Actual portable and native-attempt output is committed in `Environment/ROUND_2_VALIDATION.md`.
+
+## 2026-10-28 23:06 GMT · Review fixes
+Kind: FIX DONE FIX-B-13 8b7f7de8135c8470a4474aba7dd3c6c1c0304de7
+What: Progress resets hints to the per-act assist floor. Always-on/adaptive assist survives progress, and enabling always-on mid-act immediately publishes the floor. Three new portable regression tests pass.
+Evidence: 137/137 portable tests; seat B checker 0 errors/0 warnings (commands above).
+
+Kind: FIX DONE FIX-B-14 8b7f7de8135c8470a4474aba7dd3c6c1c0304de7
+What: Split SightBlockers (walls/closed doors, default layer 0) from HearingOccluders (closed door leaves only, default Nothing until TD/A assign the shared layer). Hearing rays end at the noise source without the old upward offset. Expanded the native hearing test to prove a wall retains full radius, while a closed-door mask halves it. Native fixture written, NOT RUN.
+Evidence: Existing portable hearing boundary/origin/occlusion tests pass; Unity unavailable.
+
+Kind: FIX DONE FIX-B-15 8b7f7de8135c8470a4474aba7dd3c6c1c0304de7
+What: Build step explicitly saves native NavMeshData to `Assets/PatientZero/Environment/Generated/WardNavMesh.asset`, replacing old data. Navigation fixture reloads Ward twice and asserts the saved asset and complete routes. It also checks Z1 can reach the window-arrival threshold, exposing an oversized bake radius before an Act 1 stall. Native persistence and geometry NOT VERIFIED without Unity.
+Evidence: Source/static checks pass; compose attempt returns BLOCKED exit 2 (Unity 6000.3.27f1 absent).
+
+Kind: FIX DONE FIX-B-16 8b7f7de8135c8470a4474aba7dd3c6c1c0304de7
+What: Audio occlusion defaults to layer 0 and is assigned explicitly by the Bootstrap builder; built-in 3D remains the fallback. Added portable attenuation checks at real Ward beacon/alarm/lure distances. Audible gain/low-pass remain native/headphone validation items.
+Evidence: 137/137 portable tests, including configured-distance attenuation; no headphone claim.
+
+Kind: FIX DONE FIX-B-17 8b7f7de8135c8470a4474aba7dd3c6c1c0304de7
+What: Exit-sign emission retains its authored green, with fixed visible emission during Blackout instead of the ambient blue tint. Still written only by LightingController.
+Evidence: Ownership/static checks clean. Actual rendered brightness/green must be inspected in Unity.
+
+Kind: FIX DONE FIX-B-18 8b7f7de8135c8470a4474aba7dd3c6c1c0304de7
+What: Built wall boxes use exact span lengths and only transverse thickness. New portable tests check actual collider extents preserve every complete door-opening width, rather than checking only mathematical spans.
+Evidence: Portable clearance test passes; no native collision claim.
+
+## 2026-10-28 23:06 GMT · Native attempts and TD handoff
+Kind: QUESTION
+What: Actual `unity_batch.py validate`, `editmode-tests`, `compose`, `desktop-sim` attempts each returned exit 2: `BLOCKED: Unity 6000.3.27f1 not found`. The PlayMode resolver also found no editor, so navigation/emitter validation and native test execution are blocked. No scene/prefab/mixer/NavMesh assets were generated. No headset/headphone tests or 72 FPS claim.
+What: TD-owned tooling suite on this Linux host: 23 pass, 1 fails (`test_env_override_is_tried_first`, backslash-only expected Windows path versus PosixPath joins). No B change touches tools; TD please fix the platform-independent test expectation. Package policy passes but dependencies have not been resolved by Unity.
+What: TD must configure bake agent radius 0.25 m (INT-B-1), approve/configure shared geometry/door/player/prop masks (INT-B-2), integrate A's services/tags/doors, and execute the canonical composer plus native test suites (INT-B-3). Default bake radius can prevent the Z1 window beat. Optional licensed assets and Meta XR Audio remain unverified; all audio/art stays procedural. Full commands, actual outputs and remaining checks: `Game/Assets/PatientZero/Environment/ROUND_2_VALIDATION.md`; updated integration contract: `Environment/INTEGRATION.md`.
+Evidence: No editor binary found; all four attempted tool commands and PlayMode discovery blocked. Frozen refs remain read-only. Existing PR #3 updates through the same branch; no second PR or main merge is needed from B.
