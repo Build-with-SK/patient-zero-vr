@@ -1,0 +1,6 @@
+{
+  "name": "PatientZero.XR",
+  "rootNamespace": "PatientZero.XR",
+  "references": ["PatientZero.Core", "Unity.XR.Hands"],
+  "autoReferenced": true
+}

@@ -1,0 +1,6 @@
+{
+  "name": "PatientZero.Scenarios",
+  "references": ["PatientZero.Core"],
+  "noEngineReferences": true,
+  "defineConstraints": ["UNITY_INCLUDE_TESTS"]
+}

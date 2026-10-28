@@ -1,0 +1,12 @@
+{
+  "name": "com.patientzero.xr",
+  "version": "0.1.0",
+  "displayName": "Patient Zero XR Systems",
+  "description": "Blind zombie hearing, XR safety, spatial audio and reusable comfort-aware encounters.",
+  "unity": "6000.0",
+  "dependencies": {
+    "com.unity.ai.navigation": "2.0.9",
+    "com.unity.xr.openxr": "1.16.1",
+    "com.unity.xr.hands": "1.7.2"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "PatientZero.PlayModeTests",
+  "references": ["PatientZero.Core", "PatientZero.XR"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "defineConstraints": ["UNITY_INCLUDE_TESTS"]
+}

@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9324d939eb8150bba0a724d2e3bbebb7, type: 3}
+  m_Name: DiagnosticCueBank
+  m_EditorClassIdentifier:
+  Entries:
+  - Cue: 0
+    Clip: {fileID: 8300000, guid: e4e546b6632252b6a50eb9395ed1f2b0, type: 3}
+    Group: {fileID: 24300001, guid: 86865c79436c5988856fcf6ad63dd9d2, type: 3}
+    Volume: 0.65
+    MinDistance: 1
+    MaxDistance: 25
+    Cooldown: 0.1
+    ComfortSensitive: 1
+  - Cue: 1
+    Clip: {fileID: 8300000, guid: 71ffeeaab422552ebecd3383a2fecb21, type: 3}
+    Group: {fileID: 24300001, guid: 86865c79436c5988856fcf6ad63dd9d2, type: 3}
+    Volume: 0.65
+    MinDistance: 1
+    MaxDistance: 25
+    Cooldown: 0.1
+    ComfortSensitive: 1
+  - Cue: 2
+    Clip: {fileID: 8300000, guid: 058beb64990a5eaeadbf96e668715305, type: 3}
+    Group: {fileID: 24300003, guid: 86865c79436c5988856fcf6ad63dd9d2, type: 3}
+    Volume: 0.65
+    MinDistance: 1
+    MaxDistance: 25
+    Cooldown: 1
+    ComfortSensitive: 1
+  - Cue: 3
+    Clip: {fileID: 8300000, guid: 2590bda79c5e5addb343f15cf0f85147, type: 3}
+    Group: {fileID: 24300003, guid: 86865c79436c5988856fcf6ad63dd9d2, type: 3}
+    Volume: 0.65
+    MinDistance: 1
+    MaxDistance: 25
+    Cooldown: 1
+    ComfortSensitive: 1
+  - Cue: 4
+    Clip: {fileID: 8300000, guid: d847e88d5c485c69a969362a74ae5deb, type: 3}
+    Group: {fileID: 24300002, guid: 86865c79436c5988856fcf6ad63dd9d2, type: 3}
+    Volume: 0.65
+    MinDistance: 1
+    MaxDistance: 60
+    Cooldown: 1
+    ComfortSensitive: 1
+  - Cue: 5
+    Clip: {fileID: 8300000, guid: e17de7b7726f57a5a40969f81dfa72d7, type: 3}
+    Group: {fileID: 24300001, guid: 86865c79436c5988856fcf6ad63dd9d2, type: 3}
+    Volume: 0.65
+    MinDistance: 1
+    MaxDistance: 25
+    Cooldown: 1
+    ComfortSensitive: 1

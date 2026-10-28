@@ -1,0 +1,5 @@
+{
+  "name": "PatientZero.Editor",
+  "references": ["PatientZero.Core", "PatientZero.XR"],
+  "includePlatforms": ["Editor"]
+}

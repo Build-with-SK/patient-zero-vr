@@ -1,0 +1,7 @@
+{
+  "name": "PatientZero.EditModeTests",
+  "references": ["PatientZero.Core", "PatientZero.XR", "PatientZero.Scenarios"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "defineConstraints": ["UNITY_INCLUDE_TESTS"]
+}

@@ -1,0 +1,5 @@
+{
+  "name": "PatientZero.Core",
+  "rootNamespace": "PatientZero.Core",
+  "noEngineReferences": true
+}

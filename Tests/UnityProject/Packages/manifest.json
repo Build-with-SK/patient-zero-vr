@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "com.patientzero.xr": "file:../../../Packages/com.patientzero.xr",
+    "com.meta.xr.sdk.interaction.ovr": "207.0.0",
+    "com.unity.test-framework": "1.6.0",
+    "com.unity.xr.management": "4.5.3",
+    "com.unity.modules.ai": "1.0.0",
+    "com.unity.modules.animation": "1.0.0",
+    "com.unity.modules.audio": "1.0.0",
+    "com.unity.modules.physics": "1.0.0",
+    "com.unity.modules.xr": "1.0.0"
+  },
+  "testables": ["com.patientzero.xr"]
+}

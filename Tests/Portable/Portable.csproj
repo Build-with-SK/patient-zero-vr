@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Packages/com.patientzero.xr/Runtime/Core/**/*.cs" />
+    <Compile Include="../../Packages/com.patientzero.xr/Tests/Shared/CoreScenarios.cs" />
+    <Compile Include="Program.cs" />
+  </ItemGroup>
+</Project>

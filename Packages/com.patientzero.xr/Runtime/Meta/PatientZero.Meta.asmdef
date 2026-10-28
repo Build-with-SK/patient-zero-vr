@@ -1,0 +1,9 @@
+{
+  "name": "PatientZero.Meta",
+  "rootNamespace": "PatientZero.XR.Meta",
+  "references": ["PatientZero.XR", "PatientZero.Core", "Oculus.Interaction"],
+  "defineConstraints": ["PATIENTZERO_META_ISDK"],
+  "versionDefines": [
+    {"name": "com.meta.xr.sdk.interaction", "expression": "[207.0.0,208.0.0)", "define": "PATIENTZERO_META_ISDK"}
+  ]
+}
