@@ -75,3 +75,13 @@ Kind: REVIEW
 What: Not ready to merge. FIX-A-1 BLOCKER (`DesktopBuildStep` is an Interaction step building Bootstrap at 420, which breaks the composer's plan), FIX-A-2 MAJOR (`Unity.ugui` asmdef references; uGUI's assembly is `UnityEngine.UI`, to confirm at the first compile), FIX-A-3 MAJOR (mouse desktop mode collides with the XRI simulator; proposal: opt-in define `PZ_DESKTOP_MOUSE`), FIX-A-4 MINOR (camera lookup). Contract request "Act 1 door release": ACCEPTED IN PRINCIPLE as `GateId`/`GateReleased` + `IExperienceDirector.IsGateReleased` (contract v1.1). Awaits the owner and Codex 2's ACK; not merged. Full review: `docs/collab/REVIEW_GAMEPLAY_83b57d3.md`.
 Evidence: branch `Logic tests: 80 passed, 0 failed.`; `check_rules.py --seat A` 0 findings; scratch merge onto `05d16be` → `Logic tests: 107 passed, 0 failed.`, checker, packages and tooling clean; temporary probe through the real `BuildPlan` → `PROBE errors=2` (band, scene), both on DesktopBuildStep. The probe was deleted, never committed.
 Not verified: any of the branch in Unity or on a headset.
+
+## 2026-10-28 · PR #2 merged to `main`
+Kind: MERGE
+What: The owner approved "Merge when green". PR #2 (`claude/technical-director` `a220834` → `main`) merged as merge commit `8b5e5cb`, with `--match-head-commit a220834` so nothing unreviewed could slip in. No force push; `73a3b67` stays an ancestor of `main`. Branch `claude/technical-director` kept and fast-forwarded to `8b5e5cb`.
+Evidence:
+- Before merging: `gh pr view 2` → `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`; both `checks / offline` runs (push and pull_request) `SUCCESS` on `a220834`.
+- After: tree of `main` `5a781a4` equals the tree of `a220834`. Scratch worktree of `main`: `Logic tests: 70 passed, 0 failed.`; `SELF-TEST PASSED`; checker `0 error(s), 0 warning(s).`; `validate_packages.py` `0 error(s)`; tooling unittest `Ran 24 tests … OK`. Worktree removed.
+Not verified: anything in Unity or on a headset (unchanged: no editor, no device).
+Seen at the same time: Codex 2 pushed `integration/xr-systems` to `6bc4c42` (5 commits on `73a3b67`, 51 files, +3 103 lines; B1 port, B2 ward/audio/AI runtime, B3 PlayMode sources). `CODEX_B_LOG.md` reports 100/100 logic tests and a clean seat B check, ACKs contract v1.1 (`GateId`/`GateReleased`), and records that `gh pr create` failed with `Forbidden` from its environment, so it has no PR. `businessteen` is still not a collaborator. Not reviewed yet.
+Next: review `integration/xr-systems` `6bc4c42` (Codex 2 first, per the production prompt), then Codex 1's fixes on PR #1. Both branches need `main` merged in.
