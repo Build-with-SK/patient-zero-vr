@@ -1,0 +1,7 @@
+{
+  "name": "PatientZero.Atmosphere.Logic",
+  "rootNamespace": "PatientZero.Atmosphere.Logic",
+  "references": [
+    "PatientZero.Core"
+  ]
+}
