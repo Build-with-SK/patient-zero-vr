@@ -107,3 +107,14 @@ Evidence:
 - `check_rules.py --self-test` → `SELF-TEST PASSED`; `check_rules.py` → `0 error(s), 0 warning(s).`
 Impact: nothing on `main` implements `IExperienceDirector`, so `main` is unaffected. Seat B's `ExperienceDirector` must implement `IsGateReleased` when it merges `main`; seat A's door can now wait on the gate. Shared physics layer names (INT-B-2) are not part of v1.1.
 Not verified: Unity compile of the Core change (no editor).
+
+## 2026-10-28 · Integration round 2: v1.1 merged, both seats integrated, first Unity run attempted
+Kind: INTEGRATION
+What: Owner prompt "CLAUDE CODE — PATIENT ZERO ROUND 2". PR #4 re-verified and merged to `main` as `44ea7b7`. `integration/round2` cut from it; Codex 2 `6bc4c42` and Codex 1 `83b57d3` merged unchanged (no conflicts). Integration exceptions E-1…E-5 (`4911c3c`): the director implements and raises the v1.1 gate, the Act 1 door uses Codex 1's own release hook, FIX-A-1 (step moved to `Player/Editor`), FIX-A-2 (`UnityEngine.UI`), FIX-A-5 (explicit test asmdefs). Claude tooling (`f0d670b`): required-sample import, INT-B-1 radius before the bake, `unity_batch.py first-run`, `tools/review/integration_scan.py` in CI. New findings: FIX-A-6, -7, FIX-B-19 (Act 3 cart built twice), FIX-B-20 (`HapticRequested` never raised), FIX-B-21 (operating theatre, needs D-4). Full record: `INTEGRATION_ROUND2.md`.
+Evidence:
+- PR #4 head `5202249`: CI SUCCESS ×2; `Logic tests: 72 passed, 0 failed.`; 0 removed lines in `Core/Contracts`; 104 enum values unchanged.
+- `integration/round2`: `Logic tests: 166 passed, 0 failed.`; checker `0 error(s), 0 warning(s).`; integration scan `0 error(s), 1 warning(s).` (21 errors on the plain merge); `BuildPlan` probe `errors=0` over 11 steps; packages 0; tooling 30/30.
+- `--seat claude --base 9d3e864 --head 4911c3c`: 13 ownership warnings, exactly the exception files; tooling commit 0.
+- `unity_batch.py first-run` → `BLOCKED: Unity 6000.3.27f1 not found`, exit 2. No Hub, editor, Android SDK, JDK or `adb` on this machine (290 GB free).
+Not verified: Unity compile, package resolution, generated scenes, EditMode/PlayMode in Unity, desktop simulation, APK, headset. `packages-lock.json` and generated `ProjectSettings` were not hand-written.
+Next: owner installs Unity 6000.3.27f1 + Android (or Codex 1 runs `first-run`); Claude runs `first-run`, commits what Unity generates and fixes what it reports; the seats take section 7 of `INTEGRATION_ROUND2.md`.
