@@ -1,0 +1,61 @@
+# Offline checks every seat's work must pass before review. No Unity licence or editor is needed:
+# Unity compile, scene assembly, EditMode tests in Unity and the APK build run through
+# tools/unity/unity_batch.py on a machine with the pinned editor (see docs/collab/INTEGRATION_CHECKLIST.md).
+name: checks
+
+on:
+  push:
+    branches: [main, "claude/**", "codex/**", "integration/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Review checker self-test
+        run: python tools/review/check_rules.py --self-test
+
+      - name: Review checker, whole tree
+        run: python tools/review/check_rules.py
+
+      - name: Logic tests (Core and every Logic assembly, compiled with Roslyn)
+        run: python tools/logic_tests/run_logic_tests.py
+
+      - name: Package policy (manifest, editor pin, forbidden SDKs)
+        run: python tools/unity/validate_packages.py --quiet
+
+      - name: Tooling tests
+        run: python -m unittest discover -s tools/unity -p "test_*.py" -v
+
+      - name: Seat ownership on the pull request diff
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          case "$HEAD_REF" in
+            codex/gameplay*) seat=A ;;
+            codex/xr-systems*|integration/xr-systems*) seat=B ;;
+            claude/*) seat=claude ;;
+            *) echo "Branch '$HEAD_REF' is not a seat branch; the whole-tree check above still applies."; exit 0 ;;
+          esac
+          echo "Seat $seat: $BASE_REF...HEAD"
+          python tools/review/check_rules.py --seat "$seat" --base "origin/$BASE_REF" --head HEAD

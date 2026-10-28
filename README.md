@@ -6,7 +6,7 @@ Built by three agents: Claude (Technical Director and integrator) and two Codex 
 
 ## Status (2026-10-28)
 
-**Pre-production.** Contracts, design and review tooling are done. **No Unity project has been opened, no build exists, nothing has run on a headset.** The owner actions that unblock the next step are in [`docs/ARCHITECTURE.md` section 11](docs/ARCHITECTURE.md#11-blockers-and-owner-actions).
+**Pre-production.** Contracts, design, review tooling, integration logic, Unity build tooling (written, not yet run in Unity), pinned packages and offline CI are done. **No Unity project has been opened, no build exists, nothing has run on a headset.** The owner actions that unblock the next step are in [`docs/ARCHITECTURE.md` section 11](docs/ARCHITECTURE.md#11-blockers-and-owner-actions).
 
 ## Start here
 
@@ -17,6 +17,7 @@ Built by three agents: Claude (Technical Director and integrator) and two Codex 
 | Codex 1 (seat A) | `docs/collab/CODEX_A_BRIEF.md` |
 | Codex 2 (seat B) | `docs/collab/CODEX_B_BRIEF.md`, then `docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md` |
 | Reviewing | `docs/REVIEW_CHECKLIST.md`, `docs/TEST_REPORT.md` |
+| Integrating or building | `docs/collab/INTEGRATION_CHECKLIST.md` (pins, gates, first Unity run) |
 
 ## Documents
 
@@ -30,6 +31,8 @@ Built by three agents: Claude (Technical Director and integrator) and two Codex 
 | [`docs/PERFORMANCE_REPORT.md`](docs/PERFORMANCE_REPORT.md) | Quest budgets and measurements |
 | [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) | Release gates |
 | [`docs/collab/WORK_PLAN.md`](docs/collab/WORK_PLAN.md) | Seats, branches, protocol |
+| [`docs/collab/INTEGRATION_CHECKLIST.md`](docs/collab/INTEGRATION_CHECKLIST.md) | Pinned toolchain with sources, PR flow, per-PR gate, first Unity run, task board |
+| [`docs/collab/DESIGN_RECONCILIATION.md`](docs/collab/DESIGN_RECONCILIATION.md) | Production-prompt beats vs the approved design; amendments awaiting the owner |
 
 ## Commands (no Unity needed)
 
@@ -37,7 +40,11 @@ Built by three agents: Claude (Technical Director and integrator) and two Codex 
 python tools/logic_tests/run_logic_tests.py     # compile + run contract and logic tests (C# 9)
 python tools/review/check_rules.py              # static review rules on the working tree
 python tools/review/check_rules.py --self-test  # prove every rule fires
+python tools/unity/validate_packages.py         # package pins, forbidden SDKs, editor pin (--online asks the registry)
+python -m unittest discover -s tools/unity -p "test_*.py"   # tests for the Unity tooling
 ```
+
+With Unity 6000.3.27f1 installed: `python tools/unity/unity_batch.py <validate|configure|compose|desktop-sim|editmode-tests|build-apk>`. Without it, the runner prints BLOCKED and exits 2.
 
 The logic harness needs a Roslyn C# compiler: Visual Studio / Build Tools (found automatically), `PZ_CSC=<path to csc.exe>`, or a .NET SDK.
 
@@ -49,6 +56,9 @@ Game/                     Unity project root (open this folder in Unity Hub)
     Core/                 shared contracts (Claude)
     Player/ Interaction/ Flow/ UI/          Codex A
     AI/ Audio/ Atmosphere/ Environment/     Codex B
+    Integration/          build plan + checks (Logic/), scene composer, Quest build, desktop simulation (Editor/) (Claude)
+  Packages/manifest.json  pinned packages · ProjectSettings/ProjectVersion.txt  pinned editor
 docs/                     design, architecture, reports
-tools/                    logic-test harness, review checker
+tools/                    logic-test harness, review checker, Unity tooling (package policy, batchmode runner)
+.github/workflows/        offline CI
 ```

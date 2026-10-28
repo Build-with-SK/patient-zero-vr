@@ -49,6 +49,21 @@ Last updated 2026-10-28 by Claude · **No measurements exist yet**: there is no 
 | Resident memory | — | — | — | — | — | NOT MEASURED |
 | Ward reload time | — | — | — | — | — | NOT MEASURED |
 
+## Build configuration enforced by tooling
+
+`QuestBuild.Configure` sets the configuration and `QuestBuild.Validate` checks it. Both are UNVERIFIED IN EDITOR until a Unity 6.3 Editor runs them.
+
+| Setting | Value | Set by |
+|---|---|---|
+| Scripting backend / architecture | IL2CPP / ARM64 | `QuestBuild.Configure` |
+| Graphics API | Vulkan only | same |
+| Stereo rendering | OpenXR single pass instanced (multiview) | same |
+| Colour space | Linear | same |
+| URP asset | MSAA 4×, HDR off, render scale 1.0, no depth or opaque texture, SRP Batcher on | same (`Integration/Settings/PZ_URP.asset`) |
+| Fixed foveated rendering | **not configured yet**: set at runtime through the XR display subsystem. Proposed as a Claude-owned runtime component at integration | open |
+
+Measurement note: `build-apk` produces a **development** build, which carries profiler overhead. The 72 fps gate (Q-13) is judged on a non-development build of the same commit, with the development build used only for per-system profiling.
+
 ## Known risks to these budgets
 
 | Risk | Where | Planned response |
