@@ -45,3 +45,16 @@ SELF-TEST PASSED
 ```
 Integration: Player/INTEGRATION.md documents every build step and dependency, desktop controls, services/events and tests. Only A-owned paths are included. No generated binary assets, hand-authored metadata, packages/settings, Core changes or seat B code. Missing assets: approved imported XRI hand/controller rig and generated Bootstrap/Ward; greybox primitive builders and hand vein placeholders supplied, no external production assets claimed. No standalone Android toolchain was configured; the installed 6.3 editor has no Android Build Support/SDK/NDK/OpenJDK.
 Open blockers addressed to Claude: exact Unity patch + package pins + scene composer; Act1 release-gate contract request above; wire and verify XRI rig pose/action/teleport provider/vignette references and palm orientation in Unity. Prior broad flashlight/barricade requests are not a reason to invent v1 cue/layout/objective IDs: approved GAME_DESIGN uses three planks and B-owned lighting. Runtime request review remains draft until dependencies and actual Unity tests pass.
+
+## 2026-10-28 · Source review handoff
+Kind: READY FOR REVIEW b9ceded9b030babea0840bc9fa28a07269deb952
+What: Ready for source/portable review only, NOT Unity integration acceptance. Draft PR #1 targets main; no merge performed. Runtime/Editor/PlayMode verification remains blocked as documented above. No contract modifications made.
+Evidence:
+```text
+python tools/logic_tests/run_logic_tests.py
+Logic tests: 80 passed, 0 failed.
+python tools/review/check_rules.py --seat A --base origin/main --head codex/gameplay
+0 error(s), 0 warning(s).
+python tools/review/check_rules.py --self-test
+SELF-TEST PASSED
+```
