@@ -7,7 +7,7 @@
     "Unity.XR.Interaction.Toolkit",
     "Unity.XR.Hands",
     "Unity.InputSystem",
-    "Unity.ugui",
+    "UnityEngine.UI",
     "PatientZero.Flow"
   ]
 }

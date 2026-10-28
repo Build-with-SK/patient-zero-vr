@@ -3,7 +3,7 @@
   "references": [
     "PatientZero.Core",
     "PatientZero.UI.Logic",
-    "Unity.ugui",
+    "UnityEngine.UI",
     "Unity.InputSystem",
     "PatientZero.Flow",
     "PatientZero.Flow.Logic",

@@ -1,4 +1,4 @@
-// UNVERIFIED IN EDITOR — canonical project pin/packages/composer pending.
+// UNVERIFIED IN EDITOR — pinned Unity 6000.3.27f1 is not installed locally.
 using PatientZero.Core;
 using PatientZero.Player;
 using UnityEngine;

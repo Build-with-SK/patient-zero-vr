@@ -1,4 +1,4 @@
-// UNVERIFIED IN EDITOR — canonical project pin/packages/composer pending.
+// UNVERIFIED IN EDITOR — pinned Unity 6000.3.27f1 is not installed locally.
 using PatientZero.Core;
 using PatientZero.Flow;
 using UnityEngine;
@@ -15,6 +15,8 @@ namespace PatientZero.Player
         private void State(GameStateChanged state){live=GameStateRules.IsSimulationLive(state.To);}
         private void Update()
         {
+#if PZ_DESKTOP_MOUSE
+
             if(!desktopSimulation || XRSettings.isDeviceActive || !rig || !cameraView)return;
             var keys=Keyboard.current;var mouse=Mouse.current;if(keys==null || mouse==null)return;
             rig.SetTracking(InputModality.Controllers,true,true);
@@ -26,7 +28,9 @@ namespace PatientZero.Player
             if(!Services<ISettingsProvider>.TryGet(out var settings) || settings.Current.Locomotion!=LocomotionMode.TeleportAndSmooth || !capsule)return;
             float x=(keys.dKey.isPressed?1:0)-(keys.aKey.isPressed?1:0),z=(keys.wKey.isPressed?1:0)-(keys.sKey.isPressed?1:0);var move=rig.origin.transform.TransformDirection(new Vector3(x,0,z).normalized);capsule.Move(move*1.5f*Time.deltaTime+Vector3.down*Time.deltaTime);
             if(move.sqrMagnitude>0){footstep+=Time.deltaTime;if(footstep>=.6f){footstep=0;Cues.Play(CueId.PlayerFootstep,rig.FloorPosition,NoiseOrigin.Player);}}
-        }
+        
+#endif
+}
         private void TeleportNext(){int nearest=-1;float best=float.MaxValue;for(int i=0;i<WardLayout.CriticalPath.Count;i++){var a=WardLayout.CriticalPath[i];if(a.Act!=flow.Core.CurrentAct)continue;float d=WardLayout.HorizontalDistance(rig.FloorPosition,a.Position);if(d<best){best=d;nearest=i;}}int next=nearest+1;if(nearest<0 || next>=WardLayout.CriticalPath.Count)return;var anchor=WardLayout.CriticalPath[next];if(anchor.Act!=flow.Core.CurrentAct || WardLayout.HorizontalDistance(rig.FloorPosition,anchor.Position)>WardLayout.TeleportMaxDistance)return;rig.origin.MoveCameraToWorldLocation(anchor.Position+Vector3.up*(rig.HeadPosition.y-rig.FloorPosition.y));Cues.Play(CueId.TeleportLand,anchor.Position,NoiseOrigin.Player);}
     }
 }

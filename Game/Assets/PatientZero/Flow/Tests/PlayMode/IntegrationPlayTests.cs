@@ -1,4 +1,4 @@
-// UNVERIFIED IN EDITOR — run only after Claude generates Bootstrap/Ward with the approved contract gate.
+// UNVERIFIED IN EDITOR — run with pinned Unity 6000.3.27f1 after Bootstrap/Ward composition.
 using System;
 using System.Collections;
 using System.Reflection;
