@@ -44,7 +44,13 @@ namespace PatientZero.Atmosphere
             GameEvents.SettingsChanged.Unsubscribe(SettingsChanged); GameEvents.StateChanged.Unsubscribe(StateChanged);
             GameEvents.TrackingChanged.Unsubscribe(TrackingChanged);
         }
-        public void StartRun(ActId startAct, bool isRestore) { core.StartRun(startAct, isRestore); lastTick = Time.time; Pump(); }
+        public void StartRun(ActId startAct, bool isRestore)
+        {
+            // Bootstrap may have published Playing before Ward was loaded. GameFlow only
+            // calls this service after loading/resuming, so synchronize the late-loaded shell.
+            state = GameState.Playing;
+            core.StartRun(startAct, isRestore); lastTick = Time.time; Pump();
+        }
         private void Progress(ObjectiveProgress e) { core.Progress(e.Objective, e.Progress01); Pump(); }
         private void Complete(ObjectiveCompleted e) { core.Complete(e.Objective); Pump(); }
         private void Noise(NoiseEvent e) => core.Noise(in e);

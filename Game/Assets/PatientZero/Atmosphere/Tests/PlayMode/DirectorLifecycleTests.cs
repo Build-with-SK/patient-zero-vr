@@ -113,5 +113,32 @@ namespace PatientZero.Atmosphere.Tests
             }
             yield return null;
         }
+        private sealed class StationaryPlayer : IPlayerQuery
+        {
+            public Vector3 FloorPosition => WardLayout.A1_Start.Position;
+            public Vector3 HeadPosition => FloorPosition + Vector3.up * 1.6f;
+            public Vector3 HeadForward => Vector3.forward;
+            public InputModality Modality => InputModality.Controllers;
+            public float HeadSpeed => 0;
+            public float FastestHandSpeed => 0;
+            public bool TryGetHandPosition(HandSide side, out Vector3 position) { position = HeadPosition; return true; }
+        }
+        [UnityTest] public IEnumerator FirstWardLoadTicksWithoutReplayingBootstrapStateEvent()
+        {
+            CoreStaticReset.ResetStatics(); var audio = new AudioStub(); var player = new StationaryPlayer();
+            Services<IAudioCuePlayer>.Register(audio); Services<IPlayerQuery>.Register(player);
+            var root = new GameObject("LateLoadedDirector"); float before = Time.timeScale; Time.timeScale = 1;
+            try
+            {
+                var director = root.AddComponent<ExperienceDirector>(); director.StartRun(ActId.Awakening, false);
+                yield return new WaitForSeconds(.3f);
+                Assert.Greater(director.ExperienceTime, .1f, "First Ward load must not wait for a Playing event already sent by Bootstrap.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root); Services<IPlayerQuery>.Unregister(player);
+                Services<IAudioCuePlayer>.Unregister(audio); Time.timeScale = before;
+            }
+        }
     }
 }

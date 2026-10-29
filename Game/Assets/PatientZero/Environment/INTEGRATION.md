@@ -6,13 +6,13 @@ No old package, duplicate Core, SDK imports, handwritten Unity assets or foreign
 
 ## What is built
 
-The approved layout is isolation B-7 → corridor → exit vestibule, with supply/side/linen rooms.
+The approved layout is isolation B-7 â†’ corridor â†’ exit vestibule, with supply/side/linen rooms.
 Round 2 dresses the existing SupplyRoom as an operating theatre, as requested by the owner, without
 moving any room, interaction, spawn or doorway. It adds a static operating table, unlit surgical lamp,
 sterile cabinet and instrument shelf/tray, plus patient-room bed/mattress dressing, with tested clearance around Z2's doorway route and layout
 points. There are no external assets with verified file licences in the project, so these use the approved
 procedural fallbacks. The geometry contains six floors/ceilings, deduplicated
-walls, six aligned door openings/headers, a monitor, narrative text, exit sign, guidance strip, cart,
+walls, six aligned door openings/headers, a monitor, narrative text, exit sign, guidance strip, cart landmark (A supplies the physical trolley),
 gurney, readable 1.3 m chain and PA/vent dressing. Functional door leaves and cart interactions belong
 to seat A. Text currently uses Unity's built-in legacy font as a generated greybox placeholder.
 
@@ -25,7 +25,10 @@ to seat A. Text currently uses Unity's built-in legacy font as a generated greyb
 | Bootstrap 600 | `Audio.Editor.AudioBuildSteps.Build` | Persistent cue-player service, native-generated Master + World/Voice/Ambience/Music/UI mixer |
 | Ward 650 | `AudioBuildSteps.Emitters` | Act-specific loops and director tension binding |
 
-These are `[SceneBuildStep]` sources for Claude's composer. **They have not executed in Unity.**
+These are `[SceneBuildStep]` sources for Claude's composer. **2026-10-29 update:** B's
+assemblies compile in Unity 6000.3.27f1; native preview tests execute the hospital geometry
+builder, with 149/149 EditMode and 9/9 selected PlayMode tests passing. Full saved-scene
+composition and end-to-end gameplay have separate integration dependencies (see DESKTOP_PLAYTEST.md).
 They generate native assets under each area's Generated directory when the editor is available;
 no `.meta`, `.unity`, `.prefab`, `.asset`, `.mat`, `.mixer` or audio binary is handwritten or committed.
 The Audio mixer factory is isolated behind Editor-only reflection; method names were checked against
@@ -34,7 +37,7 @@ fails scene generation explicitly rather than manufacturing a mixer asset.
 
 ## Required integration bindings
 
-- Claude pins Unity **6000.3.x**, URP, AI Navigation, XRI ≥3.5, XR Hands ≥1.8 and the test framework
+- Claude pins Unity **6000.3.x**, URP, AI Navigation, XRI â‰¥3.5, XR Hands â‰¥1.8 and the test framework
   in the approved Game project. B has no XRI/Hands/Meta Interaction SDK assembly references.
 - Seat A registers **IPlayerQuery**, **ISettingsProvider** and **IScreenFader** in Bootstrap and calls
   **IExperienceDirector.StartRun** after Ward load. B registers IAudioCuePlayer and IExperienceDirector.
@@ -84,7 +87,7 @@ speech ducking (-6 dB), post-scare ambience ducking (-9 dB), occlusion gain/filt
 are applied in the audio service, so fallback routing remains functional.
 
 Standard mode has two hard-scare budgets; Reduced has none and no final lunge. Blackout disables sight.
-The window light pulse replaces a scheduled flicker edge, lasts approximately 250 ms (≤300 ms), and
+The window light pulse replaces a scheduled flicker edge, lasts approximately 250 ms (â‰¤300 ms), and
 holds other flicker stable to stay under three discrete luminance changes in any second. Reduced
 flicker removes that pulse and holds the fluorescent/red variations constant. No camera motion is added.
 
@@ -107,8 +110,19 @@ Unity 6000.3.27f1 is still absent. Once Claude provisions the editor:
 3. Run B's PlayMode tests: real cue-to-hearing boundary, missing/zero-intensity assets, mono/custom rolloff,
    director lifecycle subscribers, and complete NavMesh paths along approved routes. A missing generated
    Ward fails the route test; it is not skipped or counted as a passing test.
-4. Run the full integrated autoplay, door blocking, restore ×10, tracking-loss and pause suites with seat A.
+4. Run the full integrated autoplay, door blocking, restore Ã—10, tracking-loss and pause suites with seat A.
 5. Perform headphones/localization checks and Quest captures required by TEST_REPORT/PERFORMANCE_REPORT.
    Target remains 72 Hz; no device performance or Unity compilation is claimed by this branch.
 
 No external art/audio has been imported. Licensed upgrades remain subject to the existing asset manifest.
+
+
+## First desktop test (2026-10-29)
+
+Use `DESKTOP_PLAYTEST.md` for the exact assembly-conflict resolution, proposed compile/
+Video-module patches, Windows menu sequence, simulator controls and spawn/objectives.
+No A-owned file or TD project setting is modified on this branch. The owner's existing
+Unity-generated files are preserved; native validation runs in separate checkouts.
+B's layer binding consumes a proposed `PZ_ClosedDoor` user layer if configured and otherwise
+keeps door-hearing disabled with an explicit validator warning. The bake refuses an
+incorrect radius; Claude's composer must set agent type 0 to 0.25 m before step 150.

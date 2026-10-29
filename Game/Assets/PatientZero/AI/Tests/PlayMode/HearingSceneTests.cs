@@ -37,11 +37,12 @@ namespace PatientZero.AI.Tests
                 surface.BuildNavMesh(); yield return null;
                 Assert.IsTrue(NavMesh.SamplePosition(WardLayout.Z2_Dormant.Position, out _, 1, NavMesh.AllAreas));
                 audioRoot.AddComponent<AudioCuePlayer>();
+                GameEvents.StateChanged.Raise(new GameStateChanged(GameState.Boot, GameState.Playing, FailReason.None));
+                // Actor is loaded after Playing was broadcast, as on the first Ward load.
                 actor = new GameObject("Orderly"); actor.SetActive(false); actor.transform.position = WardLayout.Z2_Dormant.Position;
                 actor.AddComponent<NavMeshAgent>(); actor.AddComponent<ZombieNavigation>().Obstacles = 0;
                 var zombie = actor.AddComponent<ZombieAgentShell>(); zombie.ZombieId = ZombieIds.Orderly; zombie.SightBlockers = 1;
                 actor.SetActive(true);
-                GameEvents.StateChanged.Raise(new GameStateChanged(GameState.Boot, GameState.Playing, FailReason.None));
                 GameEvents.ActStarted.Raise(new ActStarted(ActId.Machinery, false, 1));
                 Cues.Play(CueId.ImpactHeavy, WardLayout.Z2_Dormant.Position + Vector3.right * 7, NoiseOrigin.Player);
                 Assert.AreEqual(AlertLevel.Unaware, zombie.Brain.Level);

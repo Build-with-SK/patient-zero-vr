@@ -52,6 +52,7 @@ namespace PatientZero.AI
             ZombieId == 3 ? WardLayout.Z3_PatrolNorth.Position : WardLayout.Z4_Gurney.Position;
         private void ActStarted(ActStarted e)
         {
+            state = GameState.Playing; // Ward can load after Bootstrap's Playing notification.
             active = (int)e.Act == ZombieId; StopLoops(); lastTick = Time.time; nextTick = Time.time + ZombieId * .017f;
             brain.Reset(ZombieId == 4 ? ZombieMode.Restrained : ZombieMode.Dormant);
             if (navigation) { navigation.SetSimulationActive(active); if (active) navigation.Warp(Spawn()); }

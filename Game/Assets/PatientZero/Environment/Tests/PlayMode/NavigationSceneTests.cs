@@ -39,6 +39,7 @@ namespace PatientZero.Environment.Tests
                         WardLayout.Z2_Dormant.Position, WardLayout.Z2_Doorway.Position, WardLayout.Z3_PatrolNorth.Position, WardLayout.Z4_Gurney.Position };
                     var to = new[] { WardLayout.A1_DoorWindow.Position + Vector3.forward * .45f, WardLayout.Z1_WalkTo.Position,
                         WardLayout.Z2_Doorway.Position, WardLayout.Z1_WalkFrom.Position, WardLayout.Z3_PatrolSouth.Position, WardLayout.Z4_Gurney.Position };
+                    to[0].y = from[0].y; // Window marker is eye height; Z1 walks on the corridor floor.
                     var path = new NavMeshPath();
                     for (int i = 0; i < from.Length; i++)
                     {

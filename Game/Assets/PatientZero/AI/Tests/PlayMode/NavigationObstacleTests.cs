@@ -29,15 +29,16 @@ namespace PatientZero.AI.Tests
                 var agent = actor.AddComponent<NavMeshAgent>(); agent.radius = .22f; agent.stoppingDistance = .1f;
                 var navigation = actor.AddComponent<ZombieNavigation>(); navigation.SetSimulationActive(true);
                 Assert.IsTrue(navigation.Warp(Vector3.left * 2));
-                var destination = Vector3.right * 2;
+                var destination = Vector3.right * 2 + Vector3.up * 1.65f;
+                var expectedFloor = Vector3.right * 2;
                 float until = Time.time + 8;
-                while (Time.time < until && Vector3.Distance(actor.transform.position, destination) > .3f)
+                while (Time.time < until && Vector3.Distance(actor.transform.position, expectedFloor) > .3f)
                 {
                     navigation.Drive(true, destination, 2, Time.time);
                     Assert.IsFalse(navigation.PathFailed, "Static wall should be routed around, not treated as an impossible path.");
                     yield return new WaitForFixedUpdate();
                 }
-                Assert.Less(Vector3.Distance(actor.transform.position, destination), .3f);
+                Assert.Less(Vector3.Distance(actor.transform.position, expectedFloor), .3f);
             }
             finally { if (actor) Object.DestroyImmediate(actor); Object.DestroyImmediate(root); }
         }

@@ -38,6 +38,9 @@ namespace PatientZero.AI
             PathFailed = false;
             if (!agent || !agent.enabled || !agent.isOnNavMesh) { PathFailed = true; return; }
             if (!moving) { blockedSince = -1; Stop(); return; }
+            // Cues/window landmarks are at ear height. This ward is planar: sample the
+            // actor's floor, otherwise SamplePosition can choose the walkable ceiling.
+            target.y = transform.position.y;
             // Ask the NavMesh for the complete route first. A direct line to a target can cross
             // a wall even when the mesh has a valid route around it.
             if (now >= nextPath && (!agent.hasPath || (lastTarget - target).sqrMagnitude > .04f))

@@ -33,7 +33,30 @@ namespace PatientZero.Environment.Editor
                 if (errors.Count != 0) throw new InvalidOperationException(errors.Count + " hospital validation error(s).");
                 Debug.Log("Hospital validation passed: saved navigation, routes, actors, lighting and audio bindings.");
             }
-            finally { EditorSceneManager.RestoreSceneManagerSetup(setup); }
+            finally
+            {
+                if (setup.Length > 0 && System.Array.Exists(setup, s => s.isActive)) EditorSceneManager.RestoreSceneManagerSetup(setup);
+                else EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            }
+        }
+
+        [MenuItem("PatientZero/Hospital/Validate Saved Navigation Asset")]
+        public static void ValidateNavigationAsset()
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<NavMeshData>("Assets/PatientZero/Environment/Generated/WardNavMesh.asset");
+            if (!asset) throw new InvalidOperationException("Generate the Ward NavMesh asset first.");
+            var instance = NavMesh.AddNavMeshData(asset);
+            try
+            {
+                var errors = new List<string>();
+                CheckRoute(WardLayout.Z1_WalkFrom.Position, WardLayout.A1_DoorWindow.Position + Vector3.forward * .45f, "window approach", errors);
+                CheckRoute(WardLayout.Z2_Dormant.Position, WardLayout.Z2_Doorway.Position, "theatre doorway", errors);
+                CheckRoute(WardLayout.Z3_PatrolNorth.Position, WardLayout.Z3_PatrolSouth.Position, "corridor crossing", errors);
+                foreach (string error in errors) Debug.LogError(error);
+                if (errors.Count > 0) throw new InvalidOperationException("Saved navigation has " + errors.Count + " unreachable route(s).");
+                Debug.Log("Saved navigation routes passed.");
+            }
+            finally { instance.Remove(); }
         }
 
         public static List<string> Check(Scene bootstrap, Scene ward)
@@ -83,11 +106,13 @@ namespace PatientZero.Environment.Editor
 
         private static void CheckRoute(Vector3 start, Vector3 end, string name, List<string> errors)
         {
+            end.y = start.y; // Landmark height is not a navigation destination height.
             var path = new NavMeshPath();
-            if (!NavMesh.SamplePosition(start, out var a, .5f, NavMesh.AllAreas) ||
-                !NavMesh.SamplePosition(end, out var b, .5f, NavMesh.AllAreas) ||
-                !NavMesh.CalculatePath(a.position, b.position, NavMesh.AllAreas, path) || path.status != NavMeshPathStatus.PathComplete)
-                errors.Add("No complete route: " + name);
+            bool hasStart = NavMesh.SamplePosition(start, out var a, .5f, NavMesh.AllAreas);
+            bool hasEnd = NavMesh.SamplePosition(end, out var b, .5f, NavMesh.AllAreas);
+            if (!hasStart || !hasEnd || !NavMesh.CalculatePath(a.position, b.position, NavMesh.AllAreas, path) || path.status != NavMeshPathStatus.PathComplete)
+                errors.Add("No complete route: " + name + "; sampled start=" + hasStart + " " + a.position +
+                    "; sampled end=" + hasEnd + " " + b.position + "; status=" + path.status);
         }
         private static List<T> Find<T>(Scene scene) where T : Component
         {
