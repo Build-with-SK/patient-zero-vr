@@ -43,7 +43,7 @@ namespace PatientZero.Environment.Editor
             var emissive = WardPrimitives.Material("ExitEmission", new Color(.08f, .5f, .12f));
             emissive.EnableKeyword("_EMISSION"); emissive.SetColor("_EmissionColor", new Color(.08f, .5f, .12f));
             WardPrimitives.Box(sign, "ExitSign", sign.position, new Vector3(.05f, .25f, .5f), emissive, false);
-            Label(sign, "EXIT →", sign.position - Vector3.right * .06f, .045f, 90);
+            Label(sign, "EXIT â†’", sign.position - Vector3.right * .06f, .045f, 90);
             var route = new[] { WardLayout.A3_Start, WardLayout.A3_Mid1, WardLayout.A3_Mid2, WardLayout.A3_End };
             for (int i = 0; i < route.Length - 1; i++)
             {
@@ -54,13 +54,13 @@ namespace PatientZero.Environment.Editor
             }
             var drip = WardPrimitives.Marker(root, WardLayout.A3_Drip);
             WardPrimitives.Box(drip, "Pipe", drip.position, new Vector3(.08f, .3f, .08f), metal, false);
-            var cart = WardPrimitives.Marker(root, WardLayout.A3_Cart);
-            Cart(cart, cart.position, metal);
+            // A supplies the only colliding/physical trolley. Keep our landmark, not overlapping geometry.
+            WardPrimitives.Marker(root, WardLayout.A3_Cart);
             Gurney(root, metal);
             foreach (var prop in HospitalDressing.Create())
                 WardPrimitives.Box(root, prop.Name, prop.Position, prop.Size, metal, prop.Collider);
             Label(root, "OPERATING THEATRE", WardLayout.Z2_Doorway.Position + Vector3.up * 2.45f, .035f);
-            Label(root, "EMERGENCY EXIT →", WardLayout.A3_End.Position + Vector3.up * 2.4f, .035f);
+            Label(root, "EMERGENCY EXIT â†’", WardLayout.A3_End.Position + Vector3.up * 2.4f, .035f);
             // Seat A builds the functional door leaves and puzzle objects at the shared LayoutIds.
             // Theatre furniture adds no light, dynamic body, camera effect or encounter. All beats remain in DirectorCore.
             Label(root, "THEY HEAR YOU", WardLayout.A1_PlankMid.Position - Vector3.forward * .08f, .04f);
@@ -76,6 +76,9 @@ namespace PatientZero.Environment.Editor
         {
             var surface = WardPrimitives.FindInScene<NavMeshSurface>(root);
             if (!surface) throw new System.InvalidOperationException("Ward geometry must precede NavMesh baking");
+            var bake = UnityEngine.AI.NavMesh.GetSettingsByID(surface.agentTypeID);
+            if (Mathf.Abs(bake.agentRadius - .25f) > .001f)
+                throw new System.InvalidOperationException("Ward requires bake radius 0.25 m (INT-B-1). Run Claude's NavigationSettings through PatientZero/Build Scenes; changing runtime agent.radius is insufficient.");
             surface.BuildNavMesh();
             if (!surface.navMeshData) throw new System.InvalidOperationException("Ward bake produced no NavMeshData");
             string path = WardPrimitives.GeneratedFolder("Environment") + "/WardNavMesh.asset";
@@ -90,15 +93,6 @@ namespace PatientZero.Environment.Editor
             else AssetDatabase.CreateAsset(surface.navMeshData, path);
             AssetDatabase.SaveAssets();
         }
-        private static void Cart(Transform root, Vector3 p, Material metal)
-        {
-            WardPrimitives.Box(root, "CartShelf", p, new Vector3(.65f, .06f, .35f), metal);
-            for (int side = -1; side <= 1; side += 2)
-                WardPrimitives.Box(root, "CartLeg", p + Vector3.right * side * .25f - Vector3.up * .35f, new Vector3(.04f, .7f, .04f), metal);
-            // Physics and impact Cues belong to A; this is the dressing/attachment point only.
-            for (int bottle = 0; bottle < 3; bottle++)
-                WardPrimitives.Box(root, "Bottle_Dressing", p + Vector3.up * .12f + Vector3.right * (bottle - 1) * .13f, new Vector3(.06f, .2f, .06f), metal, false);
-        }
         private static void Gurney(Transform root, Material metal)
         {
             Vector3 p = WardLayout.Z4_Gurney.Position;
@@ -111,7 +105,7 @@ namespace PatientZero.Environment.Editor
                 Vector3 at = p + towards * (WardLayout.FinalPatientReach * link / 13) + Vector3.up * .08f;
                 WardPrimitives.Box(root, "ChainLink", at, new Vector3(.08f, .025f, .025f), metal, false);
             }
-            Label(root, "RESTRAINED — KEEP CLEAR", p + Vector3.up * .2f, .03f);
+            Label(root, "RESTRAINED â€” KEEP CLEAR", p + Vector3.up * .2f, .03f);
         }
         private static void Label(Transform root, string text, Vector3 p, float size, float yaw = 0)
         {

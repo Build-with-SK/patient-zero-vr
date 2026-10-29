@@ -28,9 +28,11 @@ namespace PatientZero.AI.Editor
                 var agent = actor.AddComponent<NavMeshAgent>(); agent.radius = .22f; agent.height = 1.7f;
                 agent.stoppingDistance = id == 1 ? .05f : .25f; agent.speed = .9f; agent.acceleration = 4;
                 agent.angularSpeed = 120; agent.obstacleAvoidanceType = ObstacleAvoidanceType.LowQualityObstacleAvoidance;
-                actor.AddComponent<ZombieNavigation>();
+                var navigation = actor.AddComponent<ZombieNavigation>();
+                var masks = WardCollisionBinding.Resolve(); navigation.Obstacles = masks.Movement;
                 var animation = actor.AddComponent<ZombieAnimationController>(); Mannequin(actor.transform, animation, material);
                 var shell = actor.AddComponent<ZombieAgentShell>(); shell.ZombieId = id; shell.Animation = animation;
+                shell.SightBlockers = masks.Sight; shell.HearingOccluders = masks.Hearing;
                 shell.Head = animation.Head; shell.FootEmitter = animation.FootEmitter; actors[i] = shell;
                 string folder = WardPrimitives.GeneratedFolder("AI");
                 PrefabUtility.SaveAsPrefabAsset(actor, folder + "/Zombie_" + id + ".prefab");

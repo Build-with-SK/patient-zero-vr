@@ -39,7 +39,7 @@ namespace PatientZero.Atmosphere.Logic
             ObjectiveId.Act2_ValveVented, ObjectiveId.Act2_CablePlugged, ObjectiveId.Act2_PowerRestored,
             ObjectiveId.Act3_BeaconReached, ObjectiveId.Act4_ReleasePulled, ObjectiveId.Act4_ExitOpened };
         private int read, write;
-        private float actTime, endingTime, scareAt, surgeAt = -1, lastHard = -100, lastAlert = -100, lastAmbient = -100, nextBeacon;
+        private float actTime, endingTime, lureAt, surgeAt = -1, lastHard = -100, lastAlert = -100, lastAmbient = -100, nextBeacon;
         private bool pass, windowArrived, windowScare, lure, z1Clear, investigate, crossing, snapped, ending, pa, drone, kneel, done;
         private Vector3 z1Position;
         private bool walkerRemoved, actOneGateReleased;
@@ -161,7 +161,7 @@ namespace PatientZero.Atmosphere.Logic
                     if (!pa && actTime >= 3) { pa = true; Cue(CueId.PaGarbledBreach, WardLayout.A1_DoorWindow.Position); }
                     if (!pass && actTime >= 16) StartPass();
                     if (complete[0] && windowArrived && !windowScare) WindowScare();
-                    if (windowScare && !lure && actTime >= scareAt + 2)
+                    if (windowScare && !lure && actTime >= lureAt)
                     { lure = true; Cue(CueId.DistantCrashLure, WardLayout.Z1_WalkTo.Position); Zombie(1, ZombieDirection.LeaveWindow, WardLayout.Z1_WalkTo.Position); }
                     if (lure && !walkerRemoved && WardLayout.HorizontalDistance(z1Position, WardLayout.Z1_WalkTo.Position) <= .35f)
                     { walkerRemoved = true; Zombie(1, ZombieDirection.Hide); }
@@ -195,7 +195,10 @@ namespace PatientZero.Atmosphere.Logic
         { if (pass || Act != ActId.Awakening) return; pass = true; Zombie(1, ZombieDirection.WindowApproach, WardLayout.A1_DoorWindow.Position); }
         private void WindowScare()
         {
-            windowScare = true; scareAt = actTime;
+            windowScare = true;
+            // Store the rounded float deadline. Mono can keep the comparison expression
+            // actTime >= start + 2 in higher precision than the stored actTime value.
+            lureAt = actTime + 2f;
             bool hard = Settings.Scares == ScareIntensity.Standard && !memory.WindowScareUsed;
             if (hard)
             {
