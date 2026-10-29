@@ -1,0 +1,10 @@
+{
+  "name": "PatientZero.Interaction.PlayModeTests",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Interaction"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

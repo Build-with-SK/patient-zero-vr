@@ -1,0 +1,15 @@
+{
+  "name": "PatientZero.Flow.PlayModeTests",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Flow",
+    "PatientZero.Interaction",
+    "PatientZero.Player",
+    "PatientZero.UI",
+    "PatientZero.Flow.Logic",
+    "Unity.XR.CoreUtils"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

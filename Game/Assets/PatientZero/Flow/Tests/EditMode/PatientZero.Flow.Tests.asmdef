@@ -1,0 +1,13 @@
+{
+  "name": "PatientZero.Flow.Tests",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Flow.Logic"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

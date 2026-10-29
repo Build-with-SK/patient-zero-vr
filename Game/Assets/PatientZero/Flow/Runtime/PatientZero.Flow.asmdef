@@ -1,0 +1,8 @@
+{
+  "name": "PatientZero.Flow",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Flow.Logic",
+    "UnityEngine.UI"
+  ]
+}

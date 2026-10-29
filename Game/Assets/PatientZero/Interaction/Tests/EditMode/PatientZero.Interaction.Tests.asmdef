@@ -1,0 +1,13 @@
+{
+  "name": "PatientZero.Interaction.Tests",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Interaction.Logic"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}
