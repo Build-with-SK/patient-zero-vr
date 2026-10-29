@@ -5,7 +5,9 @@
     "PatientZero.Flow",
     "PatientZero.Interaction",
     "PatientZero.Player",
-    "PatientZero.UI"
+    "PatientZero.UI",
+    "PatientZero.Flow.Logic",
+    "Unity.XR.CoreUtils"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"

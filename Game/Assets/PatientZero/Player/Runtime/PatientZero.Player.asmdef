@@ -8,6 +8,7 @@
     "Unity.XR.Hands",
     "Unity.InputSystem",
     "UnityEngine.UI",
-    "PatientZero.Flow"
+    "PatientZero.Flow",
+    "PatientZero.Flow.Logic"
   ]
 }
