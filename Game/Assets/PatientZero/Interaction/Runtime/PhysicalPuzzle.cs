@@ -25,7 +25,7 @@ namespace PatientZero.Interaction
         private void Selected(SelectEnterEventArgs args){grip=args.interactorObject.GetAttachTransform(interactable);BeginGrip(grip.position);}
         private void Deselected(SelectExitEventArgs args){EndGrip();}
         public void BeginGrip(Vector3 point){if(!Available)return;held=true;gripStart=point;if(mechanic==Mechanic.Valve)valve.BeginGrip(point-transform.position,transform.TransformDirection(axis));loop=Cues.PlayAttached(mechanic==Mechanic.Valve?CueId.ValveSqueal:mechanic==Mechanic.Plank?CueId.PlankCreak:CueId.ReleaseBarGrind,transform,NoiseOrigin.Player,0);}
-        public void CancelGrip(){if(interactable && interactable.isSelected && interactable.interactionManager)interactable.interactionManager.CancelInteractableSelection(interactable);EndGrip();}
+        public void CancelGrip(){if(interactable && interactable.isSelected && interactable.interactionManager)interactable.interactionManager.CancelInteractableSelection((IXRSelectInteractable)interactable);EndGrip();}
         public void EndGrip(){held=false;grip=null;valve.EndGrip();plank.Release();Cues.Stop(loop);loop=default;if(mechanic==Mechanic.Plank && !plank.Popped && movingPart)movingPart.localPosition=home;}
         public void SampleGrip(Vector3 point,float seconds)
         {

@@ -21,7 +21,7 @@ namespace PatientZero.Interaction
         private void Release(SelectExitEventArgs args){selected=false;Cues.Stop(drag);body.linearVelocity=HeldObjectSafety.ReleaseVelocity(body.linearVelocity,true,cancelled);if(cancelled)body.angularVelocity=Vector3.zero;}
         public void DesktopGrab(){if(grab.isSelected)return;selected=true;cancelled=false;body.useGravity=false;}
         public void DesktopRelease(Vector3 velocity){selected=false;body.useGravity=true;body.linearVelocity=HeldObjectSafety.ReleaseVelocity(velocity,true,cancelled);}
-        public void CancelSelection(){cancelled=true;selected=false;suppressUntil=Time.time+.3f;if(grab.isSelected && grab.interactionManager)grab.interactionManager.CancelInteractableSelection(grab);if(!body.isKinematic){body.linearVelocity=Vector3.zero;body.angularVelocity=Vector3.zero;}body.useGravity=true;Cues.Stop(drag);}
+        public void CancelSelection(){cancelled=true;selected=false;suppressUntil=Time.time+.3f;if(grab.isSelected && grab.interactionManager)grab.interactionManager.CancelInteractableSelection((IXRSelectInteractable)grab);if(!body.isKinematic){body.linearVelocity=Vector3.zero;body.angularVelocity=Vector3.zero;}body.useGravity=true;Cues.Stop(drag);}
         private InputModality lastMode;
         private void Tracking(TrackingChanged t){if(lastMode!=t.Modality)CancelSelection();lastMode=t.Modality;}
         private void State(GameStateChanged state){if(!GameStateRules.IsSimulationLive(state.To))CancelSelection();}

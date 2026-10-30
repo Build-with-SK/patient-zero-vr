@@ -3,9 +3,11 @@
   "references": [
     "PatientZero.Core",
     "PatientZero.Flow",
+    "PatientZero.Flow.Logic",
     "PatientZero.Interaction",
     "PatientZero.Player",
     "PatientZero.UI",
+    "Unity.XR.CoreUtils",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner"
   ],
