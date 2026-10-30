@@ -71,6 +71,16 @@ namespace PatientZero.Environment.Editor
             if (lights.Count != 1 || lights[0].Fixtures.Length != 6) errors.Add("Expected six bound shadowless fixtures.");
             else foreach (var fixture in lights[0].Fixtures)
                 if (!fixture || fixture.shadows != LightShadows.None) errors.Add("Fixture missing or dynamic shadows enabled.");
+            var headlamps = Find<PatientZero.Atmosphere.Mobile.NonVrHeadlampInput>(ward);
+            if (headlamps.Count != 1 || lights.Count != 1 || headlamps[0].Lighting != lights[0])
+                errors.Add("Mobile headlamp input must bind the existing LightingController; regenerate Ward.");
+            if (lights.Count == 1)
+            {
+                if (lights[0].FixtureFaces.Length != 6) errors.Add("Expected six visible fixture faces; regenerate Ward.");
+                else foreach (var face in lights[0].FixtureFaces) if (!face) errors.Add("Fixture lens renderer missing.");
+                if (lights[0].Fixtures.Length > 0 && lights[0].Fixtures[0] && lights[0].Fixtures[0].transform.childCount != 0)
+                    errors.Add("Headlamp emitter must not carry ceiling meshes; regenerate Ward.");
+            }
             var masks = WardCollisionBinding.Resolve();
             if (masks.Hearing == 0)
                 Debug.LogWarning("Door-only layer PZ_ClosedDoor is unassigned (INT-B-2); hearing door attenuation remains unverified. Integrator must bind only door leaves to that layer and rebuild.");

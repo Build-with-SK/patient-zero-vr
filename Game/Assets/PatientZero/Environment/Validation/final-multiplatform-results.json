@@ -1,0 +1,74 @@
+{
+  "date": "2026-10-30",
+  "baseline": "0f4a820b3ac135e461312107625884a0a6430a3a",
+  "branch": "integration/xr-systems",
+  "portable": {
+    "passed": 180,
+    "failed": 0,
+    "newTests": 22,
+    "command": "python tools/logic_tests/run_logic_tests.py"
+  },
+  "rules": {
+    "wholeTree": "0 errors, 0 warnings",
+    "selfTest": "PASS",
+    "seatB": "verify on committed head"
+  },
+  "packagePolicy": "PASS; packages not resolved in this cloud checkout",
+  "tooling": {
+    "passed": 23,
+    "failed": 1,
+    "case": "test_env_override_is_tried_first",
+    "cause": "unchanged Windows backslash expectation fails under Linux PosixPath"
+  },
+  "syntax": {
+    "language": "C# 9",
+    "ownedFiles": 50,
+    "profiles": [
+      "default",
+      "mobile",
+      "mobile_restart",
+      "pc"
+    ],
+    "errors": 0,
+    "typeCompilation": false
+  },
+  "buildSteps": {
+    "actualDeclarations": 6,
+    "productionBuildPlanErrors": 0,
+    "nativeExecution": false
+  },
+  "mobile": {
+    "implementation": "touch router, standard device bridge, retained HUD, non-VR headlamp, configurable voice cap",
+    "defaults": "off; opt-in separate non-XR profile",
+    "midActRestart": "guarded A compatibility patch awaiting TD review",
+    "nativeInputTest": "written, not run",
+    "phoneIpadTests": "not run"
+  },
+  "sourceScene": {
+    "rooms": 6,
+    "dressingBoxes": 49,
+    "newDetails": [
+      "broken ceiling panel/recess",
+      "abandoned bag/chart",
+      "door-jamb scuffs"
+    ],
+    "navigation": "portable clearance passes; rebake/native routes pending"
+  },
+  "native": {
+    "validate": 2,
+    "editmode-tests": 2,
+    "compose": 2,
+    "desktop-sim": 2,
+    "reason": "Unity 6000.3.27f1 absent from this cloud host",
+    "playmode": "not run",
+    "ownerWindowsBuildStarted": false,
+    "hardwareProfile": "not run"
+  },
+  "sharedSourceProposal": {
+    "file": "mobile-desktop-compatibility.patch",
+    "appliesToGameplay": "PASS cefbd3d",
+    "appliesToRound2": "PASS d4de1a1",
+    "sourceWorktreeModified": false
+  },
+  "github": "PR #3 updated through branch push; GraphQL API still HTTP 403"
+}

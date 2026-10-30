@@ -64,6 +64,18 @@ namespace PatientZero.Environment.Logic
                 boxes.Add(new DressingBox("StoryTrace_Chain_" + i, WardLayout.Z4_Gurney.Position + chain * (WardLayout.FinalPatientReach * i / 4) + Vector3.up * .008f,
                     new Vector3(.1f, .006f, .1f), false, DressingStyle.Trace));
             boxes.Add(new DressingBox("ScuffedWall", new Vector3(corridor.MinX + .7f, .35f, corridor.MaxZ - .06f), new Vector3(.4f, .12f, .01f), false, DressingStyle.Damage));
+            boxes.Add(new DressingBox("CeilingPanelRecess", WardLayout.A3_Mid1.Position + Vector3.up * 2.76f, new Vector3(.75f, .012f, 1.1f), false, DressingStyle.Damage));
+            boxes.Add(new DressingBox("BrokenCeilingPanel", WardLayout.A3_Mid1.Position + Vector3.up * 2.58f, new Vector3(.6f, .035f, .85f), false, DressingStyle.Ceramic));
+            boxes.Add(new DressingBox("AbandonedBag", new Vector3(patient.MinX + .45f, .13f, patient.MinZ + 2.1f), new Vector3(.38f, .25f, .3f), true, DressingStyle.Fabric));
+            boxes.Add(new DressingBox("UnfinishedChart", bed + Vector3.up * .2f + Vector3.forward * .4f, new Vector3(.25f, .015f, .32f), false, DressingStyle.Ceramic));
+            foreach (var door in new RoomGeometry().Doors)
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    var along = door.AlongX ? Vector3.right : Vector3.forward;
+                    var normal = door.AlongX ? Vector3.forward : Vector3.right;
+                    boxes.Add(new DressingBox("DamagedDoorJamb", door.Centre + along * (side * (door.Width / 2 + .07f)) - normal * .065f + Vector3.up * 1.2f,
+                        new Vector3(.035f, .65f, .035f), false, DressingStyle.Damage));
+                }
             return boxes.ToArray();
         }
     }

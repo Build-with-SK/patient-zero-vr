@@ -23,7 +23,8 @@ namespace PatientZero.Atmosphere.Editor
             {
                 var go = new GameObject("Fixture_" + points[i].Id); go.transform.SetParent(root, false);
                 go.transform.position = new Vector3(points[i].Position.x, 2.5f, points[i].Position.z);
-                var fixture = go.AddComponent<Light>(); fixture.type = LightType.Point; fixture.range = i == 1 || i == 2 ? 4.5f : i < 4 ? 3 : 2.8f;
+                var emitter = new GameObject("Emitter_" + points[i].Id); emitter.transform.SetParent(go.transform, false);
+                var fixture = emitter.AddComponent<Light>(); fixture.type = LightType.Point; fixture.range = i == 1 || i == 2 ? 4.5f : i < 4 ? 3 : 2.8f;
                 fixture.intensity = 0; fixture.shadows = LightShadows.None; controller.Fixtures[i] = fixture;
                 WardPrimitives.Box(go.transform, i >= 4 ? "EmergencyLampHousing" : "FluorescentHousing",
                     go.transform.position + Vector3.up * .12f,
@@ -32,6 +33,7 @@ namespace PatientZero.Atmosphere.Editor
                     go.transform.position + Vector3.up * .075f,
                     i >= 4 ? new Vector3(.15f, .03f, .15f) : new Vector3(i == 1 ? .45f : .7f, .025f, .1f), lens, false).GetComponent<Renderer>();
             }
+            root.gameObject.AddComponent<PatientZero.Atmosphere.Mobile.NonVrHeadlampInput>().Lighting = controller;
             var director = root.gameObject.AddComponent<ExperienceDirector>(); director.Lighting = controller;
             var strips = new System.Collections.Generic.List<Renderer>();
             var emissives = new System.Collections.Generic.List<Renderer>();

@@ -9,7 +9,9 @@
     "Unity.AI.Navigation",
     "PatientZero.AI",
     "PatientZero.Atmosphere",
-    "PatientZero.AI.Logic"
+    "PatientZero.AI.Logic",
+    "PatientZero.Environment.Mobile",
+    "Unity.InputSystem"
   ],
   "overrideReferences": true,
   "precompiledReferences": [

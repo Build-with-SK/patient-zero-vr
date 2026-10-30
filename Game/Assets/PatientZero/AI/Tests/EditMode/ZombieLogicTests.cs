@@ -142,6 +142,26 @@ namespace PatientZero.AI.Tests
             b.Tick(3.1f, 3, true, south); b.Tick(3.2f, .1f, true, south);
             Assert.AreEqual(Vector3.forward * 3, b.Target); Assert.IsTrue(b.HasMoveTarget);
         }
+        [Test] public void BlockedPatrolWaitsThenTriesTheOtherEndInsteadOfOscillating()
+        {
+            var b = Brain(3); b.SetMode(ZombieMode.Patrol); var initial = b.Target;
+            b.Tick(.1f, .1f, true, Frame(20, failed: true)); Assert.IsFalse(b.HasMoveTarget);
+            b.Tick(1.1f, 1, true, Frame(20)); Assert.IsFalse(b.HasMoveTarget);
+            b.Tick(2.2f, 1.1f, true, Frame(20)); Assert.IsFalse(b.HasMoveTarget);
+            b.Tick(2.3f, .1f, true, Frame(20)); Assert.IsTrue(b.HasMoveTarget); Assert.AreNotEqual(initial, b.Target);
+        }
+        [Test] public void FailedReturnRouteCanResumeListeningWithoutAnInfiniteHomeRequest()
+        {
+            var b = Brain(); b.Hear(Noise(4), Vector3.zero, 1, 0, true);
+            b.Tick(.6f, .6f, true, Frame()); b.Tick(.7f, .1f, true, Frame(failed: true));
+            var away = new PerceptionFrame(Vector3.left * 2, Vector3.left, Vector3.right * 20);
+            b.Tick(5.8f, 5.1f, true, away); Assert.AreEqual(AlertLevel.Unaware, b.Level);
+            var blocked = new PerceptionFrame(Vector3.left * 2, Vector3.left, Vector3.right * 20, pathFailed: true);
+            b.Tick(5.9f, .1f, true, blocked); Assert.IsFalse(b.HasMoveTarget);
+            b.Tick(8, 2.1f, true, away); b.Tick(8.1f, .1f, true, away); Assert.IsFalse(b.HasMoveTarget);
+            Assert.IsTrue(b.Hear(Noise(-3, time: 8.2f), Vector3.left * 2, 1, 8.2f, true));
+            Assert.AreEqual(AlertLevel.Suspicious, b.Level);
+        }
         [Test] public void MovingSightEscalationIncludesSnarl()
         {
             var b = Brain(); b.Hear(Noise(4), Vector3.zero, 1, 0, true); b.Tick(.6f, .6f, true, Frame());

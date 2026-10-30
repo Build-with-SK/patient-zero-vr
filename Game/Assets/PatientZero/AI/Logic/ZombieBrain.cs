@@ -163,14 +163,21 @@ namespace PatientZero.AI.Logic
         }
         private void TickPatrol(float delta, in PerceptionFrame frame)
         {
+            if (patrolPause > 0)
+            { patrolPause = Math.Max(0, patrolPause - delta); HasMoveTarget = false; return; }
+            if (frame.PathFailed && HasMoveTarget)
+            {
+                // A failed return route must not keep requesting the same unreachable doorway forever.
+                returning = false; HasMoveTarget = false; patrolPause = 2;
+                if (Mode == ZombieMode.Patrol) southbound = !southbound;
+                return;
+            }
             if (returning)
             {
                 if (WardLayout.HorizontalDistance(frame.Zombie, spawn) > .35f) return;
                 returning = false; HasMoveTarget = false;
             }
             if (Mode != ZombieMode.Patrol) { HasMoveTarget = returning; return; }
-            if (patrolPause > 0)
-            { patrolPause = Math.Max(0, patrolPause - delta); HasMoveTarget = false; return; }
             if (HasMoveTarget && WardLayout.HorizontalDistance(frame.Zombie, Target) <= .35f)
             { patrolPause = southbound ? 3 : 4; southbound = !southbound; HasMoveTarget = false; }
             else { Target = southbound ? patrolSouth : patrolNorth; HasMoveTarget = true; }

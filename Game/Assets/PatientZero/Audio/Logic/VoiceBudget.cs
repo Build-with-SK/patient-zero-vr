@@ -17,6 +17,15 @@ namespace PatientZero.Audio.Logic
         private struct Slot { public bool Active, Spatialized; public int Handle; public long Order; public CueDefinition Cue; }
         private readonly Slot[] slots = new Slot[24];
         private int nextHandle;
+        public int Capacity { get; private set; } = 24;
+        public int SpatialCapacity { get; private set; } = 12;
+        public void Configure(int voices, int spatial)
+        {
+            if (ActiveCount != 0) throw new System.InvalidOperationException("Configure an empty audio pool only");
+            if (voices < 8 || voices > 24 || spatial < 0 || spatial > 12 || spatial > voices)
+                throw new System.ArgumentOutOfRangeException(nameof(voices));
+            Capacity = voices; SpatialCapacity = spatial;
+        }
         private long order;
         public int ActiveCount { get; private set; }
         public int SpatialCount { get; private set; }
@@ -25,11 +34,11 @@ namespace PatientZero.Audio.Logic
         public VoiceAdmission Start(CueDefinition cue, bool wantsSpatializer)
         {
             int slot = -1;
-            for (int i = 0; i < slots.Length; i++) if (!slots[i].Active) { slot = i; break; }
+            for (int i = 0; i < Capacity; i++) if (!slots[i].Active) { slot = i; break; }
             CueId stolen = CueId.None;
             if (slot < 0)
             {
-                for (int i = 0; i < slots.Length; i++)
+                for (int i = 0; i < Capacity; i++)
                 {
                     if (slots[i].Cue.Bus == MixerBus.UI || slots[i].Cue.Bus == MixerBus.Voice) continue;
                     if (slot < 0 || slots[i].Cue.Priority > slots[slot].Cue.Priority ||
@@ -39,7 +48,7 @@ namespace PatientZero.Audio.Logic
                 { RejectedCount++; return new VoiceAdmission(false, false, -1, 0, CueId.None); }
                 stolen = slots[slot].Cue.Id; ReleaseSlot(slot); StolenCount++;
             }
-            bool spatial = wantsSpatializer && cue.World && SpatialCount < 12;
+            bool spatial = wantsSpatializer && cue.World && SpatialCount < SpatialCapacity;
             // Beyond the HRTF cap keep 3D panning, not a 2D sound or an unreported lost cue.
             do { nextHandle = nextHandle == int.MaxValue ? 1 : nextHandle + 1; } while (Find(nextHandle) >= 0);
             slots[slot] = new Slot { Active = true, Cue = cue, Handle = nextHandle, Order = order++, Spatialized = spatial };

@@ -77,6 +77,18 @@ namespace PatientZero.Audio.Tests
             foreach (var cue in new[] { CueId.PaGarbledBreach, CueId.MonitorBeep, CueId.BeaconChirp, CueId.AlarmKlaxon }) Assert.AreEqual(0, Row(cue).NoiseRadius);
             Assert.IsFalse(Row(CueId.BeaconChirp).Loop);
         }
+        [Test] public void MobileVoiceProfileCapsPlaybackAndRetainsProtectedSpeechAndUi()
+        {
+            var budget = new VoiceBudget(); budget.Configure(16, 0);
+            for (int i = 0; i < 16; i++) budget.Start(Row(i == 0 ? CueId.PaPatientZero : CueId.ZombieBreath), true);
+            Assert.AreEqual(16, budget.ActiveCount); Assert.AreEqual(0, budget.SpatialCount);
+            var admitted = budget.Start(Row(CueId.UiSelect), false);
+            Assert.IsTrue(admitted.Accepted); Assert.AreEqual(CueId.ZombieBreath, admitted.Stolen); Assert.AreEqual(16, budget.ActiveCount);
+            Assert.Throws<System.InvalidOperationException>(() => budget.Configure(8, 0));
+            var protectedPool = new VoiceBudget(); protectedPool.Configure(8, 0);
+            for (int i = 0; i < 8; i++) protectedPool.Start(Row(CueId.PaPatientZero), false);
+            Assert.IsFalse(protectedPool.Start(Row(CueId.ZombieSnarl), false).Accepted);
+        }
         [Test] public void VoiceCapsAndHrtfFallbackAreBounded()
         {
             var budget = new VoiceBudget();

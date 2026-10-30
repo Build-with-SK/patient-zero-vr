@@ -23,6 +23,7 @@ namespace PatientZero.Atmosphere.Logic
                 return fixture == 1 ? pulse.Sample(age, fixture, reduced) : .8f;
             return LightingPresets.Variation(state, age, reduced, fixture + 7);
         }
+        public static bool HeadlampAllowed(LightingState state) => state == LightingState.Awakening || state == LightingState.WardDim;
         public static bool ShowTraces(ExperienceSettings settings) => settings.Scares == ScareIntensity.Standard;
     }
 }

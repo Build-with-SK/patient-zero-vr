@@ -54,6 +54,9 @@ namespace PatientZero.Environment.Tests
             var renderers = root.GetComponentsInChildren<Renderer>();
             Assert.AreEqual(4, renderers.Count(r => r.name.StartsWith("PrivacyCurtain_")));
             Assert.AreEqual(1, renderers.Count(r => r.name == "OxygenCylinder"));
+            Assert.AreEqual(1, renderers.Count(r => r.name == "BrokenCeilingPanel"));
+            Assert.AreEqual(1, renderers.Count(r => r.name == "AbandonedBag"));
+            Assert.AreEqual(new RoomGeometry().Doors.Length * 2, renderers.Count(r => r.name == "DamagedDoorJamb"));
             var text = root.GetComponentsInChildren<TextMesh>();
             Assert.IsTrue(text.Any(t => t.text == "REMOVE THE 3 PLANKS"));
             Assert.IsTrue(text.Any(t => t.text == "EMERGENCY RELEASE"));

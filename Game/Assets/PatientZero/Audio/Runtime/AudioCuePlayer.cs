@@ -11,6 +11,8 @@ namespace PatientZero.Audio
     public sealed class AudioCuePlayer : MonoBehaviour, IAudioCuePlayer
     {
         public AudioMixer Mixer;
+        [Range(8, 24)] public int VoiceLimit = 24;
+        [Range(0, 12)] public int SpatialVoiceLimit = 12;
         public bool BuildPlaceholders = true;
         public bool EnableLicensedSpatializer;
         public LayerMask Occluders = 1;
@@ -42,6 +44,8 @@ namespace PatientZero.Audio
         public int SpatializedVoices => budget.SpatialCount;
         private void Awake()
         {
+            int capacity = Mathf.Clamp(VoiceLimit, 8, 24);
+            budget.Configure(capacity, Mathf.Clamp(SpatialVoiceLimit, 0, Mathf.Min(12, capacity)));
             spatializerAvailable = EnableLicensedSpatializer && !string.IsNullOrEmpty(AudioSettings.GetSpatializerPluginName());
             clips = new AudioClip[CueTable.Count]; curves = new AnimationCurve[CueTable.Count]; groups = new AudioMixerGroup[5];
             if (Mixer)

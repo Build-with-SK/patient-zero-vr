@@ -65,7 +65,10 @@ namespace PatientZero.Environment.Editor
                 WardPrimitives.Material("RestrainedTrace", new Color(.12f, .055f, .04f)),
                 WardPrimitives.Material("SurfaceDamage", new Color(.13f, .15f, .14f)) };
             foreach (var prop in HospitalDressing.Create())
-                WardPrimitives.Box(root, prop.Name, prop.Position, prop.Size, dressingMaterials[(int)prop.Style], prop.Collider);
+            {
+                var detail = WardPrimitives.Box(root, prop.Name, prop.Position, prop.Size, dressingMaterials[(int)prop.Style], prop.Collider);
+                if (prop.Name == "BrokenCeilingPanel") detail.transform.rotation = Quaternion.Euler(12, 0, 0);
+            }
             Label(root, "OPERATING THEATRE", WardLayout.Z2_Doorway.Position + Vector3.up * 2.45f, .045f, 180);
             Label(root, "EMERGENCY EXIT ->", WardLayout.A3_End.Position + Vector3.up * 2.4f, .045f, 90);
             // Seat A builds the functional door leaves and puzzle objects at the shared LayoutIds.

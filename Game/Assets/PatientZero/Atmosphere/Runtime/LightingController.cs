@@ -20,7 +20,22 @@ namespace PatientZero.Atmosphere
         private float entered, fromAmbient, fromGain, gain;
         private Color fromFog, fromAmbientColour;
         private readonly LocalLightPulse pulse = new LocalLightPulse();
-        private float beaconUntil;
+        private float beaconUntil, headlampGain;
+        private bool mobileHeadlamp;
+        private Vector3 headlampHome;
+        private Quaternion headlampRotation;
+        public bool MobileHeadlampRequested { get; private set; }
+        public bool HeadlampUsable => mobileHeadlamp && FixturePolicy.HeadlampAllowed(current);
+        public void ConfigureMobileHeadlamp(bool value)
+        {
+            if (mobileHeadlamp == value || Fixtures.Length == 0 || !Fixtures[0]) return;
+            var lamp = Fixtures[0];
+            if (value) { headlampHome = lamp.transform.position; headlampRotation = lamp.transform.rotation; }
+            else { lamp.transform.SetPositionAndRotation(headlampHome, headlampRotation); lamp.type = LightType.Point; lamp.range = 3; }
+            mobileHeadlamp = value; MobileHeadlampRequested = false; headlampGain = 0;
+            if (FixtureFaces.Length > 0 && FixtureFaces[0]) FixtureFaces[0].enabled = !value;
+        }
+        public void SetMobileHeadlamp(bool value) => MobileHeadlampRequested = mobileHeadlamp && FixturePolicy.HeadlampAllowed(current) && value;
         private static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
         private void Awake() => block = new MaterialPropertyBlock();
         private void OnEnable()
@@ -37,6 +52,7 @@ namespace PatientZero.Atmosphere
             fromAmbient = RenderSettings.ambientIntensity; fromGain = gain; current = state; entered = Time.time;
             fromFog = RenderSettings.fogColor; fromAmbientColour = RenderSettings.ambientLight;
             pulse.Reset();
+            if (!FixturePolicy.HeadlampAllowed(state)) MobileHeadlampRequested = false;
             target = LightingPresets.Get(state, settings.DarknessBrightness01);
             RenderSettings.fog = true; RenderSettings.fogMode = target.ExponentialFog ? FogMode.Exponential : FogMode.Linear;
             RenderSettings.fogStartDistance = target.FogNear; RenderSettings.fogEndDistance = target.FogFar; RenderSettings.fogDensity = target.FogDensity;
@@ -62,6 +78,18 @@ namespace PatientZero.Atmosphere
                 fixture.color = colour; fixture.shadows = LightShadows.None;
                 float variation = FixturePolicy.Variation(current, age, settings.ReduceFlicker, i, pulse);
                 fixture.intensity = zone ? gain * variation : 0;
+                if (i == 0 && mobileHeadlamp)
+                {
+                    bool on = MobileHeadlampRequested && FixturePolicy.HeadlampAllowed(current);
+                    headlampGain = Mathf.MoveTowards(headlampGain, on ? .9f : 0, Time.deltaTime * 6);
+                    fixture.type = LightType.Spot; fixture.range = 7.5f; fixture.spotAngle = 48; fixture.color = new Color(.9f, .95f, 1);
+                    if (Services<IPlayerQuery>.TryGet(out var player) && player.HeadForward.sqrMagnitude > .001f)
+                    {
+                        fixture.transform.SetPositionAndRotation(player.HeadPosition + player.HeadForward * .05f, Quaternion.LookRotation(player.HeadForward));
+                        fixture.intensity = headlampGain;
+                    }
+                    else fixture.intensity = 0;
+                }
                 if (i < FixtureFaces.Length && FixtureFaces[i])
                 {
                     FixtureFaces[i].GetPropertyBlock(block);

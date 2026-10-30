@@ -16,7 +16,11 @@ namespace PatientZero.Audio.Editor
         public static void Build(Transform root)
         {
             var audio = root.gameObject.AddComponent<AudioCuePlayer>();
-            audio.EnableLicensedSpatializer = false; audio.Occluders = WardCollisionBinding.Resolve().Audio; audio.Mixer = CreateMixer();
+            audio.EnableLicensedSpatializer = false;
+#if PZ_MOBILE_TOUCH && PZ_MOBILE_NON_XR
+            audio.VoiceLimit = 16; audio.SpatialVoiceLimit = 0;
+#endif
+            audio.Occluders = WardCollisionBinding.Resolve().Audio; audio.Mixer = CreateMixer();
         }
         [SceneBuildStep(BuildScene.Ward, 650)]
         public static void Emitters(Transform root)

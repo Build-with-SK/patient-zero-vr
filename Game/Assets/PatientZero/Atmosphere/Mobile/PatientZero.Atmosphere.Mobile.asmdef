@@ -1,0 +1,10 @@
+{
+  "name": "PatientZero.Atmosphere.Mobile",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Atmosphere",
+    "PatientZero.Environment.Mobile",
+    "Unity.InputSystem",
+    "Unity.XR.Management"
+  ]
+}

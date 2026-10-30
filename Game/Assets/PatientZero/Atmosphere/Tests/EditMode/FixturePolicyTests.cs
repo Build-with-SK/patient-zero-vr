@@ -34,6 +34,13 @@ namespace PatientZero.Atmosphere.Tests
                 Assert.LessOrEqual(changes.Count, 3);
             }
         }
+        [Test] public void HeadlampNeverOverridesBlackoutOrFinalRevealLighting()
+        {
+            Assert.IsTrue(FixturePolicy.HeadlampAllowed(LightingState.Awakening));
+            Assert.IsTrue(FixturePolicy.HeadlampAllowed(LightingState.WardDim));
+            foreach (var state in new[] { LightingState.Surge, LightingState.Blackout, LightingState.EmergencyRed, LightingState.ExitDaylight })
+                Assert.IsFalse(FixturePolicy.HeadlampAllowed(state));
+        }
         [Test] public void ReducedScaresSuppressOptionalSurfaceTraces()
         {
             var settings = ExperienceSettings.Defaults; Assert.IsTrue(FixturePolicy.ShowTraces(settings));
