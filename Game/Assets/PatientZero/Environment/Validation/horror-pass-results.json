@@ -11,7 +11,7 @@
     "wholeTreeErrors": 0,
     "wholeTreeWarnings": 0,
     "selfTest": "PASS",
-    "seatB": "check again on final committed head"
+    "seatB": "0 errors, 0 warnings against origin/main at implementation commit 54c145c"
   },
   "packagePolicy": "PASS; no Unity packages-lock.json here; resolution not verified",
   "tooling": {

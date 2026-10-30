@@ -191,3 +191,33 @@ Remaining:
 Delivery: same integration/xr-systems branch and draft PR #3; do not merge it automatically.
 
 Final native follow-up: a fresh Unity session after simulator import compiled successfully and exited 0. Native first-encounter test passed 1/1; saved hospital validator passed with the documented door-layer warning.
+
+
+## 2026-10-30 18:50 GMT · Player-visible horror experience pass
+Kind: READY FOR REVIEW 54c145c40d5142331ad191c2523c7dba25e1a441
+What: Fast-forwarded this checkout from 7b23e03 to the later B delivery 07bf6f3 before implementation. main remains 44ea7b7; the four-acts/two-hard-scares specification and Core v1.1 remain authoritative. Inspected current generated-scene source and the prior native/desktop handoff; did not claim a new human desktop playtest. No owner Windows process, local settings, untracked file or A-owned source was touched.
+What: Added 33-box procedural dressing plan with bedside curtains, bed frame/headboard/IV silhouette, theatre privacy screen/sterile drape/oxygen silhouette, corridor colour bands that stop at door cuts, restrained stains/scuffs/chain marks and clearer environmental guidance. Fixed corrupted arrows/dashes and theatre/exit label orientation. New sign reads REMOVE THE 3 PLANKS; final release is labelled. The A-owned physical trolley remains unique. Existing LayoutTags, spawn/puzzle coordinates and scene composer registrations are preserved.
+What: Six original shadowless fixtures now have visible emission lenses; only the damaged window tube flickers, B-7 fill is steady, WardDim enables exactly three corridor fixtures, Blackout disables fixtures and retains the green sign, red lamps retain comfort variation. Optional traces hide in Reduced scares. Fixture/material changes use shared materials/property blocks and add no light, postprocessing or new scare.
+What: Replaced the common tone/noise placeholders with distinct deterministic original mono synthesis for breath/growls/sniffs/shuffles, ventilation, electrical buzz, alarms, metal transients, drip and beacon. Each cue has tapered endpoints and bounded sample peaks; native distance curves, CueIds, mixer/caption policies, volume preferences and gameplay noise radii remain intact. PA is still static plus approved text captions, not licensed speech. PCM payload totals 21,456,000 bytes (20.46 MiB); mixed output/native memory still requires measurement.
+What: A salient thrown impact farther than two metres now redirects a chase into investigation of its landing, without granting the thrower's live position. Stale player stimuli and interrupted catch accumulation are cleared. Hysteresis still filters weak rapid distractions; real visible movement can reacquire with the snarl telegraph. Existing vision, hearing radii, path/obstacle guards, near misses, restore and ending rules are preserved. Four new AI regressions cover the distraction and catch cases.
+Evidence:
+```
+PATH=/workspace/tools/dotnet:$PATH DOTNET_CLI_HOME=/workspace/tools/dotnet-home python tools/logic_tests/run_logic_tests.py
+Logic tests: 158 passed, 0 failed.
+python tools/review/check_rules.py --seat B --base origin/main --head integration/xr-systems
+0 error(s), 0 warning(s).
+python tools/review/check_rules.py
+0 error(s), 0 warning(s).
+python tools/review/check_rules.py --self-test
+SELF-TEST PASSED
+python tools/unity/validate_packages.py
+0 error(s), 0 warning(s).
+```
+Additional: parsed actual B editor attributes/signatures through production Integration.Logic.BuildPlan -> 6 steps, 0 errors. Native TypeCache/editor tests added for build registrations and new scene/sign details, NOT RUN. Complete critical-route segments/doorways/Z2 path clearances, original sound buffers/routing and ten-minute fixture comfort are portable-tested. Roslyn C# 9 parse -> 42 B files, 0 syntax errors (not Unity API/type compilation). Assembly references resolve internally with unique names/no cycles.
+Failures/blocked: TD-owned Python tooling 23 passed / 1 failed on Linux (Windows path separator expectation, unchanged from the existing finding). Current cloud Unity attempts validate/editmode-tests/compose/desktop-sim each exit 2, missing 6000.3.27f1; no editor or build was started on the owner's Windows machine. No new compilation, PlayMode, rendered scene, human run, headphone or Quest result is claimed. Prior Windows native-results.json remains evidence for its earlier baseline only. No 72 FPS claim.
+Handoff: Regenerate scenes and re-run native tests in Claude's safe integration checkout; retain existing trial patch reviews, 0.25 m bake radius and door-only layer setup. Review curtain sightlines, objective text and calibrated darkness in the actual game, then subjective audio localisation/mixed clipping and physical Quest CPU/GPU/memory. Full current command output and implementation notes: Environment/HORROR_EXPERIENCE_PASS.md; machine results and source scene plan in Environment/Validation/horror-pass-*.json. A source-derived floor-plan PNG and original mono audio preview are task artifacts, expressly not a Unity screenshot or a spatial listening test. GitHub GraphQL still returns HTTP 403; pushing this same branch updates owned PR #3. Do not merge protected main automatically.
+
+## 2026-10-30 18:50 GMT · Flashlight cross-seat handoff
+Kind: CONTRACT REQUEST
+What: The mission requests flashlight usefulness, but approved main has no flashlight state/pose channel. To Claude: decide the existing D-1b proposal (A-owned penlight useful in Acts 1-2, extinguished at surge to preserve Blackout audio navigation). Exact requested Core additions: payload HandheldLightChanged with bool Enabled and Vector3 Position/Forward; GameEvents.HandheldLightChanged, writer Interaction and reader Atmosphere, cleared by ResetAll; WardLayout.A1_Penlight at the bedside tray. Agree pose-update rate and replacement of an existing fixture to keep the six-light budget. A owns grabbing/input/battery/hand-controller pose; B owns the actual light shell after the contract lands. No Core amendment or competing input path is implemented without the shared decision.
+Evidence: Main Core v1.1 has no such payload/channel/item; D-1b is documented in DESIGN_RECONCILIATION.md. All independent environment/AI/audio improvements above are complete within B ownership; this request does not block their review.
