@@ -118,3 +118,14 @@ Evidence:
 - `unity_batch.py first-run` → `BLOCKED: Unity 6000.3.27f1 not found`, exit 2. No Hub, editor, Android SDK, JDK or `adb` on this machine (290 GB free).
 Not verified: Unity compile, package resolution, generated scenes, EditMode/PlayMode in Unity, desktop simulation, APK, headset. `packages-lock.json` and generated `ProjectSettings` were not hand-written.
 Next: owner installs Unity 6000.3.27f1 + Android (or Codex 1 runs `first-run`); Claude runs `first-run`, commits what Unity generates and fixes what it reports; the seats take section 7 of `INTEGRATION_ROUND2.md`.
+
+## 2026-10-30 · First Unity run: project compiles, scenes build, the game plays in the Editor
+Kind: INTEGRATION
+What: Owner installed Unity 6000.3.27f1 (no Android module) and asked "open and run the game". `unity_batch.py first-run` on `integration/round2`, four integration exceptions in seat A for real compiler errors (E-6…E-9), the built-in Video module for the XRI hands demo, and tooling fixes: licence detection, URP set by desktop simulation, composer requires a render pipeline, `first-run` order, `PlayPipeline` (`PatientZero/Play`, `Set Up And Play`). Full record: `INTEGRATION_ROUND2.md` section 11.
+Evidence:
+- `open`: PASS, exit 0. `import-samples`: PASS. `compose`: PASS, 0 errors (recomposed under URP in the Editor: PASS). `desktop-sim`: PASS.
+- `editmode-tests`: 165/166 (FIX-B-22). `playmode-tests`: 6/10 (FIX-A-9, FIX-B-23). `build-apk`, `validate`: BLOCKED, no Android module.
+- Editor play via `PatientZero/Play`: calibration → Ward, countdown 02:00 → 01:54, PA captions, 0 console errors (screenshots in the session). FIX-A-8 found there: a pause during the opening fade leaves the screen black.
+- Tooling unittest: all pass; package policy 0 errors.
+Not verified: batch `first-run` in its new order (the owner's editor held the project), a full 120-second run, APK, headset.
+Next: seats take FIX-A-8, -9 and FIX-B-22, -23 with the earlier fixes; owner adds Android Build Support (+ OpenJDK, SDK & NDK) to 6000.3.27f1 for the APK; Claude re-runs `first-run` and the PR gate.

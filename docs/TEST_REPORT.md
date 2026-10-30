@@ -59,15 +59,15 @@ Last updated 2026-10-28 by Claude · Build under test: **none exists** · Repo c
 |---|---|---|---|
 | Q-01 | Contract tests | PASS | layer 1: 72/72 with contract v1.1; mutations caught |
 | Q-02 | Compile (outside Unity) | PASS for Core and every `Logic/` assembly | Roslyn csc, C# 9, 0 warnings. Editor scripts: parse only, NOT TESTED as a compile. `integration/round2` (both seats): 166/166, integration scan 0 errors |
-| Q-03 | Unity compile | BLOCKED | no Unity 6000.3.27f1 on any seat. `unity_batch.py first-run` attempted 2026-10-28: exit 2 |
-| Q-04 | Scene assembly | BLOCKED | composer written (UNVERIFIED IN EDITOR); no seat build steps exist yet, so it is expected to fail with `layout-missing` and `service-count` |
+| Q-03 | Unity compile | **PASS** (2026-10-30) | 6000.3.27f1, `unity_batch.py open` exit 0, 0 compiler errors after integration exceptions E-6…E-9 (`INTEGRATION_ROUND2.md` section 11). 2026-10-28: BLOCKED |
+| Q-04 | Scene assembly | **PASS** (2026-10-30) | `compose`: 11 build steps, 30 layout tags placed, one implementer per service, 0 errors; scenes committed |
 | Q-05 | Hand tracking | BLOCKED | no headset; seat A code not written |
 | Q-06 | Controller fallback | BLOCKED | no headset; seat A code not written |
 | Q-07 | Zombies respond to noise | NOT TESTED | seat B `ZombieBrain` not on `main`; testable in layer 1 once ported |
 | Q-08 | Spatial audio direction | BLOCKED | needs a headset and 3 testers (F-05) |
 | Q-09 | 120-second loop | BLOCKED | no Unity Editor; seat code not written |
 | Q-10 | Ending | BLOCKED | no Unity Editor |
-| Q-11 | No critical errors | NOT TESTED | no build to run |
+| Q-11 | No critical errors | PARTIAL | Editor desktop play to Act 1 with 0 console errors (2026-10-30); EditMode 165/166 and PlayMode 6/10 in Unity (FIX-A-8, -9, FIX-B-22, -23). No device build |
 | Q-12 | Quest build (APK) | BLOCKED | no Unity Editor or Android module; build script UNVERIFIED IN EDITOR |
 | Q-13 | 72 FPS on device | BLOCKED | no headset, no build (`PERFORMANCE_REPORT.md`) |
 
