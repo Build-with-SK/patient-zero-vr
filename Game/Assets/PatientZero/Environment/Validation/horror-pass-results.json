@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-30",
+  "baseline": "07bf6f3",
+  "scope": "Cloud Linux, seat B horror experience pass; owner Windows editor untouched",
+  "portable": {
+    "passed": 158,
+    "failed": 0,
+    "command": "python tools/logic_tests/run_logic_tests.py"
+  },
+  "static": {
+    "wholeTreeErrors": 0,
+    "wholeTreeWarnings": 0,
+    "selfTest": "PASS",
+    "seatB": "check again on final committed head"
+  },
+  "packagePolicy": "PASS; no Unity packages-lock.json here; resolution not verified",
+  "tooling": {
+    "passed": 23,
+    "failed": 1,
+    "failure": "test_env_override_is_tried_first: backslash Windows expected path versus PosixPath joins on Linux; unchanged TD-owned test"
+  },
+  "sourceSyntax": {
+    "files": 42,
+    "errors": 0,
+    "language": "C# 9",
+    "limitation": "not Unity API/type compilation"
+  },
+  "buildStepDeclarations": {
+    "count": 6,
+    "canonicalBuildPlanErrors": 0,
+    "limitation": "AST declarations passed through production BuildPlan, not native TypeCache or scene execution"
+  },
+  "synthesis": {
+    "monoSampleRate": 48000,
+    "sampleBuffersBytes": 21456000,
+    "perCuePeakBound": 0.16,
+    "limitation": "not mixed-bus peak, native memory or headphone validation"
+  },
+  "geometry": {
+    "rooms": 6,
+    "dressingBoxes": 33,
+    "evidence": "horror-pass-scene-plan.json",
+    "limitation": "portable plan; not a Unity screenshot or native navigation bake"
+  },
+  "native": {
+    "currentPass": "BLOCKED: local Unity 6000.3.27f1 absent; validate/editmode-tests/compose/desktop-sim each exit 2",
+    "historical": "native-results.json records earlier 2026-10-29 Windows trial results for the prior baseline only; not evidence for this pass"
+  },
+  "github": "PR #3 branch update through push; gh GraphQL HTTP 403 still blocks API editing",
+  "quest": "NOT TESTED; no 72 FPS claim"
+}

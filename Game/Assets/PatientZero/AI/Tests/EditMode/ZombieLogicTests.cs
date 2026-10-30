@@ -172,6 +172,49 @@ namespace PatientZero.AI.Tests
             Assert.IsTrue(b.Hear(Noise(-4, 12, .8f), Vector3.zero, 1, .8f, true));
             b.Tick(.9f, .1f, true, Frame(8)); Assert.AreEqual(-4, b.Target.x);
         }
+        [Test] public void BottleDistractsChaseWithoutRevealingTheStationaryThrower()
+        {
+            var b = Brain(); b.Hear(Noise(1), Vector3.zero, 1, 0, true);
+            b.Tick(.6f, .6f, true, Frame()); b.Tick(.7f, .1f, true, Frame());
+            Assert.AreEqual(AlertLevel.Chasing, b.Level);
+            Assert.IsTrue(b.Hear(Noise(-4, 6, 2.3f), Vector3.zero, 1, 2.3f, true));
+            Assert.AreEqual(AlertLevel.Investigating, b.Level);
+            var landing = new PerceptionFrame(Vector3.left * 3, Vector3.left, Vector3.right * .2f, lineClear: false);
+            b.Tick(2.4f, .1f, true, landing);
+            Assert.AreEqual(AlertLevel.Investigating, b.Level); Assert.AreEqual(Vector3.left * 4, b.Target);
+            landing = new PerceptionFrame(Vector3.left * 4, Vector3.left, Vector3.right * .2f, lineClear: false);
+            b.Tick(2.5f, .1f, true, landing); Assert.AreEqual(AlertLevel.Searching, b.Level);
+            b.Tick(7.6f, 5.1f, true, landing); Assert.AreEqual(AlertLevel.Unaware, b.Level);
+        }
+        [Test] public void ARemoteImpactDuringInvestigationClearsStalePlayerStimulus()
+        {
+            var b = Brain(); b.Hear(Noise(1), Vector3.zero, 1, 0, true);
+            b.Tick(.6f, .6f, true, Frame()); Assert.AreEqual(AlertLevel.Investigating, b.Level);
+            Assert.IsTrue(b.Hear(Noise(-4, 12, .65f), Vector3.zero, 1, .65f, true));
+            var nearLanding = new PerceptionFrame(Vector3.left * 3, Vector3.left, Vector3.right * 5, lineClear: false);
+            b.Tick(.7f, .1f, true, nearLanding); Assert.AreEqual(AlertLevel.Investigating, b.Level);
+        }
+        [Test] public void DistractionDoesNotOverrideHysteresisOrFreshVisibleMovement()
+        {
+            var b = Brain(); b.Hear(Noise(1), Vector3.zero, 1, 0, true);
+            b.Tick(.6f, .6f, true, Frame()); b.Tick(.7f, .1f, true, Frame());
+            Assert.IsFalse(b.Hear(Noise(-5, 6, .8f), Vector3.zero, 1, .8f, true));
+            Assert.IsTrue(b.Hear(Noise(-4, 6, 2.3f), Vector3.zero, 1, 2.3f, true));
+            var seen = b.Tick(2.4f, .1f, true, Frame(4, speed: 1));
+            Assert.AreEqual(AlertLevel.Chasing, b.Level); Assert.IsTrue((seen & ZombieSignals.Snarl) != 0);
+        }
+        [Test] public void InterruptedCatchMustBuildACompleteNewCatchTimer()
+        {
+            var b = Brain(); b.Hear(Noise(1), Vector3.zero, 1, 0, true);
+            b.Tick(.6f, .6f, true, Frame()); b.Tick(.7f, .1f, true, Frame());
+            b.Tick(.9f, .2f, true, Frame(.2f));
+            b.Hear(Noise(-4, 12, 1), Vector3.zero, 1, 1, true);
+            Assert.AreEqual(AlertLevel.Investigating, b.Level);
+            b.Tick(1.1f, .1f, true, Frame(4, speed: 1));
+            var reacquired = b.Tick(1.2f, .1f, true, Frame(.2f));
+            Assert.IsFalse((reacquired & ZombieSignals.Caught) != 0);
+            b.Reset(ZombieMode.Dormant); Assert.AreEqual(AlertLevel.Unaware, b.Level); Assert.IsFalse(b.HasMoveTarget);
+        }
         [Test] public void AQuietPlayerAtCatchDistanceStillDoesNotTriggerDetection()
         {
             var b = Brain(); b.Tick(1, 1, true, Frame(.2f)); Assert.AreEqual(AlertLevel.Unaware, b.Level);

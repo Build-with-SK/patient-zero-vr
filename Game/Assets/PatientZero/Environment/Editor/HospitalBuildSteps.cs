@@ -42,8 +42,9 @@ namespace PatientZero.Environment.Editor
             var sign = WardPrimitives.Marker(root, WardLayout.A3_Beacon);
             var emissive = WardPrimitives.Material("ExitEmission", new Color(.08f, .5f, .12f));
             emissive.EnableKeyword("_EMISSION"); emissive.SetColor("_EmissionColor", new Color(.08f, .5f, .12f));
+            EditorUtility.SetDirty(emissive); AssetDatabase.SaveAssets();
             WardPrimitives.Box(sign, "ExitSign", sign.position, new Vector3(.05f, .25f, .5f), emissive, false);
-            Label(sign, "EXIT â†’", sign.position - Vector3.right * .06f, .045f, 90);
+            Label(sign, "EXIT ->", sign.position - Vector3.right * .06f, .045f, 90);
             var route = new[] { WardLayout.A3_Start, WardLayout.A3_Mid1, WardLayout.A3_Mid2, WardLayout.A3_End };
             for (int i = 0; i < route.Length - 1; i++)
             {
@@ -57,12 +58,22 @@ namespace PatientZero.Environment.Editor
             // A supplies the only colliding/physical trolley. Keep our landmark, not overlapping geometry.
             WardPrimitives.Marker(root, WardLayout.A3_Cart);
             Gurney(root, metal);
+            var dressingMaterials = new[] { metal,
+                WardPrimitives.Material("PrivacyFabric", new Color(.18f, .3f, .29f)),
+                WardPrimitives.Material("ClinicalCeramic", new Color(.55f, .58f, .52f)),
+                WardPrimitives.Material("WardWayfinding", new Color(.18f, .42f, .35f)),
+                WardPrimitives.Material("RestrainedTrace", new Color(.12f, .055f, .04f)),
+                WardPrimitives.Material("SurfaceDamage", new Color(.13f, .15f, .14f)) };
             foreach (var prop in HospitalDressing.Create())
-                WardPrimitives.Box(root, prop.Name, prop.Position, prop.Size, metal, prop.Collider);
-            Label(root, "OPERATING THEATRE", WardLayout.Z2_Doorway.Position + Vector3.up * 2.45f, .035f);
-            Label(root, "EMERGENCY EXIT â†’", WardLayout.A3_End.Position + Vector3.up * 2.4f, .035f);
+                WardPrimitives.Box(root, prop.Name, prop.Position, prop.Size, dressingMaterials[(int)prop.Style], prop.Collider);
+            Label(root, "OPERATING THEATRE", WardLayout.Z2_Doorway.Position + Vector3.up * 2.45f, .045f, 180);
+            Label(root, "EMERGENCY EXIT ->", WardLayout.A3_End.Position + Vector3.up * 2.4f, .045f, 90);
             // Seat A builds the functional door leaves and puzzle objects at the shared LayoutIds.
             // Theatre furniture adds no light, dynamic body, camera effect or encounter. All beats remain in DirectorCore.
+            Label(root, "REMOVE THE 3 PLANKS", WardLayout.A1_DoorWindow.Position + Vector3.up * .6f - Vector3.forward * .08f, .04f);
+            Label(root, "MOVE QUIETLY / LISTEN", WardLayout.A2_Monitor.Position - Vector3.up * .4f - Vector3.forward * .04f, .035f);
+            Label(root, "B-7: NO FEVER\nCONTAINMENT CONTINUES", WardLayout.A1_Tray.Position + Vector3.up * .2f, .022f);
+            Label(root, "EMERGENCY RELEASE", WardLayout.A4_ReleaseLever.Position + Vector3.up * .45f - Vector3.right * .07f, .035f, 90);
             Label(root, "THEY HEAR YOU", WardLayout.A1_PlankMid.Position - Vector3.forward * .08f, .04f);
             Label(root, "B-7", WardLayout.A1_DoorWindow.Position + Vector3.up * .45f, .055f);
             foreach (var p in new[] { WardLayout.A1_DoorWindow, WardLayout.A2_Monitor, WardLayout.A3_Drip, WardLayout.A4_ExitDoor })
@@ -105,7 +116,7 @@ namespace PatientZero.Environment.Editor
                 Vector3 at = p + towards * (WardLayout.FinalPatientReach * link / 13) + Vector3.up * .08f;
                 WardPrimitives.Box(root, "ChainLink", at, new Vector3(.08f, .025f, .025f), metal, false);
             }
-            Label(root, "RESTRAINED â€” KEEP CLEAR", p + Vector3.up * .2f, .03f);
+            Label(root, "RESTRAINED - KEEP CLEAR", p + Vector3.up * .2f, .03f);
         }
         private static void Label(Transform root, string text, Vector3 p, float size, float yaw = 0)
         {
