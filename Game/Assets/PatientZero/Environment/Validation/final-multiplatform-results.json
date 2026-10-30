@@ -11,7 +11,7 @@
   "rules": {
     "wholeTree": "0 errors, 0 warnings",
     "selfTest": "PASS",
-    "seatB": "verify on committed head"
+    "seatB": "0 errors, 0 warnings against origin/main at cb15401"
   },
   "packagePolicy": "PASS; packages not resolved in this cloud checkout",
   "tooling": {
@@ -70,5 +70,10 @@
     "appliesToRound2": "PASS d4de1a1",
     "sourceWorktreeModified": false
   },
-  "github": "PR #3 updated through branch push; GraphQL API still HTTP 403"
+  "github": "PR #3 updated through branch push; GraphQL API still HTTP 403",
+  "combinedPortable": {
+    "passed": 222,
+    "failed": 0,
+    "scope": "Scratch file-level logic trial using current B + A cefbd3d + TD Core/Integration d4de1a1; not a native build or branch merge"
+  }
 }
