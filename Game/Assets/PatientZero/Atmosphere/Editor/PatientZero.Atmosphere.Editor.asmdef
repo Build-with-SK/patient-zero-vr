@@ -1,0 +1,15 @@
+{
+  "name": "PatientZero.Atmosphere.Editor",
+  "rootNamespace": "PatientZero.Atmosphere.Editor",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Atmosphere.Logic",
+    "PatientZero.Atmosphere",
+    "PatientZero.Environment.Editor",
+    "PatientZero.Audio",
+    "PatientZero.Atmosphere.Mobile"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

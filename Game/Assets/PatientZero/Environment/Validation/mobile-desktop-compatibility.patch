@@ -1,0 +1,26 @@
+--- a/Game/Assets/PatientZero/Player/Runtime/DesktopLocomotion.cs
++++ b/Game/Assets/PatientZero/Player/Runtime/DesktopLocomotion.cs
+@@ -10,8 +10,9 @@
+     public sealed class DesktopLocomotion : MonoBehaviour
+     {
+-        public PlayerRig rig;public GameFlow flow;public CharacterController capsule;public Camera cameraView;public bool desktopSimulation=true;private float yaw,pitch;private bool live;private float footstep;
+-        private void OnEnable(){GameEvents.StateChanged.Subscribe(State);}
+-        private void OnDisable(){GameEvents.StateChanged.Unsubscribe(State);}
++        public PlayerRig rig;public GameFlow flow;public CharacterController capsule;public Camera cameraView;public bool desktopSimulation=true;private float yaw,pitch;private bool live;private float footstep;private bool syncLook=true;
++        private void OnEnable(){GameEvents.StateChanged.Subscribe(State);GameEvents.ActStarted.Subscribe(SyncLookAfterAct);}
++        private void OnDisable(){GameEvents.StateChanged.Unsubscribe(State);GameEvents.ActStarted.Unsubscribe(SyncLookAfterAct);}
+         private void State(GameStateChanged state){live=GameStateRules.IsSimulationLive(state.To);}
++        private void SyncLookAfterAct(ActStarted act){syncLook=true;}
+         private void Update()
+         {
+@@ -22,6 +23,10 @@
+             rig.SetTracking(InputModality.Controllers,true,true);
+             if(keys.escapeKey.wasPressedThisFrame && flow){if(flow.Core.State==GameState.Paused)flow.Resume();else flow.Pause();}
++#if PZ_MOBILE_TOUCH && PZ_MOBILE_RESTART
++            if(keys.rKey.wasPressedThisFrame && flow && flow.Core.State==GameState.Paused){flow.RestartRun();return;}
++#endif
+             if(keys.enterKey.wasPressedThisFrame && flow && flow.Core.State==GameState.Calibration)flow.ConfirmCalibration();
+             if(!live || !flow || flow.Core.IsTransitioning)return;
++            if(syncLook){syncLook=false;yaw=rig.origin.transform.eulerAngles.y;pitch=Mathf.DeltaAngle(0,cameraView.transform.localEulerAngles.x);}
+             if(mouse.rightButton.isPressed){var delta=mouse.delta.ReadValue();yaw+=delta.x*.12f;pitch=Mathf.Clamp(pitch-delta.y*.12f,-75,75);rig.origin.transform.rotation=Quaternion.Euler(0,yaw,0);cameraView.transform.localRotation=Quaternion.Euler(pitch,0,0);}
+             if(keys.tKey.wasPressedThisFrame)TeleportNext();

@@ -1,0 +1,24 @@
+{
+  "name": "PatientZero.Environment.PlayModeTests",
+  "rootNamespace": "PatientZero.Environment.PlayModeTests",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Environment.Logic",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner",
+    "Unity.AI.Navigation",
+    "PatientZero.AI",
+    "PatientZero.Atmosphere",
+    "PatientZero.AI.Logic",
+    "PatientZero.Environment.Mobile",
+    "Unity.InputSystem"
+  ],
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ]
+}

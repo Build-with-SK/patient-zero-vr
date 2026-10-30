@@ -1,0 +1,29 @@
+diff --git a/Game/Assets/PatientZero/Flow/Tests/PlayMode/PatientZero.Flow.PlayModeTests.asmdef b/Game/Assets/PatientZero/Flow/Tests/PlayMode/PatientZero.Flow.PlayModeTests.asmdef
+index a63170c..fdd8644 100644
+--- a/Game/Assets/PatientZero/Flow/Tests/PlayMode/PatientZero.Flow.PlayModeTests.asmdef
++++ b/Game/Assets/PatientZero/Flow/Tests/PlayMode/PatientZero.Flow.PlayModeTests.asmdef
+@@ -7,7 +7,9 @@
+     "PatientZero.Player",
+     "PatientZero.UI",
+     "UnityEngine.TestRunner",
+-    "UnityEditor.TestRunner"
++    "UnityEditor.TestRunner",
++    "PatientZero.Flow.Logic",
++    "Unity.XR.CoreUtils"
+   ],
+   "overrideReferences": true,
+   "precompiledReferences": [
+diff --git a/Game/Assets/PatientZero/Player/Runtime/PatientZero.Player.asmdef b/Game/Assets/PatientZero/Player/Runtime/PatientZero.Player.asmdef
+index 430ea47..d2097c0 100644
+--- a/Game/Assets/PatientZero/Player/Runtime/PatientZero.Player.asmdef
++++ b/Game/Assets/PatientZero/Player/Runtime/PatientZero.Player.asmdef
+@@ -8,6 +8,7 @@
+     "Unity.XR.Hands",
+     "Unity.InputSystem",
+     "UnityEngine.UI",
+-    "PatientZero.Flow"
++    "PatientZero.Flow",
++    "PatientZero.Flow.Logic"
+   ]
+ }
+\ No newline at end of file
