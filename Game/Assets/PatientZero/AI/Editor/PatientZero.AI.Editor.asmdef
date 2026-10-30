@@ -7,7 +7,8 @@
     "PatientZero.AI",
     "PatientZero.Environment.Editor",
     "PatientZero.Atmosphere",
-    "Unity.AI.Navigation"
+    "Unity.AI.Navigation",
+    "PatientZero.Environment.Logic"
   ],
   "includePlatforms": [
     "Editor"

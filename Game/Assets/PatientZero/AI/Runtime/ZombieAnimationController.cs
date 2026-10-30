@@ -27,6 +27,7 @@ namespace PatientZero.AI
         public void Apply(AlertLevel alert, ZombieMode zombieMode, float motionSpeed, Vector3 lookAt)
         { level = alert; mode = zombieMode; speed = motionSpeed; target = lookAt; }
         public void SetVisible(bool visible) { if (Visual) Visual.enabled = visible; else if (Body) Body.gameObject.SetActive(visible); }
+        public void ResetPose() { kneel = false; lungeUntil = 0; speed = 0; level = AlertLevel.Unaware; mode = ZombieMode.Dormant; }
         public void Lunge() => lungeUntil = Time.time + .5f;
         public void Kneel() => kneel = true;
         private void Update()

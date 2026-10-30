@@ -15,12 +15,16 @@ namespace PatientZero.Atmosphere.Editor
             controller.Fixtures = new Light[6];
             var points = new[] { WardLayout.A1_Tray, WardLayout.A1_DoorWindow, WardLayout.A2_ValveWheel,
                 WardLayout.A3_Mid1, WardLayout.A4_Start, WardLayout.Z4_Gurney };
+            var housing = WardPrimitives.Material("FixtureHousing", new Color(.18f, .2f, .19f));
             for (int i = 0; i < points.Length; i++)
             {
                 var go = new GameObject("Fixture_" + points[i].Id); go.transform.SetParent(root, false);
                 go.transform.position = new Vector3(points[i].Position.x, 2.5f, points[i].Position.z);
                 var fixture = go.AddComponent<Light>(); fixture.type = LightType.Point; fixture.range = i < 2 ? 3 : 2.8f;
                 fixture.intensity = 0; fixture.shadows = LightShadows.None; controller.Fixtures[i] = fixture;
+                WardPrimitives.Box(go.transform, i >= 4 ? "EmergencyLampHousing" : "FluorescentHousing",
+                    go.transform.position + Vector3.up * .12f,
+                    i >= 4 ? new Vector3(.2f, .08f, .2f) : new Vector3(.8f, .06f, .18f), housing, false);
             }
             var director = root.gameObject.AddComponent<ExperienceDirector>(); director.Lighting = controller;
             var strips = new System.Collections.Generic.List<Renderer>();

@@ -4,7 +4,10 @@
   "references": [
     "PatientZero.Core",
     "PatientZero.Environment.Logic",
-    "Unity.AI.Navigation"
+    "Unity.AI.Navigation",
+    "PatientZero.AI",
+    "PatientZero.Atmosphere",
+    "PatientZero.Audio"
   ],
   "includePlatforms": [
     "Editor"

@@ -6,7 +6,8 @@
     "PatientZero.Audio.Logic",
     "PatientZero.Audio",
     "PatientZero.Environment.Editor",
-    "PatientZero.Atmosphere"
+    "PatientZero.Atmosphere",
+    "PatientZero.Environment.Logic"
   ],
   "includePlatforms": [
     "Editor"

@@ -20,12 +20,10 @@ namespace PatientZero.Atmosphere
         private GameState state = GameState.Boot;
         private float nextTick, lastTick, nextAmbient;
         private bool pumping;
-        // Contract v1.1 gate state. Added at integration (exception E-1, docs/collab/INTEGRATION_ROUND2.md).
-        private bool act1DoorReleased;
         public ActId CurrentAct => core == null ? ActId.None : core.Act;
         public float ExperienceTime => core == null ? 0 : core.ExperienceTime;
-        // Local B-side evidence only: seat A cannot depend on this without the pending Core gate contract.
-        public bool ActOneDoorGateReady => core != null && core.CanOpenAct1Door;
+        // Contract v1.1: late-loaded doors query the same latch that produces the one-shot signal.
+        public bool IsGateReleased(GateId gate) => core != null && core.IsGateReleased(gate);
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetRetainedState() => retained = new DirectorMemory();
         private void Awake() { core = new DirectorCore(retained); lastTick = Time.time; }
@@ -46,16 +44,20 @@ namespace PatientZero.Atmosphere
             GameEvents.SettingsChanged.Unsubscribe(SettingsChanged); GameEvents.StateChanged.Unsubscribe(StateChanged);
             GameEvents.TrackingChanged.Unsubscribe(TrackingChanged);
         }
-        /// <summary>Contract v1.1: true once the Act 1 door gate has been released in the current Act 1 attempt.</summary>
-        public bool IsGateReleased(GateId gate) => gate == GateId.Act1Door && act1DoorReleased && core != null && core.Act == ActId.Awakening;
-        public void StartRun(ActId startAct, bool isRestore) { core.StartRun(startAct, isRestore); lastTick = Time.time; Pump(); }
+        public void StartRun(ActId startAct, bool isRestore)
+        {
+            // Bootstrap may have published Playing before Ward was loaded. GameFlow only
+            // calls this service after loading/resuming, so synchronize the late-loaded shell.
+            state = GameState.Playing;
+            core.StartRun(startAct, isRestore); lastTick = Time.time; Pump();
+        }
         private void Progress(ObjectiveProgress e) { core.Progress(e.Objective, e.Progress01); Pump(); }
         private void Complete(ObjectiveCompleted e) { core.Complete(e.Objective); Pump(); }
         private void Noise(NoiseEvent e) => core.Noise(in e);
         private void Alert(ZombieAlertChanged e)
         { if (Services<IPlayerQuery>.TryGet(out var player)) core.Alert(e.ZombieId, e.Level, e.Position, player.FloorPosition); }
         private void Caught(PlayerCaught e) => core.Caught();
-        private void SettingsChanged(SettingsChanged e) => core.Settings = e.Settings;
+        private void SettingsChanged(SettingsChanged e) { core.Settings = e.Settings; Pump(); }
         private void StateChanged(GameStateChanged e) { state = e.To; lastTick = Time.time; }
         private void TrackingChanged(TrackingChanged e) => core.Tracking(e.Modality, e.LeftTracked, e.RightTracked);
         private void Update()
@@ -97,7 +99,8 @@ namespace PatientZero.Atmosphere
                             break;
                         case DirectorCommandKind.Lighting: if (Lighting) Lighting.SetState((LightingState)c.Id); break;
                         case DirectorCommandKind.LocalLightPulse: if (Lighting) Lighting.WindowPulse(); break;
-                        case DirectorCommandKind.Act: act1DoorReleased = false; GameEvents.ActStarted.Raise(new ActStarted((ActId)c.Id, c.Detail != 0, (int)c.Value)); break;
+                        case DirectorCommandKind.Gate: GameEvents.GateReleased.Raise(new GateReleased((GateId)c.Id)); break;
+                        case DirectorCommandKind.Act: GameEvents.ActStarted.Raise(new ActStarted((ActId)c.Id, c.Detail != 0, (int)c.Value)); break;
                         case DirectorCommandKind.Assist: GameEvents.AssistChanged.Raise(new AssistChanged((ObjectiveId)c.Id, (AssistLevel)c.Detail)); break;
                         case DirectorCommandKind.Zombie: ZombieCommand(c); break;
                         case DirectorCommandKind.Reveal: GameEvents.InfectionReveal.Raise(new InfectionReveal(c.Value)); break;
@@ -113,14 +116,6 @@ namespace PatientZero.Atmosphere
                 }
             }
             finally { pumping = false; }
-            ReleaseGates();
-        }
-        /// <summary>Contract v1.1: raise each gate once per act start, after the commands that opened it have been applied.</summary>
-        private void ReleaseGates()
-        {
-            if (act1DoorReleased || core.Act != ActId.Awakening || !core.CanOpenAct1Door) return;
-            act1DoorReleased = true;
-            GameEvents.GateReleased.Raise(new GateReleased(GateId.Act1Door));
         }
         private void ZombieCommand(DirectorCommand c)
         {
