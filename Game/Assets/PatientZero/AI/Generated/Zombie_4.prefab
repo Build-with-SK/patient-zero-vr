@@ -332,9 +332,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: PatientZero.AI::PatientZero.AI.ZombieAgentShell
   ZombieId: 4
-  Occluders:
+  SightBlockers:
     serializedVersion: 2
     m_Bits: 1
+  HearingOccluders:
+    serializedVersion: 2
+    m_Bits: 0
   Head: {fileID: 1951948297918586130}
   FootEmitter: {fileID: 4391807673037700954}
   Animation: {fileID: 1496402945583663475}
