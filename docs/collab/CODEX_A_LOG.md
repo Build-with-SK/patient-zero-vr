@@ -58,3 +58,47 @@ python tools/review/check_rules.py --seat A --base origin/main --head codex/game
 python tools/review/check_rules.py --self-test
 SELF-TEST PASSED
 ```
+
+## 2026-10-28 · Round 2: approved v1.1 synchronisation
+Kind: PROGRESS
+What: GitHub API as lavanyahd verified PR #4 closed/merged, head 5202249f2c68232d905ff41654ffb98e35a22382, merge 44ea7b742fd4305c01cadd2cd026d417792db69b on main. Merged origin/main normally into codex/gameplay, no conflicts or rewritten commits. Only A-owned source changes after that merge. No Core/seat B code changed; no PR or main merge performed by A.
+Evidence: /pulls/4 merged=true, merged_at=2026-10-28T22:57:38Z; main 44ea7b7. Existing 83b57d3 preserved in ancestry.
+
+## 2026-10-28 · Round 2 review fixes
+Kind: FIX DONE FIX-A-1 f1ed57b
+What: Moved DesktopBuildStep to Player/Editor (Bootstrap 420) and added the same-seat Interaction runtime reference. FIX-A-2: replaced Unity.ugui references with UnityEngine.UI (no TMP types used). FIX-A-3: mouse locomotion and interaction hot loops compile only with PZ_DESKTOP_MOUSE; default desktop uses XRI simulator. Tracking bridge no longer skips the simulator merely because physical XR is inactive. FIX-A-4: desktop camera comes explicitly from PlayerRig.origin.Camera. Source fixes in f1ed57b; actual package/Unity confirmation still blocked.
+Evidence: portable check of all 11 actual combined scene-build declarations through Integration.BuildPlan passed (disposable probe); whole-tree and seat A static checks have 0 errors/0 warnings. No project define was changed.
+
+## 2026-10-28 · Round 2 door-gate implementation
+Kind: PROGRESS
+What: ObjectiveDoor subscribes/unsubscribes GateReleased, queries IExperienceDirector.IsGateReleased after subscription and on act restart, and retries if director service arrives late. DoorGateLatch consumes release once per act start. Director query is authoritative; no manual bypass and no A-raised gate events. Duplicate notifications/re-enable do not replay unlatch; act reset closes the door. Added five portable gate tests and four authored PlayMode regressions (live+restart, late creation+reenable, false/wrong gate, late director service). PlayMode tests have NOT run.
+Evidence: branch portable suite 114 passed/0 failed, no compiler warnings. Disposable combination with origin/integration/xr-systems 6ad78f8: 179 existing tests passed. Two additional disposable probes passed (181 total): real B DirectorCore -> A DoorGateLatch live/late/duplicate/reset/new-attempt path, and all 11 actual SceneBuildStep declarations through the real BuildPlan. No probe, B source or scratch merge committed to A. These are portable checks, not scene/Unity/device checks.
+
+## 2026-10-28 · Round 2 Unity validation attempts and integration status
+Kind: PROGRESS
+What: Canonical project now pins 6000.3.27f1 (672d562a42a7). Installed editors are 6000.3.26f1 and 6000.6.6f1; neither substituted. Ran the canonical launcher commands below: every one is BLOCKED before launching an editor. Consequently there is no new Unity Editor log or NUnit XML to inspect. Runtime/Editor headers remain UNVERIFIED IN EDITOR. Android toolchain verification/build also blocked (pinned editor and its Android module absent; 26f1 has Windows support only). No generated scenes or playable canonical build claimed.
+Evidence:
+```text
+python tools/unity/unity_batch.py validate
+python tools/unity/unity_batch.py editmode-tests
+python tools/unity/unity_batch.py compose
+python tools/unity/unity_batch.py desktop-sim
+Each: BLOCKED: Unity 6000.3.27f1 not found.
+Expected location: C:/Program Files/Unity/Hub/Editor/6000.3.27f1/Editor/Unity.exe
+Launcher exit 2 (environment blocker, not compile/test failure).
+python tools/logic_tests/run_logic_tests.py
+Logic tests: 114 passed, 0 failed.
+python tools/review/check_rules.py
+0 error(s), 0 warning(s).
+python tools/unity/validate_packages.py
+0 error(s), 0 warning(s). (lock absent until actual package restore)
+python -m unittest discover -s tools/unity -p "test_*.py"
+Ran 24 tests ... OK
+```
+Remaining: install exact pinned editor and Android support; compose with B integration; verify XRI 3.7 rig, poses, actions, teleport provider, hand-menu orientation, stereo fader and reach in Unity/device. Run authored full-loop/restart/pause/recovery/door PlayMode suites and desktop simulation. Hands tracking loss follows approved design: zero-velocity release after 1.5s + warning, no automatic pause; headset focus loss pauses and explicit input resumes. Flashlight/Act1 trolley amendment remains outside approved Core/layout (DESIGN_RECONCILIATION D-1/D-2); no competing lighting/event SDK introduced. Player/INTEGRATION.md updated for v1.1 and pins. Claude should combine reviewed A/B branches for actual integration; scratch merge was diagnostic only.
+
+## 2026-10-29 · Urgent CS0012 dependency fix
+Kind: FIX DONE da316a4b593323a5da3d4db9376a95c3c62b21de
+What: GameFlow.Core returns GameFlowCore, defined by PatientZero.Flow.Logic. Player referenced Flow but not Flow.Logic; added the direct reference. Also added Flow.Logic and Unity.XR.CoreUtils to Flow.PlayModeTests, which accesses flow.Core and PlayerRig.origin (XROrigin). Only these two asmdefs changed in the isolated fix commit so an integration branch can cherry-pick it without pulling gameplay history. No classes duplicated, no Core/B/project settings changed.
+Evidence: inspected all 24 local asmdefs; names unique, graph acyclic. Portable tests 114 passed/0 failed; tooling 24 passed; whole-tree checker and package policy 0 errors/0 warnings. Actual Unity launcher validate remains BLOCKED locally (6000.3.27f1 not installed on this host), despite owner reporting their Unity session is open. No Unity compile success claimed.
+Apply on gameplay: git fetch origin, git pull --ff-only origin codex/gameplay. Apply on existing integration branch: git fetch origin, git cherry-pick da316a4b593323a5da3d4db9376a95c3c62b21de. Preserve local edits before pulling/cherry-picking; do not reset or change branches blindly. Unity reimports the changed asmdefs and recompiles.

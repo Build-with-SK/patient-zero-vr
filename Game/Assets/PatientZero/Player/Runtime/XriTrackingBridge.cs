@@ -1,4 +1,4 @@
-// UNVERIFIED IN EDITOR — canonical project pin/packages/composer pending.
+// UNVERIFIED IN EDITOR — pinned Unity 6000.3.27f1 is not installed locally.
 using System.Collections.Generic;
 using PatientZero.Core;
 using PatientZero.Flow;
@@ -24,7 +24,11 @@ namespace PatientZero.Player
         private void Controllers(){mode=InputModality.Controllers;if(rig){rig.leftPose=leftControllerPose;rig.rightPose=rightControllerPose;}}
         public void HandMenuGesture(){if(flow)flow.Pause();}
         private void PauseInput(InputAction.CallbackContext context){if(flow)flow.Pause();}
-        private void Update(){if(!rig || !XRSettings.isDeviceActive)return;bool l=false,r=false;if(mode==InputModality.Hands){for(int i=0;i<systems.Count;i++){if(!systems[i].running)continue;l|=systems[i].leftHand.isTracked;r|=systems[i].rightHand.isTracked;var hand=systems[i].leftHand;bool palmValid=hand.GetJoint(XRHandJointID.Palm).TryGetPose(out var palm);bool thumbValid=hand.GetJoint(XRHandJointID.ThumbTip).TryGetPose(out var thumb);bool indexValid=hand.GetJoint(XRHandJointID.IndexTip).TryGetPose(out var index);if(gesture.Sample(palmValid && Vector3.Dot(palm.rotation*Vector3.up,Vector3.up)>.7f,thumbValid && indexValid && Vector3.Distance(thumb.position,index.position)<.025f,hand.isTracked))HandMenuGesture();}}else if(mode==InputModality.Controllers){InputDevices.GetDeviceAtXRNode(XRNode.LeftHand).TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked,out l);InputDevices.GetDeviceAtXRNode(XRNode.RightHand).TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked,out r);}rig.SetTracking(mode,l,r);}
+        private void Update(){if(!rig)return;
+#if PZ_DESKTOP_MOUSE
+if(!XRSettings.isDeviceActive)return;
+#endif
+bool l=false,r=false;if(mode==InputModality.Hands){for(int i=0;i<systems.Count;i++){if(!systems[i].running)continue;l|=systems[i].leftHand.isTracked;r|=systems[i].rightHand.isTracked;var hand=systems[i].leftHand;bool palmValid=hand.GetJoint(XRHandJointID.Palm).TryGetPose(out var palm);bool thumbValid=hand.GetJoint(XRHandJointID.ThumbTip).TryGetPose(out var thumb);bool indexValid=hand.GetJoint(XRHandJointID.IndexTip).TryGetPose(out var index);if(gesture.Sample(palmValid && Vector3.Dot(palm.rotation*Vector3.up,Vector3.up)>.7f,thumbValid && indexValid && Vector3.Distance(thumb.position,index.position)<.025f,hand.isTracked))HandMenuGesture();}}else if(mode==InputModality.Controllers){InputDevices.GetDeviceAtXRNode(XRNode.LeftHand).TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked,out l);InputDevices.GetDeviceAtXRNode(XRNode.RightHand).TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked,out r);}rig.SetTracking(mode,l,r);}
         private void Haptic(HapticRequested h){if(!rig || rig.Modality!=InputModality.Controllers)return;float strength=Services<ISettingsProvider>.TryGet(out var s)?s.Current.HapticsStrength01:1;var d=InputDevices.GetDeviceAtXRNode(h.Hand==HandSide.Left?XRNode.LeftHand:XRNode.RightHand);d.SendHapticImpulse(0,h.Amplitude01*strength,h.DurationSeconds);}
     }
 }
