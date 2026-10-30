@@ -77,6 +77,7 @@ class UnityBatchTests(unittest.TestCase):
         order = ub.FIRST_RUN
         self.assertEqual(order[0], "open")
         self.assertLess(order.index("import-samples"), order.index("compose"))  # samples compile before compose uses them
+        self.assertLess(order.index("desktop-sim"), order.index("compose"))     # URP is active before primitives get materials
         self.assertLess(order.index("build-apk"), order.index("validate"))      # validate reads what configure wrote
         self.assertTrue({"configure", "build-apk", "validate"} <= ub.NEEDS_ANDROID)
 
@@ -102,6 +103,9 @@ class UnityBatchTests(unittest.TestCase):
         self.assertEqual(len(ub.compile_errors(log)), 1)
         self.assertIsNone(ub.licence_problem(log))
         self.assertIsNotNone(ub.licence_problem("[Licensing::Module] Error: No valid Unity Editor license found.\n"))
+        # Logged by sessions that then compile normally (measured 2026-10-30): not a licence failure.
+        self.assertIsNone(ub.licence_problem("[Licensing::Module] Error: Access token is unavailable; failed to update\n"))
+        self.assertIsNotNone(ub.licence_problem("[Licensing::Module] Error: 'com.unity.editor.headless' was not found.\n"))
 
     def test_pz_lines(self):
         log = "noise\n[PZ] PASS  saved Ward\nUnityEngine.Debug:Log\n2026 [PZ] FAIL  layout-missing: x\n"

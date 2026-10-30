@@ -46,8 +46,10 @@ COMMANDS = {
 TEST_PLATFORMS = {"editmode-tests": "EditMode", "playmode-tests": "PlayMode"}
 
 # first-run order. Each step runs in its own editor session: samples must compile before compose uses them.
+# desktop-sim sets the URP asset and Linear colour space before compose: primitives take the active pipeline's default
+# material when they are created, so scenes composed under the built-in pipeline render magenta in URP (seen 2026-10-30).
 # validate runs after build-apk because it checks the Android configuration that configure writes.
-FIRST_RUN = ["open", "import-samples", "compose", "editmode-tests", "playmode-tests", "desktop-sim", "build-apk", "validate"]
+FIRST_RUN = ["open", "import-samples", "desktop-sim", "compose", "editmode-tests", "playmode-tests", "build-apk", "validate"]
 NEEDS_ANDROID = {"configure", "build-apk", "validate"}
 
 
@@ -133,13 +135,18 @@ def compile_errors(log_text: str) -> list[str]:
     return out
 
 
-LICENCE_MARKERS = ("No valid Unity Editor license", "No ULF license found", "License is not active", "Licensing::Module")
+# Lines that mean the editor refused to run. Measured 2026-10-30 (6000.3.27f1, Unity Personal): with Unity Hub closed a
+# batch session exits 198 after "'com.unity.editor.headless' was not found"; with Hub open it compiles normally. Both
+# sessions log "[Licensing::Module] Error: Access token is unavailable", so that line is not a licence failure.
+LICENCE_FATAL = ("No valid Unity Editor license", "No ULF license found", "License is not active",
+                 "'com.unity.editor.headless' was not found")
+LICENCE_HINT = "start Unity Hub and stay signed in: a Unity Personal licence allows -batchmode only while Hub holds a session"
 
 
 def licence_problem(log_text: str) -> str | None:
-    """The first licensing error line, if the editor refused to start for want of an activated licence."""
+    """The first line saying the editor refused to run for want of a licence, or None."""
     for line in log_text.splitlines():
-        if any(m in line for m in LICENCE_MARKERS) and ("error" in line.lower() or "no valid" in line.lower() or "not active" in line.lower()):
+        if any(m in line for m in LICENCE_FATAL):
             return line.strip()
     return None
 
@@ -179,8 +186,8 @@ def run_step(unity: Path, command: str) -> dict:
     if errors:
         step["compile_errors"] = errors[:200]
     licence = licence_problem(text)
-    if code != 0 and licence:
-        step.update(status="BLOCKED", note="Unity licence not activated (sign in with Unity Hub): " + licence)
+    if code != 0 and licence and not errors:  # compiler errors mean the editor ran: a real failure, not a licence block
+        step.update(status="BLOCKED", note="Unity licence refused batch mode (" + LICENCE_HINT + "): " + licence)
         return step
     if "Scripts have compiler errors" in text and not errors:
         step["compile_errors"] = ["Unity reported 'Scripts have compiler errors'; see the log."]
@@ -217,8 +224,8 @@ def print_step(step: dict) -> None:
             print(f"   FAIL {name}")
     if step.get("note"):
         print("   " + step["note"])
-    if step["command"] == "open":
-        print("   packages-lock.json " + ("written" if step.get("packages_lock") else "MISSING"))
+    if "packages_lock" in step:
+        print("   packages-lock.json " + ("present" if step["packages_lock"] else "MISSING"))
 
 
 def first_run(unity: Path, version: str) -> int:

@@ -97,14 +97,21 @@ namespace PatientZero.Integration.Editor.Quest
             PlayerSettings.Android.targetSdkVersion = (AndroidSdkVersions)QuestBuildConfig.TargetAndroidApi;
             PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.Android, false);
             PlayerSettings.SetGraphicsAPIs(BuildTarget.Android, new[] { GraphicsDeviceType.Vulkan });
-            PlayerSettings.colorSpace = ColorSpace.Linear;
             report.Pass("player settings: " + QuestBuildConfig.ApplicationId + ", IL2CPP, ARM64, API " +
-                        QuestBuildConfig.MinAndroidApi + "-" + QuestBuildConfig.TargetAndroidApi + ", Vulkan, Linear");
+                        QuestBuildConfig.MinAndroidApi + "-" + QuestBuildConfig.TargetAndroidApi + ", Vulkan");
 
-            ConfigureUrp(report);
+            ConfigureRendering(report);
             ConfigureLoader(report, BuildTargetGroup.Android, initOnStart: true);
             ConfigureOpenXR(report);
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>Project-wide rendering for every platform: Linear colour space and the URP asset. Also used by desktop simulation.</summary>
+        public static void ConfigureRendering(EditorReport report)
+        {
+            if (PlayerSettings.colorSpace != ColorSpace.Linear) PlayerSettings.colorSpace = ColorSpace.Linear;
+            report.Pass("colour space: Linear");
+            ConfigureUrp(report);
         }
 
         private static void ConfigureUrp(EditorReport report)
@@ -319,7 +326,7 @@ namespace PatientZero.Integration.Editor.Quest
 
         public static XRGeneralSettings SettingsFor(BuildTargetGroup group, bool create)
         {
-            EditorBuildSettings.TryGetConfigObject(XRGeneralSettings.k_SettingsKey, out XRGeneralSettingsPerBuildTarget perTarget);
+            EditorBuildSettings.TryGetConfigObject(XRGeneralSettings.settingsKey, out XRGeneralSettingsPerBuildTarget perTarget);
             if (perTarget == null)
             {
                 if (!create) return null;
@@ -332,7 +339,7 @@ namespace PatientZero.Integration.Editor.Quest
                     AssetDatabase.CreateAsset(perTarget, XRSettingsAsset);
                 }
 
-                EditorBuildSettings.AddConfigObject(XRGeneralSettings.k_SettingsKey, perTarget, true);
+                EditorBuildSettings.AddConfigObject(XRGeneralSettings.settingsKey, perTarget, true);
             }
 
             XRGeneralSettings settings = perTarget.SettingsForBuildTarget(group);

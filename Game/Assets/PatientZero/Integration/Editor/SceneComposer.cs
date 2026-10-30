@@ -8,6 +8,7 @@ using PatientZero.Integration.Logic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 namespace PatientZero.Integration.Editor
@@ -37,11 +38,29 @@ namespace PatientZero.Integration.Editor
             EditorApplication.Exit(report.Ok ? 0 : 1);
         }
 
+        /// <summary>
+        /// Build steps create primitives, which take the active pipeline's default material. Composed under the built-in
+        /// pipeline they render magenta once URP is on, so the URP asset must be assigned first.
+        /// </summary>
+        private static bool RenderPipelineActive(EditorReport report)
+        {
+            RenderPipelineAsset asset = GraphicsSettings.defaultRenderPipeline;
+            if (asset == null)
+            {
+                report.Error("render pipeline: no URP asset is assigned. Run `python tools/unity/unity_batch.py desktop-sim` " +
+                             "or PatientZero/Desktop Simulation/Use Desktop Simulation first.");
+                return false;
+            }
+
+            report.Pass("render pipeline: " + AssetDatabase.GetAssetPath(asset));
+            return true;
+        }
+
         public static EditorReport BuildAll()
         {
             var report = new EditorReport("compose");
             // Preconditions, checked before any scene is touched (round 2 integration).
-            if (!PackageSamples.RequiredAreImported(report) | !NavigationSettings.EnsureZombieAgentRadius(report))
+            if (!PackageSamples.RequiredAreImported(report) | !NavigationSettings.EnsureZombieAgentRadius(report) | !RenderPipelineActive(report))
             {
                 report.Line("Preconditions failed: no scene was touched.");
                 report.Finish();

@@ -19,6 +19,7 @@ namespace PatientZero.Integration.Editor.Quest
     ///
     /// Menu:      PatientZero/Desktop Simulation/Use Desktop Simulation, .../Use Headset (Link)
     /// Batchmode: -executeMethod PatientZero.Integration.Editor.Quest.DesktopSimulation.EnableBatch
+    /// Then:      PatientZero/Play, or PatientZero/Set Up And Play from a fresh checkout (PlayPipeline)
     /// </summary>
     public static class DesktopSimulation
     {
@@ -35,12 +36,16 @@ namespace PatientZero.Integration.Editor.Quest
 
         public static void EnableBatch() => Apply(true, exit: true);
 
-        private static void Apply(bool desktop, bool exit)
+        /// <summary>Desktop simulation on, no dialog and no exit; for PlayPipeline.</summary>
+        public static EditorReport Enable() => Apply(true, exit: false);
+
+        private static EditorReport Apply(bool desktop, bool exit)
         {
             var report = new EditorReport(desktop ? "desktop-simulation" : "headset-mode");
             try
             {
                 if (desktop) ImportSamples(report);
+                QuestBuild.ConfigureRendering(report); // both modes render with URP, as on the headset
                 SetSimulator(report, desktop);
                 QuestBuild.ConfigureLoader(report, BuildTargetGroup.Standalone, initOnStart: !desktop);
                 AssetDatabase.SaveAssets();
@@ -56,6 +61,7 @@ namespace PatientZero.Integration.Editor.Quest
 
             report.Finish();
             if (exit) EditorApplication.Exit(report.Ok ? 0 : 1);
+            return report;
         }
 
         private static void ImportSamples(EditorReport report)
