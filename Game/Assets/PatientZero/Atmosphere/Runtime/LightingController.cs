@@ -10,6 +10,8 @@ namespace PatientZero.Atmosphere
     {
         public Light[] Fixtures = new Light[0];
         public Renderer[] Emissives = new Renderer[0];
+        public Renderer[] FixtureFaces = new Renderer[0];
+        public Renderer[] StoryTraces = new Renderer[0];
         public Renderer[] GuidanceStrip = new Renderer[0];
         private MaterialPropertyBlock block;
         private LightingState current;
@@ -56,12 +58,19 @@ namespace PatientZero.Atmosphere
             for (int i = 0; i < Fixtures.Length; i++)
             {
                 var fixture = Fixtures[i]; if (!fixture) continue;
-                bool zone = current == LightingState.Awakening ? i < 2 : red || current == LightingState.ExitDaylight ? i >= 4 : current != LightingState.Blackout;
+                bool zone = FixturePolicy.Enabled(current, i);
                 fixture.color = colour; fixture.shadows = LightShadows.None;
-                float variation = current == LightingState.Awakening ? pulse.Sample(age, i, settings.ReduceFlicker) :
-                    LightingPresets.Variation(current, age, settings.ReduceFlicker, i + 7);
+                float variation = FixturePolicy.Variation(current, age, settings.ReduceFlicker, i, pulse);
                 fixture.intensity = zone ? gain * variation : 0;
+                if (i < FixtureFaces.Length && FixtureFaces[i])
+                {
+                    FixtureFaces[i].GetPropertyBlock(block);
+                    block.SetColor(EmissionId, colour * fixture.intensity * .6f);
+                    FixtureFaces[i].SetPropertyBlock(block);
+                }
             }
+            bool showTraces = FixturePolicy.ShowTraces(settings);
+            for (int i = 0; i < StoryTraces.Length; i++) if (StoryTraces[i]) StoryTraces[i].enabled = showTraces;
             for (int i = 0; i < Emissives.Length; i++)
             {
                 if (!Emissives[i]) continue;

@@ -68,6 +68,32 @@ namespace PatientZero.Environment.Tests
                 }
             }
         }
+        [Test] public void NewDressingLeavesEveryCriticalPathSegmentAndDoorClear()
+        {
+            var boxes = HospitalDressing.Create(); var geometry = new RoomGeometry();
+            foreach (var box in boxes)
+            {
+                Assert.Greater(box.Size.x, 0); Assert.Greater(box.Size.y, 0); Assert.Greater(box.Size.z, 0);
+                if (!box.Collider) continue;
+                for (int n = 1; n < WardLayout.CriticalPath.Count; n++)
+                {
+                    var a = WardLayout.CriticalPath[n - 1]; var b = WardLayout.CriticalPath[n];
+                    for (int i = 0; i <= 100; i++)
+                    {
+                        var p = a.Position + (b.Position - a.Position) * (i / 100f);
+                        float dx = System.Math.Max(0, System.Math.Abs(box.Position.x - p.x) - box.Size.x / 2);
+                        float dz = System.Math.Max(0, System.Math.Abs(box.Position.z - p.z) - box.Size.z / 2);
+                        Assert.GreaterOrEqual(dx * dx + dz * dz, .3f * .3f, box.Name + " blocks " + a.Id + " -> " + b.Id);
+                    }
+                }
+                foreach (var door in geometry.Doors)
+                {
+                    float dx = System.Math.Max(0, System.Math.Abs(box.Position.x - door.Centre.x) - box.Size.x / 2);
+                    float dz = System.Math.Max(0, System.Math.Abs(box.Position.z - door.Centre.z) - box.Size.z / 2);
+                    Assert.GreaterOrEqual(dx * dx + dz * dz, .3f * .3f, box.Name + " / " + door.RoomA);
+                }
+            }
+        }
         [Test] public void EachRoomBoundaryIsCoveredByAWallOrDoor()
         {
             var g = new RoomGeometry();

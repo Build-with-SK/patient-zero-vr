@@ -1,0 +1,692 @@
+{
+  "Evidence": "Portable geometry plan exported from production Logic; not a Unity render or navigation bake",
+  "Rooms": [
+    {
+      "Id": "IsolationB7",
+      "MinX": -2,
+      "MaxX": 2,
+      "MinZ": -2,
+      "MaxZ": 2
+    },
+    {
+      "Id": "Corridor",
+      "MinX": -2,
+      "MaxX": 13,
+      "MinZ": 2,
+      "MaxZ": 4.5
+    },
+    {
+      "Id": "SupplyRoom",
+      "MinX": 4,
+      "MaxX": 8,
+      "MinZ": -1,
+      "MaxZ": 2
+    },
+    {
+      "Id": "SideRoom",
+      "MinX": 9.5,
+      "MaxX": 11.5,
+      "MinZ": 4.5,
+      "MaxZ": 7
+    },
+    {
+      "Id": "LinenRoom",
+      "MinX": 9.5,
+      "MaxX": 11.5,
+      "MinZ": -0.5,
+      "MaxZ": 2
+    },
+    {
+      "Id": "Vestibule",
+      "MinX": 13,
+      "MaxX": 17,
+      "MinZ": 1.5,
+      "MaxZ": 5
+    }
+  ],
+  "Walls": [
+    {
+      "ax": -2,
+      "az": -2,
+      "bx": 2,
+      "bz": -2
+    },
+    {
+      "ax": -2,
+      "az": 2,
+      "bx": -0.6,
+      "bz": 2
+    },
+    {
+      "ax": 0.6,
+      "az": 2,
+      "bx": 2,
+      "bz": 2
+    },
+    {
+      "ax": -2,
+      "az": -2,
+      "bx": -2,
+      "bz": 2
+    },
+    {
+      "ax": 2,
+      "az": -2,
+      "bx": 2,
+      "bz": 2
+    },
+    {
+      "ax": 2,
+      "az": 2,
+      "bx": 4,
+      "bz": 2
+    },
+    {
+      "ax": 4,
+      "az": 2,
+      "bx": 5.4,
+      "bz": 2
+    },
+    {
+      "ax": 6.6,
+      "az": 2,
+      "bx": 8,
+      "bz": 2
+    },
+    {
+      "ax": 8,
+      "az": 2,
+      "bx": 9.5,
+      "bz": 2
+    },
+    {
+      "ax": 9.5,
+      "az": 2,
+      "bx": 9.9,
+      "bz": 2
+    },
+    {
+      "ax": 11.1,
+      "az": 2,
+      "bx": 11.5,
+      "bz": 2
+    },
+    {
+      "ax": 11.5,
+      "az": 2,
+      "bx": 13,
+      "bz": 2
+    },
+    {
+      "ax": -2,
+      "az": 4.5,
+      "bx": 9.5,
+      "bz": 4.5
+    },
+    {
+      "ax": 9.5,
+      "az": 4.5,
+      "bx": 9.9,
+      "bz": 4.5
+    },
+    {
+      "ax": 11.1,
+      "az": 4.5,
+      "bx": 11.5,
+      "bz": 4.5
+    },
+    {
+      "ax": 11.5,
+      "az": 4.5,
+      "bx": 13,
+      "bz": 4.5
+    },
+    {
+      "ax": -2,
+      "az": 2,
+      "bx": -2,
+      "bz": 4.5
+    },
+    {
+      "ax": 13,
+      "az": 2,
+      "bx": 13,
+      "bz": 2.45
+    },
+    {
+      "ax": 13,
+      "az": 4.05,
+      "bx": 13,
+      "bz": 4.5
+    },
+    {
+      "ax": 4,
+      "az": -1,
+      "bx": 8,
+      "bz": -1
+    },
+    {
+      "ax": 4,
+      "az": -1,
+      "bx": 4,
+      "bz": 2
+    },
+    {
+      "ax": 8,
+      "az": -1,
+      "bx": 8,
+      "bz": 2
+    },
+    {
+      "ax": 9.5,
+      "az": 7,
+      "bx": 11.5,
+      "bz": 7
+    },
+    {
+      "ax": 9.5,
+      "az": 4.5,
+      "bx": 9.5,
+      "bz": 7
+    },
+    {
+      "ax": 11.5,
+      "az": 4.5,
+      "bx": 11.5,
+      "bz": 7
+    },
+    {
+      "ax": 9.5,
+      "az": -0.5,
+      "bx": 11.5,
+      "bz": -0.5
+    },
+    {
+      "ax": 9.5,
+      "az": -0.5,
+      "bx": 9.5,
+      "bz": 2
+    },
+    {
+      "ax": 11.5,
+      "az": -0.5,
+      "bx": 11.5,
+      "bz": 2
+    },
+    {
+      "ax": 13,
+      "az": 1.5,
+      "bx": 17,
+      "bz": 1.5
+    },
+    {
+      "ax": 13,
+      "az": 5,
+      "bx": 17,
+      "bz": 5
+    },
+    {
+      "ax": 13,
+      "az": 1.5,
+      "bx": 13,
+      "bz": 2
+    },
+    {
+      "ax": 13,
+      "az": 4.5,
+      "bx": 13,
+      "bz": 5
+    },
+    {
+      "ax": 17,
+      "az": 1.5,
+      "bx": 17,
+      "bz": 2.5
+    },
+    {
+      "ax": 17,
+      "az": 4,
+      "bx": 17,
+      "bz": 5
+    }
+  ],
+  "Props": [
+    {
+      "Name": "PatientBed",
+      "x": -1.35,
+      "z": -1.2,
+      "y": 0.65,
+      "sx": 0.8,
+      "sz": 1.4,
+      "Collider": true,
+      "Style": "Metal"
+    },
+    {
+      "Name": "PatientMattress",
+      "x": -1.35,
+      "z": -1.2,
+      "y": 0.75,
+      "sx": 0.75,
+      "sz": 1.35,
+      "Collider": false,
+      "Style": "Fabric"
+    },
+    {
+      "Name": "OperatingTable",
+      "x": 4.55,
+      "z": 0.5,
+      "y": 0.85,
+      "sx": 0.8,
+      "sz": 1.7,
+      "Collider": true,
+      "Style": "Metal"
+    },
+    {
+      "Name": "OperatingTableBase",
+      "x": 4.55,
+      "z": 0.5,
+      "y": 0.40000004,
+      "sx": 0.35,
+      "sz": 0.8,
+      "Collider": true,
+      "Style": "Metal"
+    },
+    {
+      "Name": "SurgicalLampArm_Unlit",
+      "x": 4.55,
+      "z": 0.5,
+      "y": 2.35,
+      "sx": 0.05,
+      "sz": 0.05,
+      "Collider": false,
+      "Style": "Metal"
+    },
+    {
+      "Name": "SurgicalLamp_Unlit",
+      "x": 4.55,
+      "z": 0.5,
+      "y": 2.0500002,
+      "sx": 0.65,
+      "sz": 0.45,
+      "Collider": false,
+      "Style": "Metal"
+    },
+    {
+      "Name": "SterileCabinet",
+      "x": 7.55,
+      "z": -0.7,
+      "y": 1,
+      "sx": 0.65,
+      "sz": 0.45,
+      "Collider": true,
+      "Style": "Metal"
+    },
+    {
+      "Name": "InstrumentShelf",
+      "x": 7.55,
+      "z": -0.29999998,
+      "y": 0.9,
+      "sx": 0.65,
+      "sz": 0.3,
+      "Collider": true,
+      "Style": "Metal"
+    },
+    {
+      "Name": "InstrumentTray",
+      "x": 7.55,
+      "z": -0.29999998,
+      "y": 1,
+      "sx": 0.45,
+      "sz": 0.2,
+      "Collider": false,
+      "Style": "Metal"
+    },
+    {
+      "Name": "BedFrame",
+      "x": -1.35,
+      "z": -1.2,
+      "y": 0.39999998,
+      "sx": 0.65,
+      "sz": 1.15,
+      "Collider": true,
+      "Style": "Metal"
+    },
+    {
+      "Name": "BedHeadboard",
+      "x": -1.35,
+      "z": -1.85,
+      "y": 0.95,
+      "sx": 0.85,
+      "sz": 0.04,
+      "Collider": false,
+      "Style": "Ceramic"
+    },
+    {
+      "Name": "IVStand",
+      "x": -1.6,
+      "z": -0.5500001,
+      "y": 1.0999999,
+      "sx": 0.035,
+      "sz": 0.035,
+      "Collider": false,
+      "Style": "Metal"
+    },
+    {
+      "Name": "IVBag",
+      "x": -1.5,
+      "z": -0.5500001,
+      "y": 1.75,
+      "sx": 0.15,
+      "sz": 0.04,
+      "Collider": false,
+      "Style": "Ceramic"
+    },
+    {
+      "Name": "PrivacyRail",
+      "x": -0.82000005,
+      "z": -0.95000005,
+      "y": 2.5,
+      "sx": 0.04,
+      "sz": 1.6,
+      "Collider": false,
+      "Style": "Metal"
+    },
+    {
+      "Name": "PrivacyCurtain_0",
+      "x": -0.7950001,
+      "z": -1.5,
+      "y": 1.6,
+      "sx": 0.035,
+      "sz": 0.31,
+      "Collider": true,
+      "Style": "Fabric"
+    },
+    {
+      "Name": "PrivacyCurtain_1",
+      "x": -0.82000005,
+      "z": -1.2,
+      "y": 1.6,
+      "sx": 0.035,
+      "sz": 0.31,
+      "Collider": true,
+      "Style": "Fabric"
+    },
+    {
+      "Name": "PrivacyCurtain_2",
+      "x": -0.7950001,
+      "z": -0.90000004,
+      "y": 1.6,
+      "sx": 0.035,
+      "sz": 0.31,
+      "Collider": true,
+      "Style": "Fabric"
+    },
+    {
+      "Name": "PrivacyCurtain_3",
+      "x": -0.82000005,
+      "z": -0.6,
+      "y": 1.6,
+      "sx": 0.035,
+      "sz": 0.31,
+      "Collider": true,
+      "Style": "Fabric"
+    },
+    {
+      "Name": "TheatrePrivacyScreen",
+      "x": 6,
+      "z": -0.92,
+      "y": 1.4,
+      "sx": 1.5,
+      "sz": 0.035,
+      "Collider": true,
+      "Style": "Fabric"
+    },
+    {
+      "Name": "TheatreMattress",
+      "x": 4.55,
+      "z": 0.5,
+      "y": 0.97,
+      "sx": 0.72,
+      "sz": 1.55,
+      "Collider": false,
+      "Style": "Fabric"
+    },
+    {
+      "Name": "FoldedSterileDrape",
+      "x": 4.55,
+      "z": 0.85,
+      "y": 1.04,
+      "sx": 0.65,
+      "sz": 0.45,
+      "Collider": false,
+      "Style": "Ceramic"
+    },
+    {
+      "Name": "OxygenCylinder",
+      "x": 7.8,
+      "z": 0.39999998,
+      "y": 0.6,
+      "sx": 0.2,
+      "sz": 0.2,
+      "Collider": true,
+      "Style": "Wayfinding"
+    },
+    {
+      "Name": "CorridorWayfindingBand",
+      "x": 3.75,
+      "z": 4.44,
+      "y": 1.15,
+      "sx": 11.4,
+      "sz": 0.012,
+      "Collider": false,
+      "Style": "Wayfinding"
+    },
+    {
+      "Name": "CorridorWayfindingBand",
+      "x": 9.7,
+      "z": 4.44,
+      "y": 1.15,
+      "sx": 0.29999962,
+      "sz": 0.012,
+      "Collider": false,
+      "Style": "Wayfinding"
+    },
+    {
+      "Name": "CorridorWayfindingBand",
+      "x": 11.3,
+      "z": 4.44,
+      "y": 1.15,
+      "sx": 0.29999962,
+      "sz": 0.012,
+      "Collider": false,
+      "Style": "Wayfinding"
+    },
+    {
+      "Name": "CorridorWayfindingBand",
+      "x": 12.25,
+      "z": 4.44,
+      "y": 1.15,
+      "sx": 1.4,
+      "sz": 0.012,
+      "Collider": false,
+      "Style": "Wayfinding"
+    },
+    {
+      "Name": "ContainmentStripe",
+      "x": 16.94,
+      "z": 4.65,
+      "y": 1.5,
+      "sx": 0.012,
+      "sz": 0.25,
+      "Collider": false,
+      "Style": "Wayfinding"
+    },
+    {
+      "Name": "StoryTrace_Bedside",
+      "x": -1.35,
+      "z": -0.30000007,
+      "y": 0.008000016,
+      "sx": 0.25,
+      "sz": 0.4,
+      "Collider": false,
+      "Style": "Trace"
+    },
+    {
+      "Name": "StoryTrace_Chain_1",
+      "x": 15.183522,
+      "z": 4.1317754,
+      "y": 0.008,
+      "sx": 0.1,
+      "sz": 0.1,
+      "Collider": false,
+      "Style": "Trace"
+    },
+    {
+      "Name": "StoryTrace_Chain_2",
+      "x": 15.367044,
+      "z": 3.8635502,
+      "y": 0.008,
+      "sx": 0.1,
+      "sz": 0.1,
+      "Collider": false,
+      "Style": "Trace"
+    },
+    {
+      "Name": "StoryTrace_Chain_3",
+      "x": 15.550567,
+      "z": 3.5953255,
+      "y": 0.008,
+      "sx": 0.1,
+      "sz": 0.1,
+      "Collider": false,
+      "Style": "Trace"
+    },
+    {
+      "Name": "StoryTrace_Chain_4",
+      "x": 15.734089,
+      "z": 3.3271003,
+      "y": 0.008,
+      "sx": 0.1,
+      "sz": 0.1,
+      "Collider": false,
+      "Style": "Trace"
+    },
+    {
+      "Name": "ScuffedWall",
+      "x": -1.3,
+      "z": 4.44,
+      "y": 0.35,
+      "sx": 0.4,
+      "sz": 0.01,
+      "Collider": false,
+      "Style": "Damage"
+    }
+  ],
+  "Route": [
+    {
+      "Id": "A1.Start",
+      "x": 0,
+      "z": -0.5
+    },
+    {
+      "Id": "A1.Door",
+      "x": 0,
+      "z": 1.4
+    },
+    {
+      "Id": "A2.Start",
+      "x": 0,
+      "z": 3.25
+    },
+    {
+      "Id": "A2.Valve",
+      "x": 2,
+      "z": 3.9
+    },
+    {
+      "Id": "A2.Machinery",
+      "x": 3.4,
+      "z": 3.9
+    },
+    {
+      "Id": "A3.Start",
+      "x": 5.5,
+      "z": 3.25
+    },
+    {
+      "Id": "A3.Mid1",
+      "x": 7.5,
+      "z": 2.8
+    },
+    {
+      "Id": "A3.Mid2",
+      "x": 9.6,
+      "z": 3.7
+    },
+    {
+      "Id": "A3.End",
+      "x": 12.4,
+      "z": 3.25
+    },
+    {
+      "Id": "A4.Start",
+      "x": 13.6,
+      "z": 3
+    },
+    {
+      "Id": "A4.Release",
+      "x": 16.3,
+      "z": 2.5
+    }
+  ],
+  "Doors": [
+    {
+      "RoomA": "IsolationB7",
+      "RoomB": "Corridor",
+      "x": 0,
+      "z": 2,
+      "AlongX": true,
+      "Width": 1.2
+    },
+    {
+      "RoomA": "Corridor",
+      "RoomB": "SupplyRoom",
+      "x": 6,
+      "z": 2,
+      "AlongX": true,
+      "Width": 1.2
+    },
+    {
+      "RoomA": "Corridor",
+      "RoomB": "SideRoom",
+      "x": 10.5,
+      "z": 4.5,
+      "AlongX": true,
+      "Width": 1.2
+    },
+    {
+      "RoomA": "Corridor",
+      "RoomB": "LinenRoom",
+      "x": 10.5,
+      "z": 2,
+      "AlongX": true,
+      "Width": 1.2
+    },
+    {
+      "RoomA": "Corridor",
+      "RoomB": "Vestibule",
+      "x": 13,
+      "z": 3.25,
+      "AlongX": false,
+      "Width": 1.6
+    },
+    {
+      "RoomA": "Vestibule",
+      "RoomB": "Outside",
+      "x": 17,
+      "z": 3.25,
+      "AlongX": false,
+      "Width": 1.5
+    }
+  ]
+}

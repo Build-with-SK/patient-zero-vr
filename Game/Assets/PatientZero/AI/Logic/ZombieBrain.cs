@@ -76,12 +76,17 @@ namespace PatientZero.AI.Logic
                 !Hearing.CanHear(in noise, position, HearingMultiplier, occlusion, now)) return false;
             float strength = Hearing.Salience(in noise, position, HearingMultiplier, occlusion);
             if (Level >= AlertLevel.Investigating && strength <= salience && now - lastRetarget < 1.5f) return false;
+            bool thrownImpact = noise.Origin == NoiseOrigin.Player &&
+                (noise.Source == CueId.ImpactHeavy || noise.Source == CueId.ImpactLight);
+            bool remoteImpact = thrownImpact && WardLayout.HorizontalDistance(position, noise.Position) > 2;
             Target = noise.Position; searchCentre = Target; salience = strength; lastRetarget = now;
-            if (noise.Origin == NoiseOrigin.Player) lastPlayerStimulus = now;
+            // A thrown bottle identifies its landing, not the thrower's live position.
+            if (remoteImpact) lastPlayerStimulus = -100;
+            else if (noise.Origin == NoiseOrigin.Player) lastPlayerStimulus = now;
             if (Level == AlertLevel.Unaware)
             { Change(AlertLevel.Suspicious); pending |= ZombieSignals.Sniff; }
-            else if (Level == AlertLevel.Chasing && noise.Origin == NoiseOrigin.Scripted)
-                Change(AlertLevel.Investigating);
+            else if (Level == AlertLevel.Chasing && (noise.Origin == NoiseOrigin.Scripted || remoteImpact))
+            { lastPlayerStimulus = -100; Change(AlertLevel.Investigating); }
             else if (Level == AlertLevel.Searching) Change(AlertLevel.Investigating);
             // Nearby player-origin noise escalates only after the initial sniff telegraph.
             if ((Level == AlertLevel.Investigating || Level == AlertLevel.Chasing) && noise.Origin == NoiseOrigin.Player &&
@@ -187,7 +192,7 @@ namespace PatientZero.AI.Logic
             Change(AlertLevel.Searching); pending |= ZombieSignals.Sniff; HasMoveTarget = false;
         }
         private void Change(AlertLevel level)
-        { if (Level == level) return; Level = level; stateAge = 0; pending |= ZombieSignals.AlertChanged; }
+        { if (Level == level) return; Level = level; stateAge = catchAge = 0; pending |= ZombieSignals.AlertChanged; }
         private ZombieSignals Flush() { ZombieSignals result = pending; pending = ZombieSignals.None; return result; }
     }
 }
