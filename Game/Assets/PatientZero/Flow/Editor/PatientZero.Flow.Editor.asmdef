@@ -1,0 +1,10 @@
+{
+  "name": "PatientZero.Flow.Editor",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Flow"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

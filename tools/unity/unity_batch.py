@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """Run the PatientZero editor tooling in Unity batchmode with the pinned editor, and read the results back.
 
+  python tools/unity/unity_batch.py open           # open the project: resolve packages (writes packages-lock.json), compile
+  python tools/unity/unity_batch.py import-samples # import the XRI/XR Hands samples the scene build steps use
   python tools/unity/unity_batch.py compose        # build Bootstrap.unity + Ward.unity, validate layout and services
   python tools/unity/unity_batch.py validate       # editor, packages, URP, Android, XR loader, OpenXR features
   python tools/unity/unity_batch.py configure      # apply the Quest configuration (writes ProjectSettings and Assets/XR)
   python tools/unity/unity_batch.py desktop-sim    # import the XRI simulator samples and switch to desktop simulation
   python tools/unity/unity_batch.py build-apk      # configure + compose + validate + Builds/Android/PatientZero-dev.apk
   python tools/unity/unity_batch.py editmode-tests # every EditMode test assembly, NUnit XML in Game/Logs/PatientZero
+  python tools/unity/unity_batch.py playmode-tests # every PlayMode test assembly, NUnit XML in Game/Logs/PatientZero
+  python tools/unity/unity_batch.py first-run      # all of the above in order; summary in Game/Logs/PatientZero/first-run.json
 
 The editor is found from $PZ_UNITY, else the Unity Hub install folder for the pinned version.
-Exit codes: 0 pass, 1 Unity ran and reported failure, 2 BLOCKED (no pinned editor on this machine).
+Exit codes: 0 pass, 1 Unity ran and reported failure, 2 BLOCKED (no pinned editor, or a step needs a missing module).
 """
 from __future__ import annotations
 
@@ -27,14 +31,26 @@ PROJECT = REPO / "Game"
 LOGS = PROJECT / "Logs" / "PatientZero"
 BLOCKED = 2
 
+# command -> (execute method or None, build target or None)
 COMMANDS = {
+    "open": (None, None),
+    "import-samples": ("PatientZero.Integration.Editor.PackageSamples.ImportRequiredBatch", None),
     "compose": ("PatientZero.Integration.Editor.SceneComposer.BuildAllBatch", None),
     "validate": ("PatientZero.Integration.Editor.Quest.QuestBuild.ValidateBatch", None),
     "configure": ("PatientZero.Integration.Editor.Quest.QuestBuild.ConfigureBatch", "Android"),
     "desktop-sim": ("PatientZero.Integration.Editor.Quest.DesktopSimulation.EnableBatch", None),
     "build-apk": ("PatientZero.Integration.Editor.Quest.QuestBuild.BuildDevApkBatch", "Android"),
     "editmode-tests": (None, None),
+    "playmode-tests": (None, None),
 }
+TEST_PLATFORMS = {"editmode-tests": "EditMode", "playmode-tests": "PlayMode"}
+
+# first-run order. Each step runs in its own editor session: samples must compile before compose uses them.
+# desktop-sim sets the URP asset and Linear colour space before compose: primitives take the active pipeline's default
+# material when they are created, so scenes composed under the built-in pipeline render magenta in URP (seen 2026-10-30).
+# validate runs after build-apk because it checks the Android configuration that configure writes.
+FIRST_RUN = ["open", "import-samples", "desktop-sim", "compose", "editmode-tests", "playmode-tests", "build-apk", "validate"]
+NEEDS_ANDROID = {"configure", "build-apk", "validate"}
 
 
 def pinned_editor(root: Path = REPO) -> str:
@@ -69,6 +85,22 @@ def find_unity(version: str) -> Path | None:
     return None
 
 
+def android_module_paths(unity: Path) -> list[Path]:
+    """Where Unity Hub puts Android Build Support for this editor (Windows/Linux: Editor/Data, macOS: next to Unity.app)."""
+    paths = [unity.parent / "Data" / "PlaybackEngines" / "AndroidPlayer"]
+    if len(unity.parents) >= 4 and unity.parents[2].name.endswith(".app"):
+        paths.append(unity.parents[3] / "PlaybackEngines" / "AndroidPlayer")
+    return paths
+
+
+def has_android_module(unity: Path) -> bool:
+    return any(p.is_dir() for p in android_module_paths(unity))
+
+
+def results_path(command: str) -> Path:
+    return LOGS / f"{TEST_PLATFORMS.get(command, 'editmode').lower()}-results.xml"
+
+
 def command_line(unity: Path, command: str, log: Path, results: Path) -> list[str]:
     method, target = COMMANDS[command]
     args = [str(unity), "-batchmode", "-nographics", "-projectPath", str(PROJECT), "-logFile", str(log)]
@@ -76,8 +108,10 @@ def command_line(unity: Path, command: str, log: Path, results: Path) -> list[st
         args += ["-buildTarget", target]
     if method:
         args += ["-executeMethod", method]
+    elif command in TEST_PLATFORMS:
+        args += ["-runTests", "-testPlatform", TEST_PLATFORMS[command], "-testResults", str(results)]
     else:
-        args += ["-runTests", "-testPlatform", "EditMode", "-testResults", str(results)]
+        args += ["-quit"]  # open: import, resolve packages and compile, then exit
     return args
 
 
@@ -89,6 +123,32 @@ def pz_lines(log_text: str) -> list[str]:
         if i >= 0:
             out.append(line[i + 5:].rstrip())
     return out
+
+
+def compile_errors(log_text: str) -> list[str]:
+    """Unique C# compiler error lines (file(line,col): error CSxxxx: message)."""
+    seen, out = set(), []
+    for line in log_text.splitlines():
+        if "error CS" in line and line not in seen:
+            seen.add(line)
+            out.append(line.strip())
+    return out
+
+
+# Lines that mean the editor refused to run. Measured 2026-10-30 (6000.3.27f1, Unity Personal): with Unity Hub closed a
+# batch session exits 198 after "'com.unity.editor.headless' was not found"; with Hub open it compiles normally. Both
+# sessions log "[Licensing::Module] Error: Access token is unavailable", so that line is not a licence failure.
+LICENCE_FATAL = ("No valid Unity Editor license", "No ULF license found", "License is not active",
+                 "'com.unity.editor.headless' was not found")
+LICENCE_HINT = "start Unity Hub and stay signed in: a Unity Personal licence allows -batchmode only while Hub holds a session"
+
+
+def licence_problem(log_text: str) -> str | None:
+    """The first line saying the editor refused to run for want of a licence, or None."""
+    for line in log_text.splitlines():
+        if any(m in line for m in LICENCE_FATAL):
+            return line.strip()
+    return None
 
 
 def summarise_nunit(xml_text: str) -> dict:
@@ -104,17 +164,108 @@ def summarise_nunit(xml_text: str) -> dict:
     return summary
 
 
+def run_step(unity: Path, command: str) -> dict:
+    """Run one command in its own editor session. Returns {status, exit, log, lines, ...}; status is PASS, FAIL or BLOCKED."""
+    log = LOGS / f"unity-{command}.log"
+    results = results_path(command)
+    step = {"command": command, "log": str(log.relative_to(REPO))}
+    if command in NEEDS_ANDROID:
+        if not has_android_module(unity):
+            step.update(status="BLOCKED", exit=None, lines=[
+                "Android Build Support is not installed for this editor. Looked in: " + ", ".join(str(p) for p in android_module_paths(unity)),
+                "Add it in Unity Hub (Installs > editor > Add modules: Android Build Support, OpenJDK, Android SDK & NDK Tools)."])
+            return step
+    if command in TEST_PLATFORMS and results.exists():
+        results.unlink()
+
+    code = subprocess.run(command_line(unity, command, log, results)).returncode
+    text = log.read_text(encoding="utf-8", errors="replace") if log.exists() else ""
+    step["exit"] = code
+    step["lines"] = pz_lines(text)
+    errors = compile_errors(text)
+    if errors:
+        step["compile_errors"] = errors[:200]
+    licence = licence_problem(text)
+    if code != 0 and licence and not errors:  # compiler errors mean the editor ran: a real failure, not a licence block
+        step.update(status="BLOCKED", note="Unity licence refused batch mode (" + LICENCE_HINT + "): " + licence)
+        return step
+    if "Scripts have compiler errors" in text and not errors:
+        step["compile_errors"] = ["Unity reported 'Scripts have compiler errors'; see the log."]
+
+    if command in TEST_PLATFORMS:
+        if not results.exists():
+            step.update(status="FAIL", note="no test results written; compile errors stop a test run")
+            return step
+        s = summarise_nunit(results.read_text(encoding="utf-8"))
+        step["tests"] = s
+        step["status"] = "PASS" if code == 0 and s["failed"] == 0 and s["total"] > 0 else "FAIL"
+        return step
+
+    if command == "open":
+        lock = PROJECT / "Packages" / "packages-lock.json"
+        step["packages_lock"] = lock.exists()
+        step["status"] = "PASS" if code == 0 and not step.get("compile_errors") and lock.exists() else "FAIL"
+        return step
+
+    step["status"] = "PASS" if code == 0 and not step.get("compile_errors") else "FAIL"
+    return step
+
+
+def print_step(step: dict) -> None:
+    print(f"== {step['command']}: {step['status']}" + (f" (exit {step['exit']})" if step.get("exit") is not None else ""))
+    for line in step.get("lines", []):
+        print("   " + line)
+    for line in step.get("compile_errors", [])[:30]:
+        print("   " + line)
+    if "tests" in step:
+        s = step["tests"]
+        print(f"   {s['passed']}/{s['total']} passed, {s['failed']} failed, {s['skipped']} skipped ({s['result']})")
+        for name in s["failures"]:
+            print(f"   FAIL {name}")
+    if step.get("note"):
+        print("   " + step["note"])
+    if "packages_lock" in step:
+        print("   packages-lock.json " + ("present" if step["packages_lock"] else "MISSING"))
+
+
+def first_run(unity: Path, version: str) -> int:
+    """Every step in order. A failed 'open' (no compile) stops the run: nothing after it can be trusted."""
+    steps = []
+    for command in FIRST_RUN:
+        if steps and steps[0]["status"] != "PASS":
+            steps.append({"command": command, "status": "SKIPPED", "note": "open was " + steps[0]["status"]})
+            continue
+        print(f"Running Unity {version}: {command}")
+        steps.append(run_step(unity, command))
+        print_step(steps[-1])
+    summary = {"editor": version, "unity": str(unity), "steps": steps}
+    (LOGS / "first-run.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    print("\nfirst-run summary (Game/Logs/PatientZero/first-run.json):")
+    for s in steps:
+        print(f"  {s['status']:8s} {s['command']}")
+    return overall(steps)
+
+
+def overall(steps: list[dict]) -> int:
+    statuses = {s["status"] for s in steps}
+    if "FAIL" in statuses:
+        return 1
+    if "SKIPPED" in statuses and "BLOCKED" not in statuses:
+        return 1
+    if "BLOCKED" in statuses:
+        return BLOCKED
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=sorted(COMMANDS))
+    parser.add_argument("command", choices=sorted(COMMANDS) + ["first-run"])
     parser.add_argument("--print-command", action="store_true", help="print the Unity command line and stop")
     args = parser.parse_args(argv)
 
     version = pinned_editor()
     unity = find_unity(version)
     LOGS.mkdir(parents=True, exist_ok=True)
-    log = LOGS / f"unity-{args.command}.log"
-    results = LOGS / "editmode-results.xml"
 
     if unity is None:
         print(f"BLOCKED: Unity {version} not found. Looked in:")
@@ -123,31 +274,23 @@ def main(argv: list[str] | None = None) -> int:
         print("Install it with Unity Hub (add Android Build Support) or set PZ_UNITY to its executable.")
         return BLOCKED
 
-    cmd = command_line(unity, args.command, log, results)
+    if args.command == "first-run":
+        if args.print_command:
+            for command in FIRST_RUN:
+                print(" ".join(f'"{c}"' if " " in c else c for c in
+                               command_line(unity, command, LOGS / f"unity-{command}.log", results_path(command))))
+            return 0
+        return first_run(unity, version)
+
     if args.print_command:
+        cmd = command_line(unity, args.command, LOGS / f"unity-{args.command}.log", results_path(args.command))
         print(" ".join(f'"{c}"' if " " in c else c for c in cmd))
         return 0
 
-    print(f"Running Unity {version}: {args.command} (log: {log})")
-    code = subprocess.run(cmd).returncode
-    text = log.read_text(encoding="utf-8", errors="replace") if log.exists() else ""
-    for line in pz_lines(text):
-        print(line)
-
-    if args.command == "editmode-tests":
-        if not results.exists():
-            print("FAIL: no test results written; see the log (compile errors stop the run).")
-            return 1
-        s = summarise_nunit(results.read_text(encoding="utf-8"))
-        print(f"EditMode: {s['passed']}/{s['total']} passed, {s['failed']} failed, {s['skipped']} skipped ({s['result']})")
-        for name in s["failures"]:
-            print(f"  FAIL {name}")
-        return 0 if code == 0 and s["failed"] == 0 else 1
-
-    if "error CS" in text or "Scripts have compiler errors" in text:
-        print("FAIL: Unity reported compile errors; see the log.")
-    print(f"Unity exit code {code}")
-    return 0 if code == 0 else 1
+    print(f"Running Unity {version}: {args.command} (log: {LOGS / f'unity-{args.command}.log'})")
+    step = run_step(unity, args.command)
+    print_step(step)
+    return {"PASS": 0, "FAIL": 1, "BLOCKED": BLOCKED}[step["status"]]
 
 
 if __name__ == "__main__":

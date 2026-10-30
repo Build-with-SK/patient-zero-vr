@@ -40,3 +40,17 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Unity package samples (XRI Starter Assets, Hands Interaction Demo, XR Interaction Simulator, XR Hands HandVisualizer):
+# 64 MB of Unity-licensed content, regenerated from the pinned packages by `python tools/unity/unity_batch.py import-samples`
+# (first-run and PatientZero/Set Up And Play do it first). Their .meta GUIDs ship in the package, so scenes still resolve.
+/Game/Assets/Samples/
+/Game/Assets/Samples.meta
+
+# TextMesh Pro essential resources: imported from com.unity.ugui by import-samples (the Hands Interaction Demo sample
+# needs them), regenerated like the samples.
+/Game/Assets/TextMesh Pro/
+/Game/Assets/TextMesh Pro.meta
+
+# Unity 6 editor temp folder
+/Game/.utmp/

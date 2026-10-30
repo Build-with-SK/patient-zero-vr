@@ -3,6 +3,7 @@
     "rootNamespace": "PatientZero.Integration.Editor.Quest",
     "references": [
         "PatientZero.Core",
+        "PatientZero.Flow",
         "PatientZero.Integration.Logic",
         "PatientZero.Integration.Editor",
         "Unity.XR.Management",

@@ -1,0 +1,14 @@
+{
+  "name": "PatientZero.Player",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Player.Logic",
+    "Unity.XR.CoreUtils",
+    "Unity.XR.Interaction.Toolkit",
+    "Unity.XR.Hands",
+    "Unity.InputSystem",
+    "UnityEngine.UI",
+    "PatientZero.Flow",
+    "PatientZero.Flow.Logic"
+  ]
+}

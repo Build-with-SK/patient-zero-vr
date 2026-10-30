@@ -1,0 +1,7 @@
+{
+  "name": "PatientZero.Audio.Logic",
+  "rootNamespace": "PatientZero.Audio.Logic",
+  "references": [
+    "PatientZero.Core"
+  ]
+}

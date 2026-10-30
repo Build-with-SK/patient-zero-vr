@@ -44,6 +44,13 @@ Last updated 2026-10-28 by Claude · Build under test: **none exists** · Repo c
 | 2026-10-28 | 3–6 | same | `python tools/unity/unity_batch.py validate` | BLOCKED, exit 2: `C:\Program Files\Unity\Hub\Editor\6000.3.27f1\Editor\Unity.exe` not found |
 | 2026-10-28 | 1 | contract v1.1 | `python tools/logic_tests/run_logic_tests.py` | 72 passed, 0 failed (new: `GateIds_AreUniqueAndPinned`, `GateReleased_CarriesItsGate`; `ResetAll_ClearsEveryChannel` now covers `GateReleased`) |
 | 2026-10-28 | 1–2 | contract v1.1 | mutations: dropped `GateReleased.Clear()` from `ResetAll`; planted an Interaction file raising `GateReleased` | both caught: `GateReleased is missing from GameEvents.ResetAll`; `event-writer … Interaction may not raise GameEvents.GateReleased (writers: Atmosphere)` |
+| 2026-10-28 | 1 | `integration/round2` (v1.1 + both seats + E-1…E-5) | `python tools/logic_tests/run_logic_tests.py` | 166 passed, 0 failed (Core 45, Integration 27, seat A and B Logic suites) |
+| 2026-10-28 | 2 | same | `check_rules.py --self-test`; whole tree; `--seat claude --base 9d3e864 --head 4911c3c` | SELF-TEST PASSED; 0/0; 13 ownership warnings = exactly the 13 files of exceptions E-1…E-5 |
+| 2026-10-28 | 2 | same | `python tools/review/integration_scan.py` (new, self-test passes) | 0 errors, 1 warning (`HapticRequested` has no writer, FIX-B-20). The plain merge `9d3e864` before the exceptions: 21 errors |
+| 2026-10-28 | 1 | same | temporary `BuildPlan` probe over all 11 `[SceneBuildStep]`s (not committed) | 0 errors (2 before E-3) |
+| 2026-10-28 | — | same | Roslyn syntax check of the 7 changed runtime/editor C# files | 0 syntax errors; a planted missing `;` is caught. **Not a compile check** |
+| 2026-10-28 | 2b | same | tooling unittest | 30/30 PASS (new: first-run order, Android module paths, licence detection) |
+| 2026-10-28 | 3–6 | same | `python tools/unity/unity_batch.py first-run` | BLOCKED, exit 2: `C:\Program Files\Unity\Hub\Editor\6000.3.27f1\Editor\Unity.exe` not found. No Android SDK, JDK or `adb` either |
 | 2026-10-28 | review | `codex/xr-systems` `72be6d8` (not on `main`) | Codex 2's portable suite: Roslyn csc against the .NET 8.0.8 runtime (C# 9, warnings as errors), run with `dotnet` | 26 passed, 0 failed, 0 skipped; 2 mutations caught; `validate_assets.py` PASS. **Not counted toward acceptance:** not on `main`, and Unity import was not run. Details: `docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md` |
 
 ## Quality gates (Full Production Director prompt, Mission 6)
@@ -51,16 +58,16 @@ Last updated 2026-10-28 by Claude · Build under test: **none exists** · Repo c
 | # | Gate | Status | Evidence / blocker |
 |---|---|---|---|
 | Q-01 | Contract tests | PASS | layer 1: 72/72 with contract v1.1; mutations caught |
-| Q-02 | Compile (outside Unity) | PASS for Core and every `Logic/` assembly | Roslyn csc, C# 9, 0 warnings. Editor scripts: parse only, NOT TESTED as a compile |
-| Q-03 | Unity compile | BLOCKED | no Unity 6000.3.27f1 on any seat |
-| Q-04 | Scene assembly | BLOCKED | composer written (UNVERIFIED IN EDITOR); no seat build steps exist yet, so it is expected to fail with `layout-missing` and `service-count` |
+| Q-02 | Compile (outside Unity) | PASS for Core and every `Logic/` assembly | Roslyn csc, C# 9, 0 warnings. Editor scripts: parse only, NOT TESTED as a compile. `integration/round2` (both seats): 166/166, integration scan 0 errors |
+| Q-03 | Unity compile | **PASS** (2026-10-30) | 6000.3.27f1, `unity_batch.py open` exit 0, 0 compiler errors after integration exceptions E-6…E-9 (`INTEGRATION_ROUND2.md` section 11). 2026-10-28: BLOCKED |
+| Q-04 | Scene assembly | **PASS** (2026-10-30) | `compose`: 11 build steps, 30 layout tags placed, one implementer per service, 0 errors; scenes committed |
 | Q-05 | Hand tracking | BLOCKED | no headset; seat A code not written |
 | Q-06 | Controller fallback | BLOCKED | no headset; seat A code not written |
 | Q-07 | Zombies respond to noise | NOT TESTED | seat B `ZombieBrain` not on `main`; testable in layer 1 once ported |
 | Q-08 | Spatial audio direction | BLOCKED | needs a headset and 3 testers (F-05) |
 | Q-09 | 120-second loop | BLOCKED | no Unity Editor; seat code not written |
 | Q-10 | Ending | BLOCKED | no Unity Editor |
-| Q-11 | No critical errors | NOT TESTED | no build to run |
+| Q-11 | No critical errors | PARTIAL | Editor desktop play to Act 1 with 0 console errors (2026-10-30); EditMode 165/166 and PlayMode 6/10 in Unity (FIX-A-8, -9, FIX-B-22, -23). No device build |
 | Q-12 | Quest build (APK) | BLOCKED | no Unity Editor or Android module; build script UNVERIFIED IN EDITOR |
 | Q-13 | 72 FPS on device | BLOCKED | no headset, no build (`PERFORMANCE_REPORT.md`) |
 

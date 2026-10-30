@@ -35,6 +35,12 @@ jobs:
       - name: Review checker, whole tree
         run: python tools/review/check_rules.py
 
+      - name: Integration scan self-test
+        run: python tools/review/integration_scan.py --self-test
+
+      - name: Integration scan (asmdef references, usings, Unity script names, editor code in player, wiring)
+        run: python tools/review/integration_scan.py
+
       - name: Logic tests (Core and every Logic assembly, compiled with Roslyn)
         run: python tools/logic_tests/run_logic_tests.py
 
