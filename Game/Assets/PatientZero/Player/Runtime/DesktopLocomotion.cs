@@ -23,9 +23,11 @@ namespace PatientZero.Player
             if(keys.escapeKey.wasPressedThisFrame && flow){if(flow.Core.State==GameState.Paused)flow.Resume();else flow.Pause();}
             if(keys.enterKey.wasPressedThisFrame && flow && flow.Core.State==GameState.Calibration)flow.ConfirmCalibration();
             if(!live || !flow || flow.Core.IsTransitioning)return;
+            if(mouse.rightButton.wasPressedThisFrame)yaw=rig.origin.transform.eulerAngles.y; // E-11: start from the current facing, no snap
             if(mouse.rightButton.isPressed){var delta=mouse.delta.ReadValue();yaw+=delta.x*.12f;pitch=Mathf.Clamp(pitch-delta.y*.12f,-75,75);rig.origin.transform.rotation=Quaternion.Euler(0,yaw,0);cameraView.transform.localRotation=Quaternion.Euler(pitch,0,0);}
             if(keys.tKey.wasPressedThisFrame)TeleportNext();
-            if(!Services<ISettingsProvider>.TryGet(out var settings) || settings.Current.Locomotion!=LocomotionMode.TeleportAndSmooth || !capsule)return;
+            // E-11: keyboard movement on desktop does not depend on the headset comfort setting (TeleportOnly by default).
+            if(!capsule)return;
             float x=(keys.dKey.isPressed?1:0)-(keys.aKey.isPressed?1:0),z=(keys.wKey.isPressed?1:0)-(keys.sKey.isPressed?1:0);var move=rig.origin.transform.TransformDirection(new Vector3(x,0,z).normalized);capsule.Move(move*1.5f*Time.deltaTime+Vector3.down*Time.deltaTime);
             if(move.sqrMagnitude>0){footstep+=Time.deltaTime;if(footstep>=.6f){footstep=0;Cues.Play(CueId.PlayerFootstep,rig.FloorPosition,NoiseOrigin.Player);}}
         

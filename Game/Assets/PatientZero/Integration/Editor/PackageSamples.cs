@@ -1,8 +1,10 @@
 // UNVERIFIED IN EDITOR: written 2026-10-28 before a Unity 6.3 Editor existed on any seat. First compiled at integration.
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEditor.PackageManager.UI;
+using UnityEngine;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
 namespace PatientZero.Integration.Editor
@@ -23,6 +25,14 @@ namespace PatientZero.Integration.Editor
     {
         public const string Xri = "com.unity.xr.interaction.toolkit";
         public const string XrHands = "com.unity.xr.hands";
+
+        // TextMesh Pro essential resources ship inside com.unity.ugui. The Hands Interaction Demo sample needs them: its
+        // project validation rule is an error without them, and the sample then opens Project Validation after every
+        // domain reload, including every entry into Play mode (seen 2026-10-30). Imported here, not committed: they are
+        // regenerated like the samples.
+        public const string TmpEssentialsPackage = "Packages/com.unity.ugui/Package Resources/TMP Essential Resources.unitypackage";
+        public const string TmpSettingsPath = "Assets/TextMesh Pro/Resources/TMP Settings.asset";
+        private static bool tmpPending;
 
         public readonly struct Wanted
         {
@@ -58,7 +68,24 @@ namespace PatientZero.Integration.Editor
         public static void ImportRequiredBatch()
         {
             EditorReport report = ImportRequired();
-            EditorApplication.Exit(report.Ok ? 0 : 1);
+            if (!tmpPending)
+            {
+                EditorApplication.Exit(report.Ok ? 0 : 1);
+                return;
+            }
+
+            // AssetDatabase.ImportPackage runs after this call returns; wait for it before exiting.
+            double deadline = EditorApplication.timeSinceStartup + 300;
+            void WaitForTmp()
+            {
+                if (tmpPending && EditorApplication.timeSinceStartup < deadline) return;
+                EditorApplication.update -= WaitForTmp;
+                bool ok = File.Exists(TmpSettingsPath);
+                Debug.Log("[PZ] " + (ok ? "PASS  TMP essentials: imported" : "FAIL  TMP essentials: import did not finish in 300 s"));
+                EditorApplication.Exit(report.Ok && ok ? 0 : 1);
+            }
+
+            EditorApplication.update += WaitForTmp;
         }
 
         public static EditorReport ImportRequired()
@@ -69,9 +96,50 @@ namespace PatientZero.Integration.Editor
                 Import(report, ForScenes[i].Package, ForScenes[i].Sample, ForScenes[i].Required);
             }
 
+            ImportTmpEssentials(report);
             AssetDatabase.Refresh();
             report.Finish();
             return report;
+        }
+
+        /// <summary>Starts the TMP essential resources import when they are missing. The import completes asynchronously.</summary>
+        public static void ImportTmpEssentials(EditorReport report)
+        {
+            if (File.Exists(TmpSettingsPath))
+            {
+                report.Pass("TMP essentials: present at " + Path.GetDirectoryName(TmpSettingsPath).Replace('\\', '/'));
+                return;
+            }
+
+            string package = Path.GetFullPath(TmpEssentialsPackage);
+            if (!File.Exists(package))
+            {
+                report.Warn("TMP essentials: " + TmpEssentialsPackage + " not found. Import them with Window > TextMeshPro > Import TMP Essential Resources.");
+                return;
+            }
+
+            tmpPending = true;
+            AssetDatabase.importPackageCompleted += TmpDone;
+            AssetDatabase.importPackageFailed += TmpFailed;
+            AssetDatabase.importPackageCancelled += TmpDone;
+            AssetDatabase.ImportPackage(package, false);
+            report.Pass("TMP essentials: import started from " + TmpEssentialsPackage);
+        }
+
+        private static void TmpDone(string packageName) => TmpFinished();
+
+        private static void TmpFailed(string packageName, string error)
+        {
+            Debug.LogError("[PZ] FAIL  TMP essentials: " + error);
+            TmpFinished();
+        }
+
+        private static void TmpFinished()
+        {
+            tmpPending = false;
+            AssetDatabase.importPackageCompleted -= TmpDone;
+            AssetDatabase.importPackageFailed -= TmpFailed;
+            AssetDatabase.importPackageCancelled -= TmpDone;
         }
 
         /// <summary>Imports one sample if it is not imported yet. A missing required sample is an error, an optional one a warning.</summary>

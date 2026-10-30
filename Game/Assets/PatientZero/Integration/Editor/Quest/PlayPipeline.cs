@@ -14,7 +14,8 @@ namespace PatientZero.Integration.Editor.Quest
     /// batch-mode (headless) entitlement. Sample imports recompile scripts and reload the domain, so the
     /// next step is kept in SessionState and resumed after the reload. A failed step stops the chain.
     ///
-    /// Menu:          PatientZero/Set Up And Play, PatientZero/Play (scenes already built)
+    /// Menu:          PatientZero/Set Up And Play, PatientZero/Play (scenes already built),
+    ///                PatientZero/Play From Calibration, PatientZero/Reset Calibration
     /// Command line:  Unity.exe -projectPath Game -executeMethod PatientZero.Integration.Editor.Quest.PlayPipeline.SetUpAndPlay
     /// Results:       "[PZ]" lines in the Editor log, Logs/PatientZero/play.txt and the per-step reports
     /// </summary>
@@ -23,6 +24,7 @@ namespace PatientZero.Integration.Editor.Quest
     {
         private const string StepKey = "PatientZero.PlayPipeline.Step";
         private const string Samples = "samples", Desktop = "desktop", Compose = "compose", Enter = "play";
+        private const string DesktopThenPlay = "desktop-play";
 
         static PlayPipeline()
         {
@@ -41,9 +43,36 @@ namespace PatientZero.Integration.Editor.Quest
         [MenuItem("PatientZero/Play", priority = 2)]
         public static void Play()
         {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) return;
+            if (!DesktopSimulation.KeyboardMouseEnabled())
+            {
+                // Keyboard and mouse need the PZ_DESKTOP_MOUSE define; setting it recompiles, so play after the reload.
+                Debug.Log("[PZ] play pipeline: keyboard and mouse are off; turning them on first");
+                SessionState.SetString(StepKey, DesktopThenPlay);
+                EditorApplication.delayCall += Continue;
+                return;
+            }
+
             var report = new EditorReport("play");
             EnterPlay(report);
             report.Finish();
+        }
+
+        /// <summary>Clears the saved calibration, so the next run starts at the calibration screen, then plays.</summary>
+        [MenuItem("PatientZero/Play From Calibration", priority = 4)]
+        public static void PlayFromCalibration()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) return;
+            ResetCalibration();
+            Play();
+        }
+
+        /// <summary>The next run starts at the calibration screen. Calibration is saved in PlayerPrefs when it is confirmed.</summary>
+        [MenuItem("PatientZero/Reset Calibration", priority = 5)]
+        public static void ResetCalibration()
+        {
+            PatientZero.Flow.SettingsProvider.ResetCalibration();
+            Debug.Log("[PZ] PASS  calibration: reset; the next run starts at the calibration screen");
         }
 
         private static void Continue()
@@ -70,6 +99,11 @@ namespace PatientZero.Integration.Editor.Quest
                         break;
                     case Desktop:
                         next = Compose;
+                        SessionState.SetString(StepKey, next);
+                        report = DesktopSimulation.Enable();
+                        break;
+                    case DesktopThenPlay:
+                        next = Enter;
                         SessionState.SetString(StepKey, next);
                         report = DesktopSimulation.Enable();
                         break;

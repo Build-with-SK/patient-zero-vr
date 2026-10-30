@@ -46,3 +46,11 @@ Thumbs.db
 # (first-run and PatientZero/Set Up And Play do it first). Their .meta GUIDs ship in the package, so scenes still resolve.
 /Game/Assets/Samples/
 /Game/Assets/Samples.meta
+
+# TextMesh Pro essential resources: imported from com.unity.ugui by import-samples (the Hands Interaction Demo sample
+# needs them), regenerated like the samples.
+/Game/Assets/TextMesh Pro/
+/Game/Assets/TextMesh Pro.meta
+
+# Unity 6 editor temp folder
+/Game/.utmp/
