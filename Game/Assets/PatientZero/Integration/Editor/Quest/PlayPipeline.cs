@@ -44,10 +44,11 @@ namespace PatientZero.Integration.Editor.Quest
         public static void Play()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) return;
-            if (!DesktopSimulation.KeyboardMouseEnabled())
+            if (!DesktopSimulation.FlatScreenReady())
             {
-                // Keyboard and mouse need the PZ_DESKTOP_MOUSE define; setting it recompiles, so play after the reload.
-                Debug.Log("[PZ] play pipeline: keyboard and mouse are off; turning them on first");
+                // Keyboard and mouse need the Windows target and the PZ_DESKTOP_MOUSE define; either change recompiles, so
+                // play after the reload. A touch-layout test (PZ_TOUCH) counts as ready and is kept.
+                Debug.Log("[PZ] play pipeline: keyboard and mouse are off or the Editor is on Android; turning them on first");
                 SessionState.SetString(StepKey, DesktopThenPlay);
                 EditorApplication.delayCall += Continue;
                 return;

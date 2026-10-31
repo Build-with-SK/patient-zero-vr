@@ -1,0 +1,11 @@
+{
+  "name": "PatientZero.Integration.Runtime",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Flow",
+    "PatientZero.Flow.Logic",
+    "PatientZero.Interaction",
+    "PatientZero.Player",
+    "Unity.XR.CoreUtils"
+  ]
+}

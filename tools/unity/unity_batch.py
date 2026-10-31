@@ -11,6 +11,10 @@
   python tools/unity/unity_batch.py editmode-tests # every EditMode test assembly, NUnit XML in Game/Logs/PatientZero
   python tools/unity/unity_batch.py playmode-tests # every PlayMode test assembly, NUnit XML in Game/Logs/PatientZero
   python tools/unity/unity_batch.py first-run      # all of the above in order; summary in Game/Logs/PatientZero/first-run.json
+  python tools/unity/unity_batch.py build-windows  # Windows x64 release, keyboard and mouse: Builds/Windows/PatientZero/PatientZero.exe
+  python tools/unity/unity_batch.py build-phone    # Android phone release, touch controls: Builds/Android/PatientZero-phone.apk
+  python tools/unity/unity_batch.py build-ipad     # iPad Xcode project, touch controls: Builds/iOS/PatientZero-Xcode (needs iOS Build Support)
+  python tools/unity/unity_batch.py release        # first-run with both release builds; summary in Game/Logs/PatientZero/release.json
 
 The editor is found from $PZ_UNITY, else the Unity Hub install folder for the pinned version.
 Exit codes: 0 pass, 1 Unity ran and reported failure, 2 BLOCKED (no pinned editor, or a step needs a missing module).
@@ -40,6 +44,9 @@ COMMANDS = {
     "configure": ("PatientZero.Integration.Editor.Quest.QuestBuild.ConfigureBatch", "Android"),
     "desktop-sim": ("PatientZero.Integration.Editor.Quest.DesktopSimulation.EnableBatch", None),
     "build-apk": ("PatientZero.Integration.Editor.Quest.QuestBuild.BuildDevApkBatch", "Android"),
+    "build-windows": ("PatientZero.Integration.Editor.Quest.ReleaseBuild.BuildWindowsBatch", "Win64"),
+    "build-phone": ("PatientZero.Integration.Editor.Quest.ReleaseBuild.BuildPhoneBatch", "Android"),
+    "build-ipad": ("PatientZero.Integration.Editor.Quest.ReleaseBuild.BuildIPadBatch", "iOS"),
     "editmode-tests": (None, None),
     "playmode-tests": (None, None),
 }
@@ -50,7 +57,13 @@ TEST_PLATFORMS = {"editmode-tests": "EditMode", "playmode-tests": "PlayMode"}
 # material when they are created, so scenes composed under the built-in pipeline render magenta in URP (seen 2026-10-30).
 # validate runs after build-apk because it checks the Android configuration that configure writes.
 FIRST_RUN = ["open", "import-samples", "desktop-sim", "compose", "editmode-tests", "playmode-tests", "build-apk", "validate"]
-NEEDS_ANDROID = {"configure", "build-apk", "validate"}
+# release adds the two flat-screen builds before the Quest APK. The phone build puts the Quest settings back when it ends,
+# and build-apk then validate run last, so the project is left in the Quest configuration and validate checks it.
+RELEASE = ["open", "import-samples", "desktop-sim", "compose", "editmode-tests", "playmode-tests",
+           "build-windows", "build-phone", "build-apk", "validate"]
+SEQUENCES = {"first-run": FIRST_RUN, "release": RELEASE}
+NEEDS_ANDROID = {"configure", "build-apk", "build-phone", "validate"}
+NEEDS_IOS = {"build-ipad"}
 
 
 def pinned_editor(root: Path = REPO) -> str:
@@ -95,6 +108,18 @@ def android_module_paths(unity: Path) -> list[Path]:
 
 def has_android_module(unity: Path) -> bool:
     return any(p.is_dir() for p in android_module_paths(unity))
+
+
+def ios_module_paths(unity: Path) -> list[Path]:
+    """Where Unity Hub puts iOS Build Support for this editor."""
+    paths = [unity.parent / "Data" / "PlaybackEngines" / "iOSSupport"]
+    if len(unity.parents) >= 4 and unity.parents[2].name.endswith(".app"):
+        paths.append(unity.parents[3] / "PlaybackEngines" / "iOSSupport")
+    return paths
+
+
+def has_ios_module(unity: Path) -> bool:
+    return any(p.is_dir() for p in ios_module_paths(unity))
 
 
 def results_path(command: str) -> Path:
@@ -175,6 +200,12 @@ def run_step(unity: Path, command: str) -> dict:
                 "Android Build Support is not installed for this editor. Looked in: " + ", ".join(str(p) for p in android_module_paths(unity)),
                 "Add it in Unity Hub (Installs > editor > Add modules: Android Build Support, OpenJDK, Android SDK & NDK Tools)."])
             return step
+    if command in NEEDS_IOS and not has_ios_module(unity):
+        step.update(status="BLOCKED", exit=None, lines=[
+            "iOS Build Support is not installed for this editor. Looked in: " + ", ".join(str(p) for p in ios_module_paths(unity)),
+            "Add it in Unity Hub (Installs > editor > Add modules: iOS Build Support). An installable iPad app also needs a Mac "
+            "with Xcode and an Apple developer team; this step only writes the Xcode project."])
+        return step
     if command in TEST_PLATFORMS and results.exists():
         results.unlink()
 
@@ -228,19 +259,19 @@ def print_step(step: dict) -> None:
         print("   packages-lock.json " + ("present" if step["packages_lock"] else "MISSING"))
 
 
-def first_run(unity: Path, version: str) -> int:
-    """Every step in order. A failed 'open' (no compile) stops the run: nothing after it can be trusted."""
+def first_run(unity: Path, version: str, name: str = "first-run") -> int:
+    """Every step of a sequence in order. A failed 'open' (no compile) stops the run: nothing after it can be trusted."""
     steps = []
-    for command in FIRST_RUN:
+    for command in SEQUENCES[name]:
         if steps and steps[0]["status"] != "PASS":
             steps.append({"command": command, "status": "SKIPPED", "note": "open was " + steps[0]["status"]})
             continue
         print(f"Running Unity {version}: {command}")
         steps.append(run_step(unity, command))
         print_step(steps[-1])
-    summary = {"editor": version, "unity": str(unity), "steps": steps}
-    (LOGS / "first-run.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    print("\nfirst-run summary (Game/Logs/PatientZero/first-run.json):")
+    summary = {"editor": version, "unity": str(unity), "sequence": name, "steps": steps}
+    (LOGS / f"{name}.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    print(f"\n{name} summary (Game/Logs/PatientZero/{name}.json):")
     for s in steps:
         print(f"  {s['status']:8s} {s['command']}")
     return overall(steps)
@@ -259,7 +290,7 @@ def overall(steps: list[dict]) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=sorted(COMMANDS) + ["first-run"])
+    parser.add_argument("command", choices=sorted(COMMANDS) + sorted(SEQUENCES))
     parser.add_argument("--print-command", action="store_true", help="print the Unity command line and stop")
     args = parser.parse_args(argv)
 
@@ -274,13 +305,13 @@ def main(argv: list[str] | None = None) -> int:
         print("Install it with Unity Hub (add Android Build Support) or set PZ_UNITY to its executable.")
         return BLOCKED
 
-    if args.command == "first-run":
+    if args.command in SEQUENCES:
         if args.print_command:
-            for command in FIRST_RUN:
+            for command in SEQUENCES[args.command]:
                 print(" ".join(f'"{c}"' if " " in c else c for c in
                                command_line(unity, command, LOGS / f"unity-{command}.log", results_path(command))))
             return 0
-        return first_run(unity, version)
+        return first_run(unity, version, args.command)
 
     if args.print_command:
         cmd = command_line(unity, args.command, LOGS / f"unity-{args.command}.log", results_path(args.command))

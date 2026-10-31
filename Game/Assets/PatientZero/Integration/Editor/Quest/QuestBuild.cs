@@ -100,15 +100,17 @@ namespace PatientZero.Integration.Editor.Quest
             report.Pass("player settings: " + QuestBuildConfig.ApplicationId + ", IL2CPP, ARM64, API " +
                         QuestBuildConfig.MinAndroidApi + "-" + QuestBuildConfig.TargetAndroidApi + ", Vulkan");
 
-            // Desktop keyboard and mouse adapters are Standalone-only (DesktopSimulation); never ship them to the headset.
+            // The flat-screen adapters (keyboard and mouse, touch) never ship to the headset. The phone build passes PZ_TOUCH
+            // per build (ReleaseBuild), so it is never stored for Android either.
             PlayerSettings.GetScriptingDefineSymbols(android, out string[] androidDefines);
-            if (Array.IndexOf(androidDefines, DesktopSimulation.DesktopMouseDefine) >= 0)
+            var kept = new List<string>(androidDefines);
+            foreach (string flat in FlatDefines)
             {
-                var kept = new List<string>(androidDefines);
-                kept.Remove(DesktopSimulation.DesktopMouseDefine);
-                PlayerSettings.SetScriptingDefineSymbols(android, kept.ToArray());
-                report.Pass("android defines: removed " + DesktopSimulation.DesktopMouseDefine);
+                if (!kept.Remove(flat)) continue;
+                report.Pass("android defines: removed " + flat);
             }
+
+            if (kept.Count != androidDefines.Length) PlayerSettings.SetScriptingDefineSymbols(android, kept.ToArray());
 
             ConfigureRendering(report);
             ConfigureInput(report);
@@ -116,6 +118,9 @@ namespace PatientZero.Integration.Editor.Quest
             ConfigureOpenXR(report);
             AssetDatabase.SaveAssets();
         }
+
+        /// <summary>Defines that compile the flat-screen adapters; none may be stored for Android (Quest).</summary>
+        public static readonly string[] FlatDefines = { DesktopSimulation.DesktopMouseDefine, DesktopSimulation.TouchDefine };
 
         /// <summary>Player > Active Input Handling, as stored in ProjectSettings.asset (no public API): 1 = Input System only.</summary>
         public const int InputSystemOnly = 1;
@@ -254,10 +259,15 @@ namespace PatientZero.Integration.Editor.Quest
             NamedBuildTarget android = NamedBuildTarget.Android;
             Expect(report, "application id", PlayerSettings.GetApplicationIdentifier(android), QuestBuildConfig.ApplicationId);
             PlayerSettings.GetScriptingDefineSymbols(android, out string[] androidDefines);
-            if (Array.IndexOf(androidDefines, DesktopSimulation.DesktopMouseDefine) >= 0)
-                report.Error("android defines: " + DesktopSimulation.DesktopMouseDefine + " is set for Android; desktop adapters must not ship to Quest. Run configure.");
-            else
-                report.Pass("android defines: no " + DesktopSimulation.DesktopMouseDefine);
+            bool flatOnQuest = false;
+            foreach (string flat in FlatDefines)
+            {
+                if (Array.IndexOf(androidDefines, flat) < 0) continue;
+                flatOnQuest = true;
+                report.Error("android defines: " + flat + " is set for Android; flat-screen adapters must not ship to Quest. Run configure.");
+            }
+
+            if (!flatOnQuest) report.Pass("android defines: no " + string.Join(" or ", FlatDefines));
             SerializedProperty inputHandler = InputHandler(out _);
             if (inputHandler == null) report.Warn("input handling: 'activeInputHandler' not found in ProjectSettings; check Player > Active Input Handling by hand.");
             else if (inputHandler.intValue == InputSystemOnly) report.Pass("input handling: Input System only");

@@ -149,6 +149,7 @@ Allocation-free typed channels (`EventChannel<T>`). Subscribe in `OnEnable` and 
 | `SettingsChanged` | `ExperienceSettings` | A · settings | everyone | on load and on every change |
 | `TrackingChanged` | modality, left/right tracked | A · rig | B · director (hints), A · UI | the modality or tracking state changes |
 | `HapticRequested` | hand, amplitude, seconds | B · AI/director | A · haptics (controllers only) | zombie proximity, scares |
+| `HandheldLightChanged` (v1.2) | enabled, position, forward | A · interaction (torch switch and pose) | B · atmosphere (owns the light) | the switch changes, and every frame while it is on |
 
 ### 5.2 Services: `Services<T>`
 

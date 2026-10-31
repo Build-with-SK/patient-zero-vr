@@ -34,6 +34,13 @@ namespace PatientZero.Integration.Editor
         public const string TmpSettingsPath = "Assets/TextMesh Pro/Resources/TMP Settings.asset";
         private static bool tmpPending;
 
+        // The Starter Assets sample also opens Project Validation after every domain reload (each Play) while XRI interaction
+        // layer 31 is not named "Teleport", which XRI reserves for teleportation (seen 2026-10-30). Its fix is internal API,
+        // so the name is written through the settings asset. Only a name: no interaction mask changes.
+        public const string InteractionLayerSettingsPath = "Assets/XRI/Settings/Resources/InteractionLayerSettings.asset";
+        public const int TeleportInteractionLayer = 31;
+        public const string TeleportInteractionLayerName = "Teleport";
+
         public readonly struct Wanted
         {
             public readonly string Package;
@@ -97,6 +104,7 @@ namespace PatientZero.Integration.Editor
             }
 
             ImportTmpEssentials(report);
+            NameTeleportLayer(report);
             AssetDatabase.Refresh();
             report.Finish();
             return report;
@@ -124,6 +132,39 @@ namespace PatientZero.Integration.Editor
             AssetDatabase.importPackageCancelled += TmpDone;
             AssetDatabase.ImportPackage(package, false);
             report.Pass("TMP essentials: import started from " + TmpEssentialsPackage);
+        }
+
+        /// <summary>Names XRI interaction layer 31 "Teleport" when it is empty. A layer someone else named is left alone and reported.</summary>
+        public static void NameTeleportLayer(EditorReport report)
+        {
+            UnityEngine.Object asset = AssetDatabase.LoadMainAssetAtPath(InteractionLayerSettingsPath);
+            SerializedProperty names = asset == null ? null : new SerializedObject(asset).FindProperty("m_LayerNames");
+            if (names == null || !names.isArray || names.arraySize <= TeleportInteractionLayer)
+            {
+                report.Warn("interaction layers: " + InteractionLayerSettingsPath + " has no layer " + TeleportInteractionLayer +
+                            ". Name it 'Teleport' in Project Settings > XR Plug-in Management > XR Interaction Toolkit.");
+                return;
+            }
+
+            SerializedProperty layer = names.GetArrayElementAtIndex(TeleportInteractionLayer);
+            if (string.Equals(layer.stringValue, TeleportInteractionLayerName, StringComparison.OrdinalIgnoreCase))
+            {
+                report.Pass("interaction layer " + TeleportInteractionLayer + ": " + TeleportInteractionLayerName);
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(layer.stringValue))
+            {
+                report.Warn("interaction layer " + TeleportInteractionLayer + " is '" + layer.stringValue + "'; the Starter Assets sample wants '" +
+                            TeleportInteractionLayerName + "' and will open Project Validation. Left unchanged.");
+                return;
+            }
+
+            layer.stringValue = TeleportInteractionLayerName;
+            names.serializedObject.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(asset);
+            AssetDatabase.SaveAssetIfDirty(asset);
+            report.Pass("interaction layer " + TeleportInteractionLayer + ": named " + TeleportInteractionLayerName + " (Starter Assets sample rule)");
         }
 
         private static void TmpDone(string packageName) => TmpFinished();

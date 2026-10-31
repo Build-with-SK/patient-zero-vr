@@ -14,7 +14,14 @@ namespace PatientZero.Flow
         public GameFlowCore Core => core;
         public string BlockingDependency {get;private set;}
         private void OnEnable(){GameEvents.StateRequested.Subscribe(OnRequest);GameEvents.PlayerCaught.Subscribe(OnCaught);GameEvents.ActStarted.Subscribe(OnAct);}
-        private void Start(){if(!settings){BlockingDependency="SettingsProvider missing";Debug.LogError(BlockingDependency,this);return;}core.Start(settings.CalibrationConfirmed);Drain();}
+        /// <summary>Integration E-16: the flat-screen builds (Windows, phone, iPad) open on the main menu (the calibration panel) at every
+        /// launch; the headset keeps skipping calibration once it was confirmed.</summary>
+#if PZ_DESKTOP_MOUSE || PZ_TOUCH
+        public static readonly bool AlwaysOpenOnMenu=true;
+#else
+        public static readonly bool AlwaysOpenOnMenu=false;
+#endif
+        private void Start(){if(!settings){BlockingDependency="SettingsProvider missing";Debug.LogError(BlockingDependency,this);return;}core.Start(!AlwaysOpenOnMenu && settings.CalibrationConfirmed);Drain();}
         private void OnDisable(){GameEvents.StateRequested.Unsubscribe(OnRequest);GameEvents.PlayerCaught.Unsubscribe(OnCaught);GameEvents.ActStarted.Unsubscribe(OnAct);Time.timeScale=1;AudioListener.pause=false;}
         public void ConfirmCalibration(){if(!settings)return;settings.ConfirmCalibration();core.Request(GameState.Playing);Drain();}
         public void Pause(){core.Pause();Drain();}

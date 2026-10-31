@@ -1,6 +1,6 @@
 # Test Report
 
-Last updated 2026-10-28 by Claude · Build under test: **none exists** · Repo commit: see `git log -1` on `claude/technical-director`.
+Last updated 2026-10-30 by Claude · Build under test: `PatientZero-dev.apk` (development, debug-signed) from `integration/round2` · Headset: **none connected**, so every device check is NOT TESTED.
 
 ## Status vocabulary
 
@@ -21,11 +21,11 @@ Last updated 2026-10-28 by Claude · Build under test: **none exists** · Repo c
 | 2. Static rules | `python tools/review/check_rules.py` (+ `--self-test`) | yes | runs: 0 findings; self-test PASS |
 | 2b. Package policy and tooling tests | `python tools/unity/validate_packages.py` (+ `--online`); `python -m unittest discover -s tools/unity -p "test_*.py"` | yes | runs: 0 errors; 24/24 PASS |
 | 2c. CI | GitHub Actions `checks` runs layers 1, 2 and 2b on every push and PR | yes | see the evidence log |
-| 3. Unity EditMode tests (same files as layer 1, plus Unity-only ones) | `python tools/unity/unity_batch.py editmode-tests` | no | BLOCKED: no Unity Editor (the runner exits 2) |
-| 4. Scene build and validation | `python tools/unity/unity_batch.py compose` / menu `PatientZero/Build Scenes` | no | BLOCKED: no Unity Editor. Composer written, UNVERIFIED IN EDITOR; its rules are tested in layer 1 |
-| 5. PlayMode tests: autoplay full run, restart ×10 leak test, pause during load | Unity Test Runner, `-testPlatform PlayMode` | no | BLOCKED: no Unity Editor; tests not written yet |
-| 6. Android development build | `python tools/unity/unity_batch.py build-apk` / menu `PatientZero/Build Dev APK` | no | BLOCKED: no Unity Editor or Android module. Build script written, UNVERIFIED IN EDITOR |
-| 7. On-device checks | headset + `adb` + OVR Metrics Tool | no | BLOCKED: no headset connected, no `adb` |
+| 3. Unity EditMode tests (same files as layer 1, plus Unity-only ones) | `python tools/unity/unity_batch.py editmode-tests` | no | runs: 204/204 PASS (2026-10-30) |
+| 4. Scene build and validation | `python tools/unity/unity_batch.py compose` / menu `PatientZero/Build Scenes` | no | runs: PASS, 11 steps, 0 errors (2026-10-30) |
+| 5. PlayMode tests: autoplay full run, restart ×10 leak test, pause during load | `python tools/unity/unity_batch.py playmode-tests` | no | runs: 23/23 PASS (2026-10-30) |
+| 6. Android development build | `python tools/unity/unity_batch.py build-apk` / menu `PatientZero/Build Dev APK` | no | runs: PASS; APK checked with `aapt2` and `apksigner` (2026-10-30) |
+| 7. On-device checks | headset + `adb` + OVR Metrics Tool | no | NOT TESTED: `adb` 37.0.1 (Unity's SDK) lists no device |
 
 ## Evidence log
 

@@ -56,6 +56,7 @@ EVENT_WRITERS = {
     "SettingsChanged": {"Flow"},
     "TrackingChanged": {"Player"},
     "HapticRequested": {"AI", "Atmosphere"},
+    "HandheldLightChanged": {"Interaction"},  # contract v1.2, D-1b
 }
 
 UNITY_YAML = (".unity", ".prefab", ".asset", ".mat", ".controller", ".anim", ".meta",

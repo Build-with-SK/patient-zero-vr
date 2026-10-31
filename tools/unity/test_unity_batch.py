@@ -81,6 +81,25 @@ class UnityBatchTests(unittest.TestCase):
         self.assertLess(order.index("build-apk"), order.index("validate"))      # validate reads what configure wrote
         self.assertTrue({"configure", "build-apk", "validate"} <= ub.NEEDS_ANDROID)
 
+    def test_release_order(self):
+        self.assertEqual(set(ub.RELEASE) - set(ub.COMMANDS), set())
+        order = ub.RELEASE
+        self.assertEqual(order[:6], ub.FIRST_RUN[:6])
+        self.assertLess(order.index("build-windows"), order.index("build-apk"))
+        self.assertLess(order.index("build-phone"), order.index("build-apk"))
+        self.assertEqual(order[-2:], ["build-apk", "validate"])  # ends in the Quest configuration, checked
+        self.assertIn("build-phone", ub.NEEDS_ANDROID)
+        self.assertEqual(ub.COMMANDS["build-windows"][1], "Win64")
+        self.assertEqual(ub.COMMANDS["build-phone"][1], "Android")
+
+    def test_ios_is_blocked_without_the_module(self):
+        fake = Path("C:/nowhere/Editor/Unity.exe")
+        self.assertFalse(ub.has_ios_module(fake))
+        step = ub.run_step(fake, "build-ipad")
+        self.assertEqual(step["status"], "BLOCKED")
+        self.assertIn("Mac", " ".join(step["lines"]))
+        self.assertEqual(ub.COMMANDS["build-ipad"][1], "iOS")
+
     def test_android_module_paths(self):
         win = ub.android_module_paths(Path(r"C:\Program Files\Unity\Hub\Editor\6000.3.27f1\Editor\Unity.exe"))
         self.assertEqual(win[0], Path(r"C:\Program Files\Unity\Hub\Editor\6000.3.27f1\Editor\Data\PlaybackEngines\AndroidPlayer"))

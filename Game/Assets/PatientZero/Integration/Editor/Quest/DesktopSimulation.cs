@@ -18,7 +18,11 @@ namespace PatientZero.Integration.Editor.Quest
     ///     adapters are compiled out, because the simulator binds the same keys (WASD, Q/E, right and left mouse, R) and
     ///     disables mouse clicks on world-space UI while it runs.
     ///   Headset (Link): no simulator, no adapters, Standalone OpenXR started (Quest Link / Air Link).
-    /// The Android (Quest) configuration is never touched; QuestBuild refuses PZ_DESKTOP_MOUSE on Android.
+    ///   Touch (E-15): the phone/iPad controls (PZ_TOUCH) on Windows, with the mouse turned into touches, to test the
+    ///     touch layout in the Editor before a phone build.
+    /// The Android (Quest) configuration is never touched; QuestBuild refuses PZ_DESKTOP_MOUSE and PZ_TOUCH on Android.
+    /// Defines follow the active build target, so outside batch mode the flat modes also switch the Editor to Windows
+    /// (after an Android build the Editor is on Android and the adapters would be compiled out; seen 2026-10-30).
     ///
     /// Menu:      PatientZero/Desktop Simulation/Use Keyboard And Mouse, .../Use XR Interaction Simulator, .../Use Headset (Link)
     /// Batchmode: -executeMethod PatientZero.Integration.Editor.Quest.DesktopSimulation.EnableBatch (keyboard and mouse)
@@ -26,11 +30,12 @@ namespace PatientZero.Integration.Editor.Quest
     /// </summary>
     public static class DesktopSimulation
     {
-        public enum Mode { KeyboardMouse, XriSimulator, Headset }
+        public enum Mode { KeyboardMouse, XriSimulator, Headset, Touch }
 
         public const string XriPackage = "com.unity.xr.interaction.toolkit";
         public const string DesktopMouseDefine = "PZ_DESKTOP_MOUSE";
-        public const string Controls = "WASD move, hold right mouse to look, T teleport, left mouse grab, Q throw, Esc pause, Enter confirm calibration";
+        public const string TouchDefine = "PZ_TOUCH";
+        public const string Controls = "WASD move, mouse to look, aim and hold left mouse to grab (drag to pull a plank, turn the valve or pull the release), Q throw, F flashlight, T teleport, Esc pause, Enter new game";
         private const string SettingsType = "UnityEngine.XR.Interaction.Toolkit.Inputs.Simulation.XRDeviceSimulatorSettings";
         private static readonly string[] Samples = { "Starter Assets", "XR Interaction Simulator" };
         private const string SimulatorPrefab = "XR Interaction Simulator";
@@ -44,6 +49,9 @@ namespace PatientZero.Integration.Editor.Quest
         [MenuItem("PatientZero/Desktop Simulation/Use Headset (Link)", priority = 82)]
         public static void DisableFromMenu() => Apply(Mode.Headset, exit: false);
 
+        [MenuItem("PatientZero/Desktop Simulation/Use Touch Controls (phone layout)", priority = 83)]
+        public static void TouchFromMenu() => Apply(Mode.Touch, exit: false);
+
         public static void EnableBatch() => Apply(Mode.KeyboardMouse, exit: true);
 
         public static void SimulatorBatch() => Apply(Mode.XriSimulator, exit: true);
@@ -51,11 +59,18 @@ namespace PatientZero.Integration.Editor.Quest
         /// <summary>Keyboard and mouse on, no dialog and no exit; for PlayPipeline.</summary>
         public static EditorReport Enable() => Apply(Mode.KeyboardMouse, exit: false);
 
-        /// <summary>True when the Standalone target compiles seat A's keyboard and mouse adapters.</summary>
-        public static bool KeyboardMouseEnabled()
+        /// <summary>True when the Editor compiles the keyboard and mouse adapters now: Windows target and PZ_DESKTOP_MOUSE.</summary>
+        public static bool KeyboardMouseEnabled() => OnStandalone() && HasDefine(DesktopMouseDefine);
+
+        /// <summary>True when the Editor compiles a flat-screen adapter now (keyboard and mouse, or touch).</summary>
+        public static bool FlatScreenReady() => OnStandalone() && (HasDefine(DesktopMouseDefine) || HasDefine(TouchDefine));
+
+        private static bool OnStandalone() => EditorUserBuildSettings.selectedBuildTargetGroup == BuildTargetGroup.Standalone;
+
+        private static bool HasDefine(string define)
         {
             PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Standalone, out string[] defines);
-            return Array.IndexOf(defines, DesktopMouseDefine) >= 0;
+            return Array.IndexOf(defines, define) >= 0;
         }
 
         private static EditorReport Apply(Mode mode, bool exit)
@@ -67,13 +82,17 @@ namespace PatientZero.Integration.Editor.Quest
                 QuestBuild.ConfigureRendering(report); // every mode renders with URP, as on the headset
                 QuestBuild.ConfigureInput(report); // Input System only, as on the headset
                 SetSimulator(report, mode == Mode.XriSimulator);
-                SetDesktopMouse(report, mode == Mode.KeyboardMouse);
+                SetDesktopMouse(report, mode == Mode.KeyboardMouse, mode == Mode.Touch);
                 QuestBuild.ConfigureLoader(report, BuildTargetGroup.Standalone, initOnStart: mode == Mode.Headset);
                 AssetDatabase.SaveAssets();
+                if (mode != Mode.Headset) SwitchToWindows(report);
                 switch (mode)
                 {
                     case Mode.KeyboardMouse:
                         report.Line("Keyboard and mouse on. Enter Play mode in Bootstrap.unity (PatientZero/Play). " + Controls + ".");
+                        break;
+                    case Mode.Touch:
+                        report.Line("Touch controls on (mouse = one finger). Enter Play mode in Bootstrap.unity. Left 40% of the screen: move stick; right side: look, tap to grab.");
                         break;
                     case Mode.XriSimulator:
                         report.Line("XR Interaction Simulator on. Enter Play mode in Bootstrap.unity. Controls are in the simulator's on-screen panel.");
@@ -100,17 +119,39 @@ namespace PatientZero.Integration.Editor.Quest
             AssetDatabase.Refresh();
         }
 
-        /// <summary>Adds or removes PZ_DESKTOP_MOUSE for Standalone only. A change recompiles scripts.</summary>
-        private static void SetDesktopMouse(EditorReport report, bool on)
+        /// <summary>Sets PZ_DESKTOP_MOUSE and PZ_TOUCH for Standalone only (at most one of them). A change recompiles scripts.</summary>
+        private static void SetDesktopMouse(EditorReport report, bool mouse, bool touch)
         {
             PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Standalone, out string[] defines);
             var list = new List<string>(defines);
-            bool has = list.Contains(DesktopMouseDefine);
-            if (on && !has) list.Add(DesktopMouseDefine);
-            if (!on && has) list.Remove(DesktopMouseDefine);
-            if (on != has) PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, list.ToArray());
-            report.Pass("desktop input: " + DesktopMouseDefine + (on ? " defined" : " not defined") + " for Standalone" +
-                        (on != has ? " (changed; scripts recompile)" : ""));
+            bool changed = Set(list, DesktopMouseDefine, mouse) | Set(list, TouchDefine, touch);
+            if (changed) PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, list.ToArray());
+            report.Pass("flat-screen input for Standalone: " + DesktopMouseDefine + (mouse ? " defined" : " not defined") + ", " +
+                        TouchDefine + (touch ? " defined" : " not defined") + (changed ? " (changed; scripts recompile)" : ""));
+        }
+
+        private static bool Set(List<string> list, string define, bool on)
+        {
+            bool has = list.Contains(define);
+            if (on && !has) list.Add(define);
+            if (!on && has) list.Remove(define);
+            return on != has;
+        }
+
+        /// <summary>Outside batch mode, makes Windows the active target so the Standalone defines compile in the Editor.
+        /// Batch runs choose the target with -buildTarget, and the release build passes its own defines.</summary>
+        private static void SwitchToWindows(EditorReport report)
+        {
+            if (OnStandalone()) { report.Pass("editor target: Windows"); return; }
+            if (Application.isBatchMode)
+            {
+                report.Line("editor target: " + EditorUserBuildSettings.activeBuildTarget + " (batch mode; not switched)");
+                return;
+            }
+
+            bool ok = EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows64);
+            if (ok) report.Pass("editor target: switched to Windows so the flat-screen adapters compile (reimport may take a minute)");
+            else report.Error("editor target: could not switch to Windows. File > Build Profiles > Windows > Switch Platform.");
         }
 
         private static void SetSimulator(EditorReport report, bool on)
