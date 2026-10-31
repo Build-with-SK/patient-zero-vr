@@ -6,7 +6,10 @@
     "PatientZero.Integration.Logic",
     "PatientZero.Integration.Runtime",
     "PatientZero.Flow",
-    "PatientZero.Atmosphere"
+    "PatientZero.Atmosphere",
+    "PatientZero.AI",
+    "Unity.RenderPipelines.Core.Runtime",
+    "Unity.RenderPipelines.Universal.Runtime"
   ],
   "includePlatforms": [
     "Editor"

@@ -9,6 +9,7 @@ using UnityEditor.XR.Management;
 using UnityEditor.XR.Management.Metadata;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.XR.Management;
 
 namespace PatientZero.Integration.Editor.Quest
@@ -16,7 +17,8 @@ namespace PatientZero.Integration.Editor.Quest
     /// <summary>
     /// The two flat-screen release builds. Neither changes what the Quest build ships.
     ///   Windows x64: keyboard and mouse (PZ_DESKTOP_MOUSE passed to this build only), fullscreen window at the desktop
-    ///     resolution, XR not started, Mono, non-development. Builds/Windows/PatientZero/PatientZero.exe
+    ///     resolution, no XR loader, HDR and post-processing (art pass, E-20), Mono, non-development.
+    ///     Builds/Windows/PatientZero/PatientZero.exe
     ///   Android phone: touch controls (PZ_TOUCH passed to this build only), its own application id so it installs next
     ///     to the Quest app, landscape only, Vulkan with OpenGL ES 3 fallback, Android 10+, no XR loader (so no VR
     ///     manifest entries), debug-signed for sideloading. Builds/Android/PatientZero-phone.apk
@@ -100,23 +102,57 @@ namespace PatientZero.Integration.Editor.Quest
             }
 
             Common(report);
-            NamedBuildTarget standalone = NamedBuildTarget.Standalone;
-            PlayerSettings.SetScriptingBackend(standalone, ScriptingImplementation.Mono2x);
-            PlayerSettings.fullScreenMode = FullScreenMode.FullScreenWindow;
-            PlayerSettings.defaultIsNativeResolution = true;
-            PlayerSettings.resizableWindow = true;
-            PlayerSettings.runInBackground = false; // unfocused = paused, as the game's own focus rule expects
-            PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.StandaloneWindows64, true);
-            QuestBuild.ConfigureLoader(report, BuildTargetGroup.Standalone, initOnStart: false);
-            AssetDatabase.SaveAssets();
-            report.Pass("windows: Mono, x64, fullscreen window at desktop resolution (Alt+Enter toggles), XR not started");
-            if (!report.Ok || !Compose(report)) return;
+            // Art pass (E-20): HDR for bloom and ACES, and no OpenXR at all (the flat-screen game never starts XR, and the
+            // loader alone logged XR_ERROR_RUNTIME_UNAVAILABLE). Both are for this build only and are put back below, so
+            // the Quest configuration (HDR off) and desktop simulation in the Editor (Standalone OpenXR loader) are unchanged.
+            var urp = GraphicsSettings.defaultRenderPipeline as UniversalRenderPipelineAsset;
+            bool hdrBefore = urp != null && urp.supportsHDR;
+            XRGeneralSettings xrBefore = QuestBuild.SettingsFor(BuildTargetGroup.Standalone, create: false);
+            bool hadLoader = xrBefore != null && xrBefore.Manager != null && xrBefore.Manager.activeLoaders.Count > 0;
+            bool initBefore = xrBefore != null && xrBefore.InitManagerOnStart;
+            try
+            {
+                NamedBuildTarget standalone = NamedBuildTarget.Standalone;
+                PlayerSettings.SetScriptingBackend(standalone, ScriptingImplementation.Mono2x);
+                PlayerSettings.fullScreenMode = FullScreenMode.FullScreenWindow;
+                PlayerSettings.defaultIsNativeResolution = true;
+                PlayerSettings.resizableWindow = true;
+                PlayerSettings.runInBackground = false; // unfocused = paused, as the game's own focus rule expects
+                PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.StandaloneWindows64, true);
+                RemoveXR(report, BuildTargetGroup.Standalone, "windows");
+                if (urp != null)
+                {
+                    urp.supportsHDR = true;
+                    EditorUtility.SetDirty(urp);
+                    report.Pass("windows: URP HDR on for this build (bloom, ACES tonemapping)");
+                }
+                else
+                {
+                    report.Warn("windows: no URP asset is active; the build renders without HDR");
+                }
 
-            string exe = Absolute(WindowsExePath);
-            string folder = Path.GetDirectoryName(exe);
-            if (Directory.Exists(folder)) Directory.Delete(folder, true); // a clean folder: no stale data from older builds
-            Directory.CreateDirectory(folder);
-            Build(report, exe, BuildTarget.StandaloneWindows64, BuildTargetGroup.Standalone, DesktopSimulation.DesktopMouseDefine);
+                AssetDatabase.SaveAssets();
+                report.Pass("windows: Mono, x64, fullscreen window at desktop resolution (Alt+Enter toggles), no XR loader");
+                if (!report.Ok || !Compose(report)) return;
+
+                string exe = Absolute(WindowsExePath);
+                string folder = Path.GetDirectoryName(exe);
+                if (Directory.Exists(folder)) Directory.Delete(folder, true); // a clean folder: no stale data from older builds
+                Directory.CreateDirectory(folder);
+                Build(report, exe, BuildTarget.StandaloneWindows64, BuildTargetGroup.Standalone, DesktopSimulation.DesktopMouseDefine);
+            }
+            finally
+            {
+                if (urp != null)
+                {
+                    urp.supportsHDR = hdrBefore;
+                    EditorUtility.SetDirty(urp);
+                }
+
+                if (hadLoader) QuestBuild.ConfigureLoader(report, BuildTargetGroup.Standalone, initBefore);
+                AssetDatabase.SaveAssets();
+                report.Pass("windows: put back URP HDR " + (hdrBefore ? "on" : "off") + (hadLoader ? " and the Standalone OpenXR loader for desktop simulation" : ""));
+            }
         }
 
         // ---------------------------------------------------------------- Android phone
@@ -153,7 +189,7 @@ namespace PatientZero.Integration.Editor.Quest
                 PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
                 PlayerSettings.allowedAutorotateToLandscapeLeft = true;
                 PlayerSettings.allowedAutorotateToLandscapeRight = true;
-                RemoveAndroidXR(report);
+                RemoveXR(report, BuildTargetGroup.Android, "phone");
                 AssetDatabase.SaveAssets();
                 report.Pass("phone: " + PhoneApplicationId + ", IL2CPP ARM64, API " + PhoneMinAndroidApi + "-" + QuestBuildConfig.TargetAndroidApi +
                             ", Vulkan + OpenGL ES 3, landscape only, no XR loader");
@@ -223,23 +259,26 @@ namespace PatientZero.Integration.Editor.Quest
             }
         }
 
-        /// <summary>No XR loader on Android for the phone build; QuestBuild.Configure assigns OpenXR again afterwards.</summary>
-        private static void RemoveAndroidXR(EditorReport report)
+        /// <summary>
+        /// No XR loader for a flat-screen build: the phone build (Android; QuestBuild.Configure assigns OpenXR again
+        /// afterwards) and the Windows build (Standalone; BuildWindows puts the loader back for desktop simulation).
+        /// </summary>
+        private static void RemoveXR(EditorReport report, BuildTargetGroup group, string build)
         {
-            XRGeneralSettings settings = QuestBuild.SettingsFor(BuildTargetGroup.Android, create: true);
+            XRGeneralSettings settings = QuestBuild.SettingsFor(group, create: true);
             XRManagerSettings manager = settings.Manager;
             foreach (XRLoader loader in new System.Collections.Generic.List<XRLoader>(manager.activeLoaders))
             {
                 if (loader == null) continue;
                 string type = loader.GetType().FullName;
-                if (XRPackageMetadataStore.RemoveLoader(manager, type, BuildTargetGroup.Android)) report.Line("phone: removed XR loader " + type);
+                if (XRPackageMetadataStore.RemoveLoader(manager, type, group)) report.Line(build + ": removed XR loader " + type);
             }
 
             settings.InitManagerOnStart = false;
             EditorUtility.SetDirty(settings);
             EditorUtility.SetDirty(manager);
-            if (manager.activeLoaders.Count == 0) report.Pass("phone: no XR loader for Android");
-            else report.Error("phone: an XR loader is still assigned for Android; the phone APK would start as a VR app.");
+            if (manager.activeLoaders.Count == 0) report.Pass(build + ": no XR loader for " + group);
+            else report.Error(build + ": an XR loader is still assigned for " + group + "; the build would start as a VR app.");
         }
 
         private static void Build(EditorReport report, string path, BuildTarget target, BuildTargetGroup group, string define)

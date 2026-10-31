@@ -190,6 +190,33 @@ namespace PatientZero.Integration.Editor.Quest
             asset.useSRPBatcher = true;
             EditorUtility.SetDirty(asset);
             report.Pass("URP: " + AssetDatabase.GetAssetPath(asset) + ", MSAA " + Msaa + "x, HDR off, render scale 1, no depth/opaque texture");
+            ConfigurePostProcessData(report);
+        }
+
+        public const string PostProcessDataPath = "Packages/com.unity.render-pipelines.universal/Runtime/Data/PostProcessData.asset";
+
+        /// <summary>
+        /// Art pass (E-20): the renderer needs URP's post-processing shaders and textures, or no camera can post-process.
+        /// This adds no cost by itself: a camera post-processes only when its renderPostProcessing is on, and only
+        /// FlatScreenPost turns that on, when no headset is active. Quest stays without post-processing (ARCHITECTURE.md 1).
+        /// </summary>
+        private static void ConfigurePostProcessData(EditorReport report)
+        {
+            var renderer = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(UrpRendererPath);
+            var data = AssetDatabase.LoadAssetAtPath<PostProcessData>(PostProcessDataPath);
+            if (renderer == null || data == null)
+            {
+                report.Warn("URP post-processing data: " + (renderer == null ? UrpRendererPath : PostProcessDataPath) + " not found; flat screens get no post-processing.");
+                return;
+            }
+
+            if (renderer.postProcessData != data)
+            {
+                renderer.postProcessData = data;
+                EditorUtility.SetDirty(renderer);
+            }
+
+            report.Pass("URP renderer: post-processing data assigned (used only by flat-screen cameras)");
         }
 
         /// <summary>Assigns the OpenXR loader as the only loader for a platform. Also used by desktop simulation.</summary>

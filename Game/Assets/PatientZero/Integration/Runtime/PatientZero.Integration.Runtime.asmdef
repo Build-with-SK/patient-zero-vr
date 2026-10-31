@@ -6,6 +6,8 @@
     "PatientZero.Flow.Logic",
     "PatientZero.Interaction",
     "PatientZero.Player",
-    "Unity.XR.CoreUtils"
+    "Unity.XR.CoreUtils",
+    "Unity.RenderPipelines.Core.Runtime",
+    "Unity.RenderPipelines.Universal.Runtime"
   ]
 }
