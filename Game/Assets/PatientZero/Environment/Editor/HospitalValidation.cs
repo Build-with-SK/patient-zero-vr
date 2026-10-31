@@ -52,6 +52,10 @@ namespace PatientZero.Environment.Editor
                 CheckRoute(WardLayout.Z1_WalkFrom.Position, WardLayout.A1_DoorWindow.Position + Vector3.forward * .45f, "window approach", errors);
                 CheckRoute(WardLayout.Z2_Dormant.Position, WardLayout.Z2_Doorway.Position, "theatre doorway", errors);
                 CheckRoute(WardLayout.Z3_PatrolNorth.Position, WardLayout.Z3_PatrolSouth.Position, "corridor crossing", errors);
+                // v1.3 (E-19): the lower floors' zombies must be able to walk their beats.
+                CheckRoute(WardLayout.Z5_Dormant.Position, WardLayout.A5_Start.Position, "Lab B to the Floor 2 landing (fuse lure)", errors);
+                CheckRoute(WardLayout.Z6_PatrolNorth.Position, WardLayout.Z6_PatrolSouth.Position, "lobby patrol", errors);
+                CheckRoute(WardLayout.Z7_Dormant.Position, WardLayout.A6_Hall1.Position, "reception desk to the lobby", errors);
                 foreach (string error in errors) Debug.LogError(error);
                 if (errors.Count > 0) throw new InvalidOperationException("Saved navigation has " + errors.Count + " unreachable route(s).");
                 Debug.Log("Saved navigation routes passed.");
@@ -68,7 +72,7 @@ namespace PatientZero.Environment.Editor
             if (directors.Count != 1 || !directors[0].Lighting || !directors[0].Emitters)
                 errors.Add("Ward director needs its lighting and audio emitter references.");
             var lights = Find<LightingController>(ward);
-            if (lights.Count != 1 || lights[0].Fixtures.Length != 6) errors.Add("Expected six bound shadowless fixtures.");
+            if (lights.Count != 1 || lights[0].Fixtures.Length < 6) errors.Add("Expected six ward fixtures, then the lower floors' (v1.3), all bound and shadowless.");
             else foreach (var fixture in lights[0].Fixtures)
                 if (!fixture || fixture.shadows != LightShadows.None) errors.Add("Fixture missing or dynamic shadows enabled.");
             var masks = WardCollisionBinding.Resolve();
@@ -78,13 +82,13 @@ namespace PatientZero.Environment.Editor
             var ids = new HashSet<int>();
             foreach (var actor in actors)
             {
-                if (!ids.Add(actor.ZombieId) || actor.ZombieId < 1 || actor.ZombieId > 4) errors.Add("Duplicate/invalid zombie id.");
+                if (!ids.Add(actor.ZombieId) || actor.ZombieId < 1 || actor.ZombieId > ZombieIds.Count) errors.Add("Duplicate/invalid zombie id.");
                 if (!actor.Head || !actor.FootEmitter || !actor.Animation) errors.Add("Zombie visual/audio references missing.");
                 var nav = actor.GetComponent<ZombieNavigation>();
                 if (!nav || nav.Obstacles.value != masks.Movement || actor.HearingOccluders.value != masks.Hearing || actor.SightBlockers.value != masks.Sight)
                     errors.Add("Zombie collision masks differ from the generated door/geometry policy.");
             }
-            if (actors.Count != 4) errors.Add("Expected four zombie actors.");
+            if (actors.Count != ZombieIds.Count) errors.Add("Expected " + ZombieIds.Count + " zombie actors (four ward, three lower floors).");
             if (audio.Count == 1 && audio[0].Occluders.value != masks.Audio) errors.Add("Audio occlusion mask differs from geometry/door policy.");
             var surfaces = Find<NavMeshSurface>(ward);
             if (surfaces.Count != 1 || !surfaces[0].navMeshData) errors.Add("Saved NavMeshData missing.");
@@ -97,6 +101,10 @@ namespace PatientZero.Environment.Editor
                 CheckRoute(WardLayout.Z1_WalkFrom.Position, WardLayout.A1_DoorWindow.Position + Vector3.forward * .45f, "window approach", errors);
                 CheckRoute(WardLayout.Z2_Dormant.Position, WardLayout.Z2_Doorway.Position, "theatre doorway", errors);
                 CheckRoute(WardLayout.Z3_PatrolNorth.Position, WardLayout.Z3_PatrolSouth.Position, "corridor crossing", errors);
+                // v1.3 (E-19): the lower floors' zombies must be able to walk their beats.
+                CheckRoute(WardLayout.Z5_Dormant.Position, WardLayout.A5_Start.Position, "Lab B to the Floor 2 landing (fuse lure)", errors);
+                CheckRoute(WardLayout.Z6_PatrolNorth.Position, WardLayout.Z6_PatrolSouth.Position, "lobby patrol", errors);
+                CheckRoute(WardLayout.Z7_Dormant.Position, WardLayout.A6_Hall1.Position, "reception desk to the lobby", errors);
             }
             foreach (var tag in Find<LayoutTag>(ward))
                 if (tag.LayoutId == WardLayout.A3_Cart.Id && tag.GetComponentsInChildren<Collider>(true).Length != 0)

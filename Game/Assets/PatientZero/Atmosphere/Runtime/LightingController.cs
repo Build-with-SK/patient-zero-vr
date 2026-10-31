@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace PatientZero.Atmosphere
 {
-    /// <summary>The only runtime lighting writer; six no-shadow fixtures, fog, ambient and emission.</summary>
+    /// <summary>The only runtime lighting writer; six no-shadow ward fixtures plus the lower floors' (v1.3), fog, ambient and emission.</summary>
     public sealed class LightingController : MonoBehaviour
     {
         public Light[] Fixtures = new Light[0];
@@ -58,7 +58,7 @@ namespace PatientZero.Atmosphere
             for (int i = 0; i < Fixtures.Length; i++)
             {
                 var fixture = Fixtures[i]; if (!fixture) continue;
-                bool zone = FixturePolicy.Enabled(current, i);
+                bool zone = i < FixturePolicy.WardFixtures ? FixturePolicy.Enabled(current, i) : FixturePolicy.FloorFixtureEnabled(current);
                 fixture.color = colour; fixture.shadows = LightShadows.None;
                 float variation = FixturePolicy.Variation(current, age, settings.ReduceFlicker, i, pulse);
                 fixture.intensity = zone ? gain * variation : 0;

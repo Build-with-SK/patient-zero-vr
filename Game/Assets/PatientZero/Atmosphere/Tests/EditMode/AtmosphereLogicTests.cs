@@ -43,10 +43,21 @@ namespace PatientZero.Atmosphere.Tests
             d.Tick(7, true, WardLayout.A3_Mid1.Position); Collect(d, cues);
             d.Complete(ObjectiveId.Act3_BeaconReached); Collect(d, cues); Assert.AreEqual(ActId.Exit, d.Act);
             d.Progress(ObjectiveId.Act4_ReleasePulled, .6f); d.Complete(ObjectiveId.Act4_ReleasePulled); d.Complete(ObjectiveId.Act4_ExitOpened); Collect(d, cues);
-            d.Tick(2, true, WardLayout.A4_Start.Position); Collect(d, cues);
-            d.Tick(4, true, WardLayout.A4_Start.Position); Collect(d, cues);
-            d.Tick(3, true, WardLayout.A4_Start.Position); Collect(d, cues);
-            d.Tick(3, true, WardLayout.A4_Start.Position); Collect(d, cues);
+            // v1.3 (E-19): the stairs, then floors 2 and 1; the ending now plays in the lobby.
+            Assert.AreEqual(ActId.Exit, d.Act, "the open door alone must not leave the ward");
+            d.Complete(ObjectiveId.Act4_StairsReached); Collect(d, cues); Assert.AreEqual(ActId.Laboratory, d.Act);
+            d.Tick(2, true, WardLayout.A5_Start.Position); Collect(d, cues);
+            d.Complete(ObjectiveId.Act5_FuseInserted); Collect(d, cues);
+            d.Complete(ObjectiveId.Act5_OverridePulled); d.Complete(ObjectiveId.Act5_StairDoorOpened); Collect(d, cues);
+            Assert.AreEqual(ActId.Laboratory, d.Act);
+            d.Complete(ObjectiveId.Act5_StairsReached); Collect(d, cues); Assert.AreEqual(ActId.Lobby, d.Act);
+            d.Tick(2, true, WardLayout.A6_Start.Position); Collect(d, cues);
+            d.Complete(ObjectiveId.Act6_GeneratorPrimed); d.Complete(ObjectiveId.Act6_LockdownReleased); Collect(d, cues);
+            d.Complete(ObjectiveId.Act6_MainDoorsOpened); Collect(d, cues);
+            d.Tick(2, true, WardLayout.A6_Lockdown.Position); Collect(d, cues);
+            d.Tick(4, true, WardLayout.A6_Lockdown.Position); Collect(d, cues);
+            d.Tick(3, true, WardLayout.A6_Lockdown.Position); Collect(d, cues);
+            d.Tick(3, true, WardLayout.A6_Lockdown.Position); Collect(d, cues);
             return cues;
         }
         private static void Collect(DirectorCore d, List<CueId> cues)
@@ -120,7 +131,8 @@ namespace PatientZero.Atmosphere.Tests
             var cues = GoldenRun(ScareIntensity.Standard, out var d);
             var expected = new[] { CueId.HeartbeatWake, CueId.PaGarbledBreach, CueId.ZombieGlassTap, CueId.WindowSlam, CueId.DistantCrashLure,
                 CueId.DistantCrashLure, CueId.PowerThrum, CueId.BreakerOverload, CueId.PaCarrierWarning,
-                CueId.BeaconChirp, CueId.BeaconChirp, CueId.RestraintSnap, CueId.ZombieLunge, CueId.PaPatientZero, CueId.RevealDrone };
+                CueId.BeaconChirp, CueId.BeaconChirp, CueId.RestraintSnap, CueId.ZombieLunge,
+                CueId.PaCarrierWarning, CueId.PowerThrum, CueId.DistantCrashLure, CueId.PaGarbledBreach, CueId.PaPatientZero, CueId.RevealDrone };
             Assert.AreEqual(expected.Length, cues.Count);
             for (int i = 0; i < expected.Length; i++) Assert.AreEqual(expected[i], cues[i], "beat " + i);
             Assert.AreEqual(2, d.HardScares);
@@ -195,12 +207,55 @@ namespace PatientZero.Atmosphere.Tests
             var d = New(); Window(d); Drain(d); Assert.AreEqual(1, d.HardScares);
             d.StartRun(ActId.Awakening, true); Drain(d); Window(d); Drain(d); Assert.AreEqual(1, d.HardScares);
         }
-        [Test] public void EndingOrdersKneelPaRevealDroneThenComplete()
+        // v1.3 (E-19): the lower floors.
+        [Test] public void WardEndsOnTheStairLandingNotTheOpenDoor()
         {
             var d = New(); d.StartRun(ActId.Exit, true); Drain(d);
-            d.Complete(ObjectiveId.Act4_ReleasePulled); d.Complete(ObjectiveId.Act4_ExitOpened);
+            d.Complete(ObjectiveId.Act4_ReleasePulled); d.Complete(ObjectiveId.Act4_ExitOpened); var opened = Drain(d);
+            Assert.AreEqual(ActId.Exit, d.Act); Assert.IsFalse(Contains(opened, DirectorCommandKind.State, (int)GameState.Ending));
+            Assert.IsFalse(opened.Exists(c => c.Kind == DirectorCommandKind.Lighting && c.Id == (int)LightingState.ExitDaylight), "daylight waits for the lobby");
+            d.Complete(ObjectiveId.Act4_StairsReached); var down = Drain(d);
+            Assert.AreEqual(ActId.Laboratory, d.Act); Assert.IsTrue(Contains(down, DirectorCommandKind.Act, (int)ActId.Laboratory));
+            Assert.IsTrue(down.Exists(c => c.Kind == DirectorCommandKind.Lighting && c.Id == (int)LightingState.WardDim));
+            Assert.IsTrue(down.Exists(c => c.Kind == DirectorCommandKind.Zombie && c.Id == ZombieIds.Researcher && c.Detail == (int)ZombieDirection.Dormant));
+            Assert.IsTrue(down.Exists(c => c.Kind == DirectorCommandKind.Zombie && c.Id == ZombieIds.FinalPatient && c.Detail == (int)ZombieDirection.Hide));
+        }
+        [Test] public void StairsBeforeTheDoorOpensDoNotLeaveTheWard()
+        {
+            var d = New(); d.StartRun(ActId.Exit, true); Drain(d);
+            d.Complete(ObjectiveId.Act4_StairsReached); Drain(d); Assert.AreEqual(ActId.Exit, d.Act);
+            d.Complete(ObjectiveId.Act4_ReleasePulled); d.Complete(ObjectiveId.Act4_ExitOpened); Drain(d);
+            Assert.AreEqual(ActId.Laboratory, d.Act, "a banked arrival counts once the door is open");
+        }
+        [Test] public void FuseSparkLuresTheResearcherOnce()
+        {
+            var d = New(); d.StartRun(ActId.Laboratory, true); Drain(d);
+            d.Complete(ObjectiveId.Act5_FuseInserted); var spark = Drain(d);
+            Assert.IsTrue(spark.Exists(c => c.Cue == CueId.DistantCrashLure && WardLayout.HorizontalDistance(c.Position, WardLayout.A5_Start.Position) < .01f));
+            Assert.IsTrue(spark.Exists(c => c.Kind == DirectorCommandKind.Zombie && c.Id == ZombieIds.Researcher && c.Detail == (int)ZombieDirection.Investigate));
+            d.Complete(ObjectiveId.Act5_FuseInserted); Assert.AreEqual(0, Drain(d).Count);
+            d.Complete(ObjectiveId.Act5_OverridePulled); d.Complete(ObjectiveId.Act5_StairDoorOpened); Drain(d); Assert.AreEqual(ActId.Laboratory, d.Act);
+            d.Complete(ObjectiveId.Act5_StairsReached); var lobby = Drain(d); Assert.AreEqual(ActId.Lobby, d.Act);
+            Assert.IsTrue(lobby.Exists(c => c.Kind == DirectorCommandKind.Zombie && c.Id == ZombieIds.Guard && c.Detail == (int)ZombieDirection.Patrol));
+            Assert.IsTrue(lobby.Exists(c => c.Kind == DirectorCommandKind.Zombie && c.Id == ZombieIds.Porter && c.Detail == (int)ZombieDirection.Dormant));
+            Assert.IsTrue(lobby.Exists(c => c.Kind == DirectorCommandKind.Lighting && c.Id == (int)LightingState.EmergencyRed));
+        }
+        [Test] public void LockdownReleaseBringsDaylightAndCatchesCountPerFloor()
+        {
+            var memory = new DirectorMemory(); var d = new DirectorCore(memory); d.StartRun(ActId.Lobby, true); Drain(d);
+            d.Caught(); d.Caught(); Assert.AreEqual(2, memory.Catches[(int)ActId.Lobby]); Assert.IsTrue(d.AdaptiveAssist);
+            d.Complete(ObjectiveId.Act6_LockdownReleased);
+            Assert.IsTrue(Drain(d).Exists(c => c.Kind == DirectorCommandKind.Lighting && c.Id == (int)LightingState.ExitDaylight));
+            Assert.Throws<ArgumentOutOfRangeException>(() => d.StartRun((ActId)7, false));
+        }
+        [Test] public void EndingOrdersKneelPaRevealDroneThenComplete()
+        {
+            var d = New(); d.StartRun(ActId.Lobby, true); Drain(d);
+            d.Complete(ObjectiveId.Act6_GeneratorPrimed); d.Complete(ObjectiveId.Act6_LockdownReleased); d.Complete(ObjectiveId.Act6_MainDoorsOpened);
             Assert.IsTrue(Contains(Drain(d), DirectorCommandKind.State, (int)GameState.Ending));
-            d.Tick(1, true, Vector3.zero); Assert.IsTrue(Contains(Drain(d), DirectorCommandKind.Zombie, 4));
+            d.Tick(1, true, Vector3.zero); var kneel = Drain(d);
+            Assert.IsTrue(kneel.Exists(c => c.Kind == DirectorCommandKind.Zombie && c.Id == ZombieIds.Guard && c.Detail == (int)ZombieDirection.Kneel));
+            Assert.IsTrue(kneel.Exists(c => c.Kind == DirectorCommandKind.Zombie && c.Id == ZombieIds.Porter && c.Detail == (int)ZombieDirection.Kneel));
             d.Tick(1, true, Vector3.zero); Assert.IsTrue(Drain(d).Exists(c => c.Cue == CueId.PaPatientZero));
             d.Tick(4, true, Vector3.zero); var six = Drain(d); Assert.IsTrue(six.Exists(c => c.Cue == CueId.RevealDrone));
             Assert.IsTrue(six.Exists(c => c.Kind == DirectorCommandKind.Reveal && Math.Abs(c.Value - .5f) < .01f));

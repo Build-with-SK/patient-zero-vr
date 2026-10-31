@@ -31,8 +31,11 @@ namespace PatientZero.AI
         {
             navigation = GetComponent<ZombieNavigation>();
             Vector3 spawn = Spawn();
+            // v1.3 (E-19): the lobby guard walks its own line; every other patroller uses the ward's.
+            bool guard = ZombieId == ZombieIds.Guard;
             brain = new ZombieBrain(ZombieId, spawn, new System.Random(1200 + ZombieId),
-                WardLayout.Z3_PatrolNorth.Position, WardLayout.Z3_PatrolSouth.Position);
+                guard ? WardLayout.Z6_PatrolNorth.Position : WardLayout.Z3_PatrolNorth.Position,
+                guard ? WardLayout.Z6_PatrolSouth.Position : WardLayout.Z3_PatrolSouth.Position);
             lastTick = Time.time; nextTick = Time.time + ZombieId * .017f;
         }
         private void OnEnable()
@@ -48,12 +51,23 @@ namespace PatientZero.AI
             GameEvents.StateChanged.Unsubscribe(StateChanged); GameEvents.LightingChanged.Unsubscribe(LightingChanged);
             GameEvents.SettingsChanged.Unsubscribe(SettingsChanged); StopLoops(); if (navigation) navigation.Stop();
         }
-        private Vector3 Spawn() => ZombieId == 1 ? WardLayout.Z1_WalkFrom.Position : ZombieId == 2 ? WardLayout.Z2_Dormant.Position :
-            ZombieId == 3 ? WardLayout.Z3_PatrolNorth.Position : WardLayout.Z4_Gurney.Position;
+        private Vector3 Spawn()
+        {
+            switch (ZombieId)
+            {
+                case ZombieIds.Walker: return WardLayout.Z1_WalkFrom.Position;
+                case ZombieIds.Orderly: return WardLayout.Z2_Dormant.Position;
+                case ZombieIds.Patroller: return WardLayout.Z3_PatrolNorth.Position;
+                case ZombieIds.Researcher: return WardLayout.Z5_Dormant.Position;
+                case ZombieIds.Guard: return WardLayout.Z6_PatrolNorth.Position;
+                case ZombieIds.Porter: return WardLayout.Z7_Dormant.Position;
+                default: return WardLayout.Z4_Gurney.Position;
+            }
+        }
         private void ActStarted(ActStarted e)
         {
             state = GameState.Playing; // Ward can load after Bootstrap's Playing notification.
-            active = (int)e.Act == ZombieId; StopLoops(); lastTick = Time.time; nextTick = Time.time + ZombieId * .017f;
+            active = ZombieIds.ActOf(ZombieId) == e.Act; StopLoops(); // v1.3: two zombies share the lobby lastTick = Time.time; nextTick = Time.time + ZombieId * .017f;
             brain.Reset(ZombieId == 4 ? ZombieMode.Restrained : ZombieMode.Dormant);
             if (navigation) { navigation.SetSimulationActive(active); if (active) navigation.Warp(Spawn()); }
             if (Animation) Animation.ResetPose();

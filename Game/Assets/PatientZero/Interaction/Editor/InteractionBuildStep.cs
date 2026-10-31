@@ -7,7 +7,7 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Locomotion.Teleportation;
 namespace PatientZero.Interaction.Editor
 {
-    public static class InteractionBuildStep
+    public static partial class InteractionBuildStep
     {
         /// <summary>Composer builds A-owned puzzles and props; B builds geometry, lighting and beats.</summary>
         [SceneBuildStep(BuildScene.Ward,310)]
@@ -22,6 +22,7 @@ namespace PatientZero.Interaction.Editor
             var tray=At(root,WardLayout.A1_Tray);Shape(tray.transform,"Tray",PrimitiveType.Cube,new Vector3(.5f,.04f,.35f));for(int i=0;i<3;i++){var prop=Prop(tray.transform,i==0?"Bottle":i==1?"Kidney dish":"Clipboard",i==0?PrimitiveType.Cylinder:PrimitiveType.Cube,i==0?new Vector3(.06f,.12f,.06f):new Vector3(.12f,.025f,.16f),false);prop.transform.localPosition=new Vector3((i-1)*.16f,.15f,0);}
             var cart=new GameObject("Bottle trolley");cart.transform.SetParent(root,false);cart.transform.position=WardLayout.A3_Cart.Position;var trolley=Prop(cart.transform,"Pushable trolley",PrimitiveType.Cube,new Vector3(.7f,.12f,.5f),true);trolley.GetComponent<Rigidbody>().mass=18;for(int i=0;i<4;i++){var leg=Shape(trolley.transform,"Trolley support",PrimitiveType.Cube,new Vector3(.04f,.65f,.04f));leg.transform.localPosition=new Vector3(i%2==0?-.28f:.28f,-.32f,i<2?-.2f:.2f);}for(int i=0;i<3;i++){var bottle=Prop(cart.transform,"Loose bottle",PrimitiveType.Cylinder,new Vector3(.055f,.11f,.055f),false);bottle.transform.localPosition=new Vector3((i-1)*.16f,.2f,0);}
             Door(root,publisher,WardLayout.A1_DoorWindow,true);Door(root,publisher,WardLayout.A4_ExitDoor,false);root.gameObject.AddComponent<BeaconArrival>().objectives=publisher;
+            Floors(root,publisher); // v1.3 (E-19): the stairs and the two lower floors' puzzles, doors and props.
             foreach(var point in WardLayout.CriticalPath){var anchorRoot=At(root,point);var target=anchorRoot.AddComponent<SphereCollider>();target.radius=.18f;target.isTrigger=true;var anchor=anchorRoot.AddComponent<TeleportationAnchor>();anchor.teleportAnchorTransform=anchorRoot.transform;var gate=anchorRoot.AddComponent<AnchorGate>();gate.act=point.Act;gate.target=target;var marker=Shape(anchorRoot.transform,"Aim-only marker",PrimitiveType.Cylinder,new Vector3(.25f,.01f,.25f));Object.DestroyImmediate(marker.GetComponent<Collider>());gate.marker=marker.GetComponent<Renderer>();gate.marker.enabled=false;}
         }
         private static void Plank(Transform root,ObjectivePublisher publisher,LayoutPoint point,int index){var p=Constrained(root,publisher,point,PhysicalPuzzle.Mechanic.Plank,PrimitiveType.Cube,new Vector3(1.1f,.12f,.06f));p.plankIndex=index;p.axis=Vector3.back;}

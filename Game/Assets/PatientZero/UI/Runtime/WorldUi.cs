@@ -24,8 +24,15 @@ namespace PatientZero.UI
         public const string TouchControlsHint="Left thumb moves · right thumb looks · tap to grab or drop · drag while holding · THROW · JUMP · LIGHT · II pauses";
         private readonly CaptionQueue captions=new CaptionQueue();
         private readonly string[] clocks=new string[121];
-        private int lastClock=-1; private bool showSettings,ending; private float endingTime;
+        public const string FloorTwoLabel="FLOOR 2 · LABS",GroundFloorLabel="GROUND FLOOR";
+        private const float ClockX=390,ClockWidth=300; // right edge 540: inside a 4:3 screen's 550 canvas units
+        private int lastClock=int.MinValue; private bool showSettings,ending; private float endingTime; // v1.3: -1 and -2 now mean the lower floors
         private void Awake(){for(int i=0;i<clocks.Length;i++)clocks[i]=(i/60).ToString("00")+":"+(i%60).ToString("00");
+            // v1.3 (Claude integration E-19): a hint or floor name shrinks to fit rather than being cut at two lines, and the
+            // clock moves up to the title row so it no longer sits on the hint's right edge.
+            if(hint){hint.resizeTextForBestFit=true;hint.resizeTextMinSize=24;hint.resizeTextMaxSize=hint.fontSize;}
+            if(countdown){countdown.resizeTextForBestFit=true;countdown.resizeTextMinSize=24;countdown.resizeTextMaxSize=countdown.fontSize;
+                var clock=countdown.rectTransform;clock.anchoredPosition=new Vector2(ClockX,title?title.rectTransform.anchoredPosition.y:clock.anchoredPosition.y);clock.sizeDelta=new Vector2(ClockWidth,clock.sizeDelta.y);}
 #if PZ_DESKTOP_MOUSE
             if(hint)hint.text=DesktopControls;
 #elif PZ_TOUCH
@@ -41,13 +48,24 @@ namespace PatientZero.UI
         private void OnDisable(){GameEvents.CaptionRequested.Unsubscribe(Caption);GameEvents.AssistChanged.Unsubscribe(Assist);GameEvents.StateChanged.Unsubscribe(State);GameEvents.SettingsChanged.Unsubscribe(Settings);GameEvents.ActStarted.Unsubscribe(Act);}
         private void Caption(CaptionRequested c){if(settings && ((c.Kind==CaptionKind.Speech && !settings.Current.Subtitles) || (c.Kind==CaptionKind.Sound && !settings.Current.Subtitles && !settings.Current.SoundCueVisuals)))return;captions.Add(c.Text,Time.time,c.DurationSeconds,c.IsPositional,c.WorldPosition);}
         // E-16: each act opens with its objective, so the goal is clear before any assist is needed.
-        private void Act(ActStarted a){if(!hint)return;switch(a.Act){case ActId.Awakening:hint.text="Get out of the room: pull the planks off the door.";break;case ActId.Machinery:hint.text="Restore power: vent the pressure valve, then plug in the cable.";break;case ActId.Darkness:hint.text="The lights are gone. Follow the chirp to the exit.";break;case ActId.Exit:hint.text="Pull down and hold the emergency release.";break;}
+        private void Act(ActStarted a){if(!hint)return;switch(a.Act){case ActId.Awakening:hint.text="Get out of the room: pull the planks off the door.";break;case ActId.Machinery:hint.text="Restore power: vent the pressure valve, then plug in the cable.";break;case ActId.Darkness:hint.text="The lights are gone. Follow the chirp to the exit.";break;case ActId.Exit:hint.text="Pull down and hold the emergency release, then take the stairs down.";break;
+                // v1.3 (Claude integration E-19): the lower floors.
+                case ActId.Laboratory:hint.text="Floor 2. Put the spare fuse from Lab A into the fuse box, then pull the stair door override. Lab B is not empty: keep quiet.";break;
+                case ActId.Lobby:hint.text="Ground floor. Prime the generator in Security, then pull the lockdown release by the main doors. Something walks the lobby.";break;}
 #if PZ_DESKTOP_MOUSE
             // E-18: on Windows each objective says which mouse action does it.
-            switch(a.Act){case ActId.Awakening:hint.text="Get out: aim the + at a plank on the door, hold the left mouse button and drag. Pull off all 3 planks to open the door.";break;case ActId.Machinery:hint.text="Restore power: hold left mouse on the valve wheel and drag sideways to turn it. Then pick up the cable plug and carry it to the socket.";break;case ActId.Exit:hint.text="Aim at the emergency release, hold left mouse, drag down and keep holding.";break;}
+            switch(a.Act){case ActId.Awakening:hint.text="Get out: aim the + at a plank on the door, hold the left mouse button and drag. Pull off all 3 planks to open the door.";break;case ActId.Machinery:hint.text="Restore power: hold left mouse on the valve wheel and drag sideways to turn it. Then pick up the cable plug and carry it to the socket.";break;case ActId.Exit:hint.text="Aim at the emergency release, hold left mouse, drag down and keep holding. Then go through the door and down the stairs.";break;
+                case ActId.Laboratory:hint.text="Floor 2: hold left mouse on the fuse in Lab A (north door) and carry it to the fuse box by the stair door. Then hold the override lever down. Walk slowly past Lab B.";break;
+                case ActId.Lobby:hint.text="Ground floor: in Security (north) hold left mouse on the generator valve and drag sideways. Then hold the lockdown lever down by the main doors. Keep away from the guard.";break;}
 #endif
         }
-        private void Assist(AssistChanged a){if(!hint)return;switch(a.Objective){case ObjectiveId.Act1_DoorUnbarred:hint.text="Grab and pull the loose planks.";break;case ObjectiveId.Act2_ValveVented:hint.text="Turn the pressure valve. Re-grip freely.";break;case ObjectiveId.Act2_CablePlugged:hint.text="Carry the plug into the socket.";break;case ObjectiveId.Act3_BeaconReached:hint.text="Follow the chirp; teleport between anchors.";break;default:hint.text="Pull down and hold the emergency release.";break;}}
+        private void Assist(AssistChanged a){if(!hint)return;switch(a.Objective){case ObjectiveId.Act1_DoorUnbarred:hint.text="Grab and pull the loose planks.";break;case ObjectiveId.Act2_ValveVented:hint.text="Turn the pressure valve. Re-grip freely.";break;case ObjectiveId.Act2_CablePlugged:hint.text="Carry the plug into the socket.";break;case ObjectiveId.Act3_BeaconReached:hint.text="Follow the chirp; teleport between anchors.";break;case ObjectiveId.Act4_ReleasePulled:hint.text="Pull down and hold the emergency release.";break;
+                case ObjectiveId.Act4_StairsReached:hint.text="The door is open: go through it and down the stairs.";break;
+                case ObjectiveId.Act5_FuseInserted:hint.text="The spare fuse is on the bench in Lab A. Carry it to the fuse box.";break;
+                case ObjectiveId.Act5_OverridePulled:hint.text="Pull down and hold the stair door override.";break;
+                case ObjectiveId.Act5_StairsReached:hint.text="The stair door is open: take the stairs down.";break;
+                case ObjectiveId.Act6_GeneratorPrimed:hint.text="Turn the generator valve in the Security office.";break;
+                case ObjectiveId.Act6_LockdownReleased:hint.text="Pull down and hold the lockdown release by the main doors.";break;}}
         private void State(GameStateChanged s)
         {
             if(calibration)calibration.SetActive(s.To==GameState.Calibration);if(pauseMenu)pauseMenu.SetActive(s.To==GameState.Paused);if(completeMenu)completeMenu.SetActive(s.To==GameState.Complete);
@@ -60,7 +78,12 @@ namespace PatientZero.UI
         private void Settings(SettingsChanged s){if(captionTop)captionTop.fontSize=Mathf.RoundToInt(56*s.Settings.SubtitleScale);if(captionBottom)captionBottom.fontSize=Mathf.RoundToInt(56*s.Settings.SubtitleScale);}
         private void Update()
         {
-            if(Services<IExperienceDirector>.TryGet(out var director)){int value=CountdownDisplay.Remaining(director.ExperienceTime);if(value!=lastClock){lastClock=value;if(countdown)countdown.text=clocks[value];}}
+            if(Services<IExperienceDirector>.TryGet(out var director))
+            {
+                // v1.3 (E-19): the ward keeps its clock; the lower floors show where the player is.
+                int floor=WardLayout.FloorOf(director.CurrentAct),value=floor==1||floor==2?-floor:CountdownDisplay.Remaining(director.ExperienceTime);
+                if(value!=lastClock){lastClock=value;if(countdown)countdown.text=value==-2?FloorTwoLabel:value==-1?GroundFloorLabel:clocks[value];}
+            }
             captions.Expire(Time.time);DisplayCaptions();
             if(rig && rig.HandsNotVisible && hint)hint.text="Hands not visible — bring them into view.";
             if(!ending || !flow || flow.Core.State!=GameState.Ending)return;endingTime+=Time.deltaTime;

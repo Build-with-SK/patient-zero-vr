@@ -63,9 +63,11 @@ namespace PatientZero.Core.Tests
         {
             var path = WardLayout.CriticalPath;
             Assert.AreEqual("A1.Start", path[0].Id);
-            Assert.AreEqual("A4.Release", path[path.Count - 1].Id);
+            Assert.AreEqual("A6.Exit", path[path.Count - 1].Id); // v1.3: the run ends at the lobby's main doors
             for (int i = 1; i < path.Count; i++)
             {
+                // v1.3: the stairs carry the player between floors; within a floor every step is a teleport.
+                if (WardLayout.FloorOf(path[i - 1].Act) != WardLayout.FloorOf(path[i].Act)) continue;
                 float step = WardLayout.HorizontalDistance(path[i - 1].Position, path[i].Position);
                 Assert.LessOrEqual(step, WardLayout.TeleportMaxDistance, path[i - 1].Id + " -> " + path[i].Id + " is " + step + " m");
             }
@@ -74,7 +76,7 @@ namespace PatientZero.Core.Tests
         [Test]
         public void CriticalPath_IncludesEveryActStartInOrder()
         {
-            var acts = new[] { ActId.Awakening, ActId.Machinery, ActId.Darkness, ActId.Exit };
+            var acts = new[] { ActId.Awakening, ActId.Machinery, ActId.Darkness, ActId.Exit, ActId.Laboratory, ActId.Lobby };
             int cursor = 0;
             foreach (var act in acts)
             {
@@ -154,6 +156,97 @@ namespace PatientZero.Core.Tests
         public void ActStart_RejectsNone()
         {
             Assert.Throws<System.ArgumentOutOfRangeException>(() => WardLayout.ActStart(ActId.None));
+        }
+
+        // v1.3 (E-19): three floors.
+
+        [Test]
+        public void EveryRoomHasAFloor_AndFloorsNeverTouch()
+        {
+            Assert.AreEqual(WardLayout.Rooms.Count, WardLayout.RoomFloors.Count);
+            for (int i = 0; i < WardLayout.Rooms.Count; i++)
+            {
+                Assert.GreaterOrEqual(WardLayout.RoomFloors[i], 1, WardLayout.Rooms[i].Id); Assert.LessOrEqual(WardLayout.RoomFloors[i], 3, WardLayout.Rooms[i].Id);
+                for (int j = i + 1; j < WardLayout.Rooms.Count; j++)
+                {
+                    if (WardLayout.RoomFloors[i] == WardLayout.RoomFloors[j]) continue;
+                    RoomRect a = WardLayout.Rooms[i], b = WardLayout.Rooms[j];
+                    float gapX = Mathf.Max(a.MinX - b.MaxX, b.MinX - a.MaxX), gapZ = Mathf.Max(a.MinZ - b.MaxZ, b.MinZ - a.MaxZ);
+                    Assert.GreaterOrEqual(Mathf.Max(gapX, gapZ), WardLayout.FloorSeparation, a.Id + " and " + b.Id + " are on different floors but too close");
+                }
+            }
+        }
+
+        [Test]
+        public void EveryPoint_IsInARoomOfItsActsFloor()
+        {
+            foreach (var p in WardLayout.Points)
+            {
+                if (p.Kind == LayoutKind.Landmark) continue; // door landmarks sit on the wall line between two rooms
+                bool inside = false;
+                for (int r = 0; r < WardLayout.Rooms.Count; r++)
+                    inside |= WardLayout.RoomFloors[r] == WardLayout.FloorOf(p.Act) && WardLayout.Rooms[r].Contains(p.Position, 0);
+                Assert.IsTrue(inside, p.Id + " is not inside a room of floor " + WardLayout.FloorOf(p.Act));
+            }
+        }
+
+        [Test]
+        public void FloorStartsAndStairLandings_MatchThePlayOrder()
+        {
+            Assert.IsTrue(WardLayout.StartsFloor(ActId.Awakening));
+            Assert.IsFalse(WardLayout.StartsFloor(ActId.Machinery));
+            Assert.IsFalse(WardLayout.StartsFloor(ActId.Exit));
+            Assert.IsTrue(WardLayout.StartsFloor(ActId.Laboratory));
+            Assert.IsTrue(WardLayout.StartsFloor(ActId.Lobby));
+            Assert.AreEqual(3, WardLayout.FloorOf(ActId.Exit));
+            Assert.AreEqual(2, WardLayout.FloorOf(ActId.Laboratory));
+            Assert.AreEqual(1, WardLayout.FloorOf(ActId.Lobby));
+            Assert.AreEqual(0, WardLayout.FloorOf(ActId.None));
+            Assert.IsTrue(WardLayout.TryStairLanding(ActId.Exit, out var ward));
+            Assert.AreEqual("A4.Stairs", ward.Id);
+            Assert.IsTrue(WardLayout.TryStairLanding(ActId.Laboratory, out var labs));
+            Assert.AreEqual("A5.Stairs", labs.Id);
+            Assert.IsFalse(WardLayout.TryStairLanding(ActId.Lobby, out _));
+            Assert.IsFalse(WardLayout.TryStairLanding(ActId.Darkness, out _));
+        }
+
+        [Test]
+        public void StairLanding_IsTheLastAnchorOfItsFloor()
+        {
+            var path = WardLayout.CriticalPath;
+            foreach (var act in new[] { ActId.Exit, ActId.Laboratory })
+            {
+                Assert.IsTrue(WardLayout.TryStairLanding(act, out var landing));
+                int at = -1;
+                for (int i = 0; i < path.Count; i++) if (path[i].Id == landing.Id) at = i;
+                Assert.GreaterOrEqual(at, 0, landing.Id + " missing from the critical path");
+                Assert.Less(at + 1, path.Count);
+                Assert.AreNotEqual(WardLayout.FloorOf(act), WardLayout.FloorOf(path[at + 1].Act), landing.Id + " is not the last anchor of its floor");
+            }
+        }
+
+        [Test]
+        public void LobbyPatrol_NeverRunsThroughAnAnchor()
+        {
+            Vector3 a = WardLayout.Z6_PatrolNorth.Position, b = WardLayout.Z6_PatrolSouth.Position;
+            foreach (var p in WardLayout.Points)
+            {
+                if (p.Kind != LayoutKind.TeleportAnchor && !(p.Kind == LayoutKind.Interactable && p.Required)) continue;
+                float d = WardLayout.HorizontalDistanceToSegment(p.Position, a, b);
+                Assert.GreaterOrEqual(d, WardLayout.PatrolClearance, p.Id + " sits " + d + " m from the lobby patrol line");
+            }
+        }
+
+        [Test]
+        public void SleepingZombies_AreOutOfCatchReachOfEveryAnchor()
+        {
+            foreach (var zombie in new[] { WardLayout.Z5_Dormant, WardLayout.Z7_Dormant })
+                foreach (var p in WardLayout.Points)
+                {
+                    if (p.Kind != LayoutKind.TeleportAnchor) continue;
+                    float d = WardLayout.HorizontalDistance(p.Position, zombie.Position);
+                    Assert.GreaterOrEqual(d, 2.0f, p.Id + " is " + d + " m from " + zombie.Id);
+                }
         }
     }
 }

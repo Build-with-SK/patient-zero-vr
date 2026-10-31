@@ -53,6 +53,11 @@ Last updated 2026-10-30 by Claude · Build under test: `PatientZero-dev.apk` (de
 | 2026-10-28 | 3–6 | same | `python tools/unity/unity_batch.py first-run` | BLOCKED, exit 2: `C:\Program Files\Unity\Hub\Editor\6000.3.27f1\Editor\Unity.exe` not found. No Android SDK, JDK or `adb` either |
 | 2026-10-28 | review | `codex/xr-systems` `72be6d8` (not on `main`) | Codex 2's portable suite: Roslyn csc against the .NET 8.0.8 runtime (C# 9, warnings as errors), run with `dotnet` | 26 passed, 0 failed, 0 skipped; 2 mutations caught; `validate_assets.py` PASS. **Not counted toward acceptance:** not on `main`, and Unity import was not run. Details: `docs/collab/REVIEW_XR_SYSTEMS_72be6d8.md` |
 
+| 2026-10-31 | 1 | `integration/round2` + three floors (contract v1.3, E-19) | `python tools/logic_tests/run_logic_tests.py`; `check_rules.py` | 218 passed, 0 failed; 0 errors, 7 warnings (the existing `ReleaseProbe` Debug.Log warnings) |
+| 2026-10-31 | 3 | same | `unity_batch.py compose`; `HospitalValidation.ValidateGenerated` (batch) | PASS, 0 errors, 59 LayoutTags (first run: 2 compiler errors in Runtime/Editor code the offline suite does not compile, fixed); `Hospital validation passed` (7 zombies, new NavMesh routes) |
+| 2026-10-31 | 4 | same | `unity_batch.py editmode-tests`; `playmode-tests` | 222/222; 23/23, the autoplay through all six acts to Complete (first run 221/222 and 22/23: duplicate `ExitSign` name; autoplay gripped under the stairs fade; both fixed) |
+| 2026-10-31 | 5 | same | `unity_batch.py build-windows`; `tools/release/run_probe.py --rounds 2 --shots` | build PASS, 0 errors, 121 MB; probe PASS, 2/2 rounds complete (52.4 s, 50.7 s), 0 errors or exceptions; screenshots of Floor 2 and the lobby checked by eye |
+
 ## Quality gates (Full Production Director prompt, Mission 6)
 
 | # | Gate | Status | Evidence / blocker |

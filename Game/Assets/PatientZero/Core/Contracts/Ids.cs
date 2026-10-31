@@ -19,7 +19,10 @@ namespace PatientZero.Core
         Complete = 6,
     }
 
-    /// <summary>The four 30-second acts. Owned by ExperienceDirector (Codex B).</summary>
+    /// <summary>
+    /// The acts, in play order. Acts 1-4 are the ward (Floor 3); contract v1.3 adds one act per lower floor
+    /// (GAME_DESIGN.md section 11). Owned by ExperienceDirector (Codex B).
+    /// </summary>
     public enum ActId
     {
         None = 0,
@@ -27,6 +30,8 @@ namespace PatientZero.Core
         Machinery = 2,  // 00:30-01:00
         Darkness = 3,   // 01:00-01:30
         Exit = 4,       // 01:30-02:00
+        Laboratory = 5, // v1.3: Floor 2
+        Lobby = 6,      // v1.3: Floor 1, the last act
     }
 
     /// <summary>Player objectives. Completed by puzzle components (Codex A).</summary>
@@ -41,15 +46,61 @@ namespace PatientZero.Core
         Act3_BeaconReached = 300,
         Act4_ReleasePulled = 400,  // progress = hold time / required hold time
         Act4_ExitOpened = 401,
+        Act4_StairsReached = 402,     // v1.3: player on the Floor 3 stair landing after the exit door opened
+        Act5_FuseInserted = 500,      // v1.3: fuse carried to the fuse box (socket mechanic)
+        Act5_OverridePulled = 501,    // v1.3: stair door override held (lever mechanic); needs the fuse
+        Act5_StairDoorOpened = 502,   // v1.3
+        Act5_StairsReached = 503,     // v1.3
+        Act6_GeneratorPrimed = 600,   // v1.3: generator valve turned (valve mechanic)
+        Act6_LockdownReleased = 601,  // v1.3: lockdown lever held (lever mechanic); needs the generator
+        Act6_MainDoorsOpened = 602,   // v1.3: the main doors are fully open; the ending follows
     }
 
-    /// <summary>One zombie per act. Used as ZombieAlertChanged.ZombieId and PlayerCaught.ZombieId.</summary>
+    /// <summary>Every objective in play order (contract v1.3). Index lookups and per-act sets read this list.</summary>
+    public static class ObjectiveIds
+    {
+        private static readonly ObjectiveId[] AllArray =
+        {
+            ObjectiveId.Act1_DoorUnbarred, ObjectiveId.Act1_DoorOpened,
+            ObjectiveId.Act2_ValveVented, ObjectiveId.Act2_CablePlugged, ObjectiveId.Act2_PowerRestored,
+            ObjectiveId.Act3_BeaconReached,
+            ObjectiveId.Act4_ReleasePulled, ObjectiveId.Act4_ExitOpened, ObjectiveId.Act4_StairsReached,
+            ObjectiveId.Act5_FuseInserted, ObjectiveId.Act5_OverridePulled, ObjectiveId.Act5_StairDoorOpened, ObjectiveId.Act5_StairsReached,
+            ObjectiveId.Act6_GeneratorPrimed, ObjectiveId.Act6_LockdownReleased, ObjectiveId.Act6_MainDoorsOpened,
+        };
+
+        public static readonly System.Collections.Generic.IReadOnlyList<ObjectiveId> All = System.Array.AsReadOnly(AllArray);
+        public static int Count => AllArray.Length;
+
+        /// <summary>Position in <see cref="All"/>, or -1 for None and unknown values. Allocation-free.</summary>
+        public static int IndexOf(ObjectiveId id)
+        {
+            for (int i = 0; i < AllArray.Length; i++) if (AllArray[i] == id) return i;
+            return -1;
+        }
+
+        /// <summary>The act an objective belongs to: its number divided by 100.</summary>
+        public static ActId ActOf(ObjectiveId id) => (ActId)((int)id / 100);
+    }
+
+    /// <summary>One zombie per ward act, then the lower floors' (v1.3). Used as ZombieAlertChanged.ZombieId and PlayerCaught.ZombieId.</summary>
     public static class ZombieIds
     {
         public const int Walker = 1;        // Z1, Act 1, scripted only: cannot catch
         public const int Orderly = 2;       // Z2, Act 2, investigates noise
         public const int Patroller = 3;     // Z3, Act 3, blind in the dark, hunts by ear
         public const int FinalPatient = 4;  // Z4, Act 4, restrained by a 1.3 m chain
+        public const int Researcher = 5;    // Z5, Act 5 (v1.3), asleep in Lab B, investigates noise
+        public const int Guard = 6;         // Z6, Act 6 (v1.3), patrols across the lobby
+        public const int Porter = 7;        // Z7, Act 6 (v1.3), asleep behind the reception desk, investigates noise
+        public const int Count = 7;
+
+        /// <summary>The act in which a zombie is in play; None for an unknown id.</summary>
+        public static ActId ActOf(int id)
+        {
+            if (id >= Walker && id <= Researcher) return (ActId)id;
+            return id == Guard || id == Porter ? ActId.Lobby : ActId.None;
+        }
     }
 
     /// <summary>

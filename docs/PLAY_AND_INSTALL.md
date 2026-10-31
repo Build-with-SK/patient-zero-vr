@@ -14,9 +14,12 @@ What was tested, and how: `docs/TEST_REPORT.md`. What is not done: `docs/RELEASE
 ## The game
 
 You wake strapped to a hospital bed with two minutes on the clock. Get out of the room (Act 1), restore the power
-(Act 2), cross the ward in the dark by sound (Act 3) and pull the emergency release (Act 4). Zombies hunt by
-sound: footsteps, thrown objects and slammed doors draw them; a thrown object is also how you lure them away.
-If one catches you, the act restarts. The 02:00 countdown sets the mood; nothing fails when it reaches zero.
+(Act 2), cross the ward in the dark by sound (Act 3), pull the emergency release and take the stairs down (Act 4).
+On Floor 2, the laboratories, carry the spare fuse from Lab A to the fuse box and pull the stair door override
+(Act 5). On the ground floor, prime the generator in the Security office and pull the lockdown release by the main
+doors (Act 6). Zombies hunt by sound: footsteps, thrown objects and slammed doors draw them; a thrown object is also
+how you lure them away. If one catches you, the act restarts. The 02:00 countdown in the ward sets the mood; nothing
+fails when it reaches zero.
 
 ## Windows
 

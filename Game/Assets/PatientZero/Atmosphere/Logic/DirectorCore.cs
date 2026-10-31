@@ -21,23 +21,24 @@ namespace PatientZero.Atmosphere.Logic
     /// <summary>Retained by B's shell across Ward reloads; reset on full restart/subsystem registration.</summary>
     public sealed class DirectorMemory
     {
-        public readonly int[] Catches = new int[5];
+        public readonly int[] Catches = new int[(int)ActId.Lobby + 1];
         public bool WindowScareUsed, StrapScareUsed;
         public int Attempt;
         public float ExperienceTime;
         public void Reset() { Array.Clear(Catches, 0, Catches.Length); WindowScareUsed = StrapScareUsed = false; Attempt = 0; ExperienceTime = 0; }
     }
-    /// <summary>Objective-driven approved four-act timeline. No clock may fail the player.</summary>
+    /// <summary>
+    /// Objective-driven approved timeline: the ward's four acts, then one act per lower floor (contract v1.3,
+    /// GAME_DESIGN.md section 11; Claude integration E-19). No clock may fail the player.
+    /// </summary>
     public sealed class DirectorCore
     {
         private readonly DirectorMemory memory;
         private readonly DirectorCommand[] commands = new DirectorCommand[128];
-        private readonly float[] progress = new float[8], lastProgress = new float[8];
-        private readonly int[] hint = new int[8];
-        private readonly bool[] complete = new bool[8];
-        private readonly ObjectiveId[] objectives = { ObjectiveId.Act1_DoorUnbarred, ObjectiveId.Act1_DoorOpened,
-            ObjectiveId.Act2_ValveVented, ObjectiveId.Act2_CablePlugged, ObjectiveId.Act2_PowerRestored,
-            ObjectiveId.Act3_BeaconReached, ObjectiveId.Act4_ReleasePulled, ObjectiveId.Act4_ExitOpened };
+        private readonly float[] progress = new float[ObjectiveIds.Count], lastProgress = new float[ObjectiveIds.Count];
+        private readonly int[] hint = new int[ObjectiveIds.Count];
+        private readonly bool[] complete = new bool[ObjectiveIds.Count];
+        private readonly ObjectiveId[] objectives = CopyObjectives();
         private int read, write;
         private float actTime, endingTime, lureAt, surgeAt = -1, lastHard = -100, lastAlert = -100, lastAmbient = -100, nextBeacon;
         private bool pass, windowArrived, windowScare, lure, z1Clear, investigate, crossing, snapped, ending, pa, drone, kneel, done;
@@ -87,7 +88,7 @@ namespace PatientZero.Atmosphere.Logic
         public DirectorCore(DirectorMemory memory) { this.memory = memory ?? throw new ArgumentNullException(nameof(memory)); }
         public void StartRun(ActId act, bool restore)
         {
-            if (act < ActId.Awakening || act > ActId.Exit) throw new ArgumentOutOfRangeException(nameof(act));
+            if (act < ActId.Awakening || act > ActId.Lobby) throw new ArgumentOutOfRangeException(nameof(act));
             if (!restore && act == ActId.Awakening) memory.Reset();
             memory.Attempt++; read = write = 0; Tension = 0; lastHard = lastAlert = lastAmbient = -100;
             EnterAct(act, restore);
@@ -100,7 +101,7 @@ namespace PatientZero.Atmosphere.Logic
             Array.Clear(progress, 0, progress.Length); Array.Clear(lastProgress, 0, lastProgress.Length);
             Array.Clear(hint, 0, hint.Length); Array.Clear(complete, 0, complete.Length);
             Emit(new DirectorCommand(DirectorCommandKind.Act, (int)act, restore ? 1 : 0, memory.Attempt));
-            for (int id = 1; id <= 4; id++) Zombie(id, ZombieDirection.Hide);
+            for (int id = 1; id <= ZombieIds.Count; id++) Zombie(id, ZombieDirection.Hide);
             switch (act)
             {
                 case ActId.Awakening:
@@ -109,6 +110,10 @@ namespace PatientZero.Atmosphere.Logic
                 case ActId.Machinery: Light(LightingState.WardDim); Zombie(2, ZombieDirection.Dormant); break;
                 case ActId.Darkness: Light(LightingState.Blackout); Zombie(3, ZombieDirection.Hold); break;
                 case ActId.Exit: Light(LightingState.EmergencyRed); Zombie(4, ZombieDirection.Restraint); break;
+                case ActId.Laboratory: Light(LightingState.WardDim); Zombie(ZombieIds.Researcher, ZombieDirection.Dormant); break;
+                case ActId.Lobby:
+                    Light(LightingState.EmergencyRed);
+                    Zombie(ZombieIds.Guard, ZombieDirection.Patrol); Zombie(ZombieIds.Porter, ZombieDirection.Dormant); break;
             }
             ApplyAssistFloor();
         }
@@ -127,7 +132,14 @@ namespace PatientZero.Atmosphere.Logic
             // An early/stale door completion cannot be banked to skip the authorised opening.
             if (objective == ObjectiveId.Act1_DoorOpened && !IsGateReleased(GateId.Act1Door)) return;
             Progress(objective, 1); complete[i] = true;
-            if (objective == ObjectiveId.Act4_ReleasePulled) Light(LightingState.ExitDaylight);
+            // v1.3: the ward's emergency door now leads to the stairs, so daylight waits for the lobby's main doors.
+            if (objective == ObjectiveId.Act6_LockdownReleased) Light(LightingState.ExitDaylight);
+            // v1.3: the fuse box sparks; a crash at the west landing draws the researcher out of Lab B, away from the player.
+            if (objective == ObjectiveId.Act5_FuseInserted && !lure)
+            {
+                lure = true; Cue(CueId.PowerThrum, WardLayout.A5_FuseSocket.Position);
+                Cue(CueId.DistantCrashLure, WardLayout.A5_Start.Position + Vector3.up); Zombie(ZombieIds.Researcher, ZombieDirection.Investigate);
+            }
             EvaluateGates();
         }
         public void ReportZombiePosition(int id, Vector3 position)
@@ -180,6 +192,12 @@ namespace PatientZero.Atmosphere.Logic
                     { crossing = true; Zombie(3, ZombieDirection.Patrol); }
                     break;
                 case ActId.Exit: if (!snapped && actTime >= 15) Snap(); break;
+                case ActId.Laboratory:
+                    if (!pa && actTime >= 2) { pa = true; Cue(CueId.PaCarrierWarning, WardLayout.A5_Hall1.Position + Vector3.up * 2.5f); }
+                    break;
+                case ActId.Lobby:
+                    if (!pa && actTime >= 2) { pa = true; Cue(CueId.PaGarbledBreach, WardLayout.A6_Hall1.Position + Vector3.up * 2.5f); }
+                    break;
             }
             Hints(); EvaluateGates();
             Emit(new DirectorCommand(DirectorCommandKind.Tension, value: Tension));
@@ -228,10 +246,14 @@ namespace PatientZero.Atmosphere.Logic
                 for (int id = 1; id <= 4; id++) Zombie(id, ZombieDirection.Stun, value: 2.5f);
             }
             else if (Act == ActId.Darkness && complete[5]) EnterAct(ActId.Exit, false);
-            else if (Act == ActId.Exit && complete[6] && complete[7] && !ending)
+            // v1.3: the ward ends on the stair landing, the laboratories on theirs; the lobby's main doors end the run.
+            else if (Act == ActId.Exit && Done(ObjectiveId.Act4_ReleasePulled) && Done(ObjectiveId.Act4_ExitOpened) && Done(ObjectiveId.Act4_StairsReached))
+                EnterAct(ActId.Laboratory, false);
+            else if (Act == ActId.Laboratory && Done(ObjectiveId.Act5_StairsReached)) EnterAct(ActId.Lobby, false);
+            else if (Act == ActId.Lobby && Done(ObjectiveId.Act6_MainDoorsOpened) && !ending)
             {
                 ending = true; endingTime = 0; pa = drone = false;
-                for (int id = 1; id <= 4; id++) Zombie(id, ZombieDirection.Passive);
+                for (int id = 1; id <= ZombieIds.Count; id++) Zombie(id, ZombieDirection.Passive);
                 Emit(new DirectorCommand(DirectorCommandKind.StopZombieLoops, value: 2));
                 Emit(new DirectorCommand(DirectorCommandKind.State, (int)GameState.Ending));
             }
@@ -239,11 +261,11 @@ namespace PatientZero.Atmosphere.Logic
         private void TickEnding(float delta)
         {
             endingTime += delta;
-            if (!kneel && endingTime >= 1) { kneel = true; Zombie(4, ZombieDirection.Kneel); }
-            if (!pa && endingTime >= 2) { pa = true; Cue(CueId.PaPatientZero, WardLayout.A4_ExitDoor.Position); }
+            if (!kneel && endingTime >= 1) { kneel = true; Zombie(ZombieIds.Guard, ZombieDirection.Kneel); Zombie(ZombieIds.Porter, ZombieDirection.Kneel); }
+            if (!pa && endingTime >= 2) { pa = true; Cue(CueId.PaPatientZero, WardLayout.A6_MainDoors.Position); }
             if (endingTime >= 3 && endingTime <= 9 + delta)
                 Emit(new DirectorCommand(DirectorCommandKind.Reveal, value: Math.Max(0, Math.Min(1, (endingTime - 3) / 6))));
-            if (!drone && endingTime >= 6) { drone = true; Cue(CueId.RevealDrone, WardLayout.A4_Start.Position); }
+            if (!drone && endingTime >= 6) { drone = true; Cue(CueId.RevealDrone, WardLayout.A6_Lockdown.Position); }
             if (!done && endingTime >= 12) { done = true; Emit(new DirectorCommand(DirectorCommandKind.State, (int)GameState.Complete)); }
         }
         private void Hints()
@@ -251,7 +273,8 @@ namespace PatientZero.Atmosphere.Logic
             for (int i = 0; i < objectives.Length; i++)
             {
                 if (!InAct(objectives[i]) || complete[i] || objectives[i] == ObjectiveId.Act1_DoorOpened ||
-                    objectives[i] == ObjectiveId.Act2_PowerRestored || objectives[i] == ObjectiveId.Act4_ExitOpened) continue;
+                    objectives[i] == ObjectiveId.Act2_PowerRestored || objectives[i] == ObjectiveId.Act4_ExitOpened ||
+                    objectives[i] == ObjectiveId.Act5_StairDoorOpened || objectives[i] == ObjectiveId.Act6_MainDoorsOpened) continue;
                 float elapsed = actTime - lastProgress[i] - (Act == ActId.Darkness ? 2 : 0);
                 int wanted = elapsed >= 30 ? 3 : elapsed >= 20 ? 2 : elapsed >= 10 ? 1 : 0;
                 if (wanted <= hint[i]) continue;
@@ -263,6 +286,9 @@ namespace PatientZero.Atmosphere.Logic
         { hint[i] = (int)level; Emit(new DirectorCommand(DirectorCommandKind.Assist, (int)objectives[i], (int)level)); }
         private bool InAct(ObjectiveId objective) => (int)objective / 100 == (int)Act;
         private int Index(ObjectiveId objective) { for (int i = 0; i < objectives.Length; i++) if (objectives[i] == objective) return i; return -1; }
+        private bool Done(ObjectiveId objective) { int i = Index(objective); return i >= 0 && complete[i]; }
+        private static ObjectiveId[] CopyObjectives()
+        { var all = new ObjectiveId[ObjectiveIds.Count]; for (int i = 0; i < all.Length; i++) all[i] = ObjectiveIds.All[i]; return all; }
         private void Cue(CueId cue, Vector3 position, float gain = 1) => Emit(new DirectorCommand(DirectorCommandKind.Cue, value: gain, position: position, cue: cue));
         private void Light(LightingState state) => Emit(new DirectorCommand(DirectorCommandKind.Lighting, (int)state));
         private void Zombie(int id, ZombieDirection direction, Vector3 position = default, float value = 0) =>

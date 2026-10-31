@@ -18,11 +18,13 @@ namespace PatientZero.AI.Editor
             var director = WardPrimitives.FindInScene<ExperienceDirector>(root);
             if (!director) throw new InvalidOperationException("Atmosphere step 200 must precede AI step 500");
             var material = WardPrimitives.Material("GeneratedPatient", new Color(.24f, .28f, .22f));
-            var actors = new ZombieAgentShell[4];
+            var actors = new ZombieAgentShell[ZombieIds.Count]; // v1.3 (E-19): Z5-Z7 on the lower floors
             for (int i = 0; i < actors.Length; i++)
             {
                 int id = i + 1;
-                var marker = id == 1 ? WardLayout.Z1_WalkFrom : id == 2 ? WardLayout.Z2_Dormant : id == 3 ? WardLayout.Z3_PatrolNorth : WardLayout.Z4_Gurney;
+                var marker = id == 1 ? WardLayout.Z1_WalkFrom : id == 2 ? WardLayout.Z2_Dormant : id == 3 ? WardLayout.Z3_PatrolNorth :
+                    id == 4 ? WardLayout.Z4_Gurney : id == ZombieIds.Researcher ? WardLayout.Z5_Dormant :
+                    id == ZombieIds.Guard ? WardLayout.Z6_PatrolNorth : WardLayout.Z7_Dormant;
                 var actor = new GameObject("Zombie_" + id); actor.transform.SetParent(root, false); actor.transform.position = marker.Position;
                 actor.layer = 2; // Ignore Raycast: the environment mask must not count the zombie itself.
                 var agent = actor.AddComponent<NavMeshAgent>(); agent.radius = .22f; agent.height = 1.7f;

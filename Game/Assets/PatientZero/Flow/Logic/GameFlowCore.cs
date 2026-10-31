@@ -20,7 +20,7 @@ namespace PatientZero.Flow.Logic
         public int CommandCount {get;private set;}
         public FlowCommand CommandAt(int index) => commands[index];
         public void ClearCommands(){CommandCount=0;}
-        public void SetAct(ActId act){if(act>=ActId.Awakening && act<=ActId.Exit)CurrentAct=act;}
+        public void SetAct(ActId act){if(act>=ActId.Awakening && act<=ActId.Lobby)CurrentAct=act;} // v1.3: through the lobby (E-19)
         public void Start(bool calibrated){Request(calibrated?GameState.Playing:GameState.Calibration);}
         public bool Request(GameState next,FailReason reason=FailReason.None)
         {

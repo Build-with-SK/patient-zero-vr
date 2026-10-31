@@ -66,6 +66,11 @@ namespace PatientZero.Environment.Editor
                 WardPrimitives.Material("SurfaceDamage", new Color(.13f, .15f, .14f)) };
             foreach (var prop in HospitalDressing.Create())
                 WardPrimitives.Box(root, prop.Name, prop.Position, prop.Size, dressingMaterials[(int)prop.Style], prop.Collider);
+            // v1.3 (Claude integration E-19): the stairwells and the two lower floors, built before the NavMesh bake like the ward.
+            foreach (var prop in FloorDressing.Create())
+                WardPrimitives.Box(root, prop.Name, prop.Position, prop.Size, dressingMaterials[(int)prop.Style], prop.Collider);
+            foreach (var floorSign in FloorDressing.Signs()) Label(root, floorSign.Text, floorSign.Position, floorSign.Size, floorSign.Yaw);
+            foreach (var floorExit in FloorDressing.ExitSigns) WardPrimitives.Box(root, "FloorExitSign", floorExit, new Vector3(.05f, .25f, .5f), emissive, false);
             Label(root, "OPERATING THEATRE", WardLayout.Z2_Doorway.Position + Vector3.up * 2.45f, .045f, 180);
             Label(root, "EMERGENCY EXIT ->", WardLayout.A3_End.Position + Vector3.up * 2.4f, .045f, 90);
             // Seat A builds the functional door leaves and puzzle objects at the shared LayoutIds.

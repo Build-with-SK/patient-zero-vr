@@ -7,6 +7,16 @@ namespace PatientZero.Atmosphere.Tests
 {
     public sealed class FixturePolicyTests
     {
+        [Test] public void LowerFloorFixturesLightInEveryLitPresetAndNeverInBlackout()
+        {
+            Assert.AreEqual(6, FixturePolicy.WardFixtures);
+            Assert.IsTrue(FixturePolicy.FloorFixtureEnabled(LightingState.WardDim));
+            Assert.IsTrue(FixturePolicy.FloorFixtureEnabled(LightingState.EmergencyRed));
+            Assert.IsTrue(FixturePolicy.FloorFixtureEnabled(LightingState.ExitDaylight));
+            Assert.IsTrue(FixturePolicy.FloorFixtureEnabled(LightingState.Surge));
+            Assert.IsFalse(FixturePolicy.FloorFixtureEnabled(LightingState.Blackout));
+            Assert.IsFalse(FixturePolicy.FloorFixtureEnabled(LightingState.None));
+        }
         [Test] public void EveryActLightsOnlyItsIntendedFixturesAndBlackoutHasNone()
         {
             var states = new[] { LightingState.Awakening, LightingState.WardDim, LightingState.Surge, LightingState.Blackout, LightingState.EmergencyRed, LightingState.ExitDaylight };

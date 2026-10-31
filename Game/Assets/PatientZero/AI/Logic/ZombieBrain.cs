@@ -44,7 +44,7 @@ namespace PatientZero.AI.Logic
 
         public ZombieBrain(int id, Vector3 spawn, System.Random random, Vector3 patrolNorth = default, Vector3 patrolSouth = default)
         {
-            if (id < 1 || id > 4 || !Hearing.Finite(spawn)) throw new ArgumentException("Invalid zombie setup");
+            if (id < 1 || id > ZombieIds.Count || !Hearing.Finite(spawn)) throw new ArgumentException("Invalid zombie setup");
             this.id = id; this.spawn = spawn; this.random = random ?? throw new ArgumentNullException(nameof(random));
             this.patrolNorth = patrolNorth; this.patrolSouth = patrolSouth;
             Reset(id == ZombieIds.FinalPatient ? ZombieMode.Restrained : ZombieMode.Dormant);

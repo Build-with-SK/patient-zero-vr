@@ -81,23 +81,35 @@ namespace PatientZero.Flow.Tests
             Assert.Less(director.ExperienceTime,10f,"restart kept the old clock");
             Assert.Greater(PatientZero.Flow.Logic.CountdownDisplay.Remaining(director.ExperienceTime),110);
         }
-        [UnityTest,Timeout(300000)] public IEnumerator AutoplayObjectivesReachCompleteWithoutBypassingDirectorGate()
+        private static void Valves(PhysicalPuzzle[] puzzles,ActId act){foreach(var p in puzzles)if(p.mechanic==PhysicalPuzzle.Mechanic.Valve&&p.BoundAct==act){var center=p.transform.position;p.BeginGrip(center+Vector3.right*.2f);for(int step=1;step<=6;step++)p.SampleGrip(center+Quaternion.AngleAxis(step*90,p.transform.TransformDirection(p.axis))*Vector3.right*.2f,1);p.EndGrip();}}
+        private static IEnumerator Levers(PhysicalPuzzle[] puzzles,ActId act){foreach(var p in puzzles)if(p.mechanic==PhysicalPuzzle.Mechanic.Lever&&p.BoundAct==act){var point=p.transform.position;p.BeginGrip(point);p.SampleGrip(point-Vector3.up*.05f,.1f);yield return new WaitForSeconds(2.1f);p.EndGrip();}}
+        private static void Plug(ActId act){CableSocket found=null;foreach(var socket in Components<CableSocket>())if(socket.socketAct==act)found=socket;Assert.IsNotNull(found,"no socket for "+act);found.plug.transform.SetPositionAndRotation(found.transform.position,found.transform.rotation);Assert.IsTrue(found.TryConnect(),act+" socket did not connect");}
+        // StairArrival completes the stairs objective once the floor's door is open, so standing on the landing early is fine.
+        private static void Stairs(ActId act){Assert.IsTrue(WardLayout.TryStairLanding(act,out var landing),"no stair landing for "+act);MoveTo(landing.Position);}
+        private static void MoveTo(Vector3 floor){var rig=Services<IPlayerQuery>.Instance as PatientZero.Player.PlayerRig;Assert.IsNotNull(rig);rig.origin.MoveCameraToWorldLocation(floor+Vector3.up*(rig.HeadPosition.y-rig.FloorPosition.y));Physics.SyncTransforms();}
+        // v1.3 (Claude integration E-19): the run is three floors and six acts; each act drives only its own puzzles.
+        [UnityTest,Timeout(420000)] public IEnumerator AutoplayObjectivesReachCompleteWithoutBypassingDirectorGate()
         {
-            float deadline=Time.realtimeSinceStartup+200;ActId previous=ActId.None;bool acted=false;
+            float deadline=Time.realtimeSinceStartup+360;ActId previous=ActId.None;bool acted=false;
             while(flow.Core.State!=GameState.Complete && Time.realtimeSinceStartup<deadline)
             {
-                if(flow.Core.CurrentAct!=previous){previous=flow.Core.CurrentAct;acted=false;}
+                if(flow.Core.CurrentAct!=previous){previous=flow.Core.CurrentAct;acted=false;Debug.Log("[PZ-AUTOPLAY] act "+previous+" at "+Time.realtimeSinceStartup.ToString("0.0")+" s");}
                 if(!acted && flow.Core.State==GameState.Playing && !flow.Core.IsTransitioning)
                 {
-                    acted=true;var puzzles=Components<PhysicalPuzzle>();
-                    if(previous==ActId.Awakening){foreach(var p in puzzles)if(p.mechanic==PhysicalPuzzle.Mechanic.Plank){var point=p.transform.position;p.BeginGrip(point);p.SampleGrip(point+p.transform.TransformDirection(p.axis)*.081f,.1f);p.EndGrip();}}
-                    if(previous==ActId.Machinery){foreach(var p in puzzles)if(p.mechanic==PhysicalPuzzle.Mechanic.Valve){var center=p.transform.position;p.BeginGrip(center+Vector3.right*.2f);for(int step=1;step<=6;step++)p.SampleGrip(center+Quaternion.AngleAxis(step*90,p.transform.TransformDirection(p.axis))*Vector3.right*.2f,1);p.EndGrip();}var socket=Components<CableSocket>()[0];socket.plug.transform.SetPositionAndRotation(socket.transform.position,socket.transform.rotation);Assert.IsTrue(socket.TryConnect());}
-                    if(previous==ActId.Darkness){var query=Services<IPlayerQuery>.Instance as PatientZero.Player.PlayerRig;Assert.IsNotNull(query);query.origin.MoveCameraToWorldLocation(WardLayout.A3_End.Position+Vector3.up*(query.HeadPosition.y-query.FloorPosition.y));}
-                    if(previous==ActId.Exit){foreach(var p in puzzles)if(p.mechanic==PhysicalPuzzle.Mechanic.Lever){var point=p.transform.position;p.BeginGrip(point);p.SampleGrip(point-Vector3.up*.05f,.1f);yield return new WaitForSeconds(2.1f);p.EndGrip();}}
+                    acted=true;
+                    // The stairs fade drops whatever the player holds 0.35 s in; nothing can be gripped until it has cleared.
+                    if(previous!=ActId.Awakening && WardLayout.StartsFloor(previous))yield return new WaitForSeconds(PatientZero.Player.PlayerRig.StairFadeOutSeconds+PatientZero.Player.PlayerRig.StairFadeInSeconds+.5f);
+                    var puzzles=Components<PhysicalPuzzle>();
+                    if(previous==ActId.Awakening){foreach(var p in puzzles)if(p.mechanic==PhysicalPuzzle.Mechanic.Plank&&p.BoundAct==previous){var point=p.transform.position;p.BeginGrip(point);p.SampleGrip(point+p.transform.TransformDirection(p.axis)*.081f,.1f);p.EndGrip();}}
+                    if(previous==ActId.Machinery){Valves(puzzles,previous);Plug(previous);}
+                    if(previous==ActId.Darkness)MoveTo(WardLayout.A3_End.Position);
+                    if(previous==ActId.Exit){yield return Levers(puzzles,previous);Stairs(previous);}
+                    if(previous==ActId.Laboratory){Plug(previous);yield return Levers(puzzles,previous);Stairs(previous);}
+                    if(previous==ActId.Lobby){Valves(puzzles,previous);yield return Levers(puzzles,previous);}
                 }
                 yield return null;
             }
-            Assert.AreEqual(GameState.Complete,flow.Core.State,"If stalled in Awakening: approved director-to-door gate is still missing. No bypass is allowed.");
+            Assert.AreEqual(GameState.Complete,flow.Core.State,"Stalled in "+flow.Core.CurrentAct+". If stalled in Awakening: approved director-to-door gate is still missing. No bypass is allowed.");
         }
     }
 }
