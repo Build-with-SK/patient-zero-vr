@@ -73,6 +73,10 @@ namespace PatientZero.Core
         public static readonly EventChannel<TrackingChanged> TrackingChanged =
             new EventChannel<TrackingChanged>(nameof(TrackingChanged));
 
+        /// <summary>Contract v1.2 (D-1b). Writer: Interaction (A), the player's torch switch and pose. Reader: Atmosphere (B), which owns the light.</summary>
+        public static readonly EventChannel<HandheldLightChanged> HandheldLightChanged =
+            new EventChannel<HandheldLightChanged>(nameof(HandheldLightChanged));
+
         /// <summary>Writer: AI or director (B). Reader: haptics (A), which ignores it in hands mode.</summary>
         public static readonly EventChannel<HapticRequested> HapticRequested =
             new EventChannel<HapticRequested>(nameof(HapticRequested));
@@ -100,6 +104,7 @@ namespace PatientZero.Core
             SettingsChanged.Clear();
             TrackingChanged.Clear();
             HapticRequested.Clear();
+            HandheldLightChanged.Clear();
         }
     }
 }

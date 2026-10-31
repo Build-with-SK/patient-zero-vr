@@ -22,6 +22,14 @@ namespace PatientZero.Integration.Logic
         public const string WardScenePath = GeneratedSceneFolder + "/Ward.unity";
         public const string DevApkPath = "Builds/Android/PatientZero-dev.apk";
 
+        /// <summary>
+        /// NavMesh agent type the ward is baked for (0 = Unity's built-in Humanoid) and its radius. Humanoid defaults
+        /// to 0.5 m, which leaves about 0.1 m of walkable width in a 1.1 m doorway; zombies are 0.22 m agents
+        /// (REVIEW_XR_SYSTEMS_6bc4c42.md, INT-B-1). The composer sets this before Environment bakes.
+        /// </summary>
+        public const int ZombieAgentTypeId = 0;
+        public const float ZombieAgentRadius = 0.25f;
+
         /// <summary>Build order matters: Bootstrap is scene 0 and loads Ward additively.</summary>
         public static IReadOnlyList<string> Scenes { get; } = Array.AsReadOnly(new[] { BootstrapScenePath, WardScenePath });
 

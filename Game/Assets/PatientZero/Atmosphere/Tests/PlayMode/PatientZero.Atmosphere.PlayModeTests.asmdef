@@ -1,0 +1,19 @@
+{
+  "name": "PatientZero.Atmosphere.PlayModeTests",
+  "rootNamespace": "PatientZero.Atmosphere.PlayModeTests",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Atmosphere.Logic",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner",
+    "PatientZero.Atmosphere"
+  ],
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "PatientZero.AI.Logic",
+  "rootNamespace": "PatientZero.AI.Logic",
+  "references": [
+    "PatientZero.Core"
+  ]
+}

@@ -93,6 +93,26 @@ namespace PatientZero.Core
     }
 
     /// <summary>
+    /// Contract v1.2 (D-1b, decided by the owner's final-release mission, 2026-10-30; requested by seat B on 2026-10-30
+    /// 18:50): the player's torch. Enabled is what the player chose; Position and Forward are the beam's origin and
+    /// direction, raised every frame while it is on. Atmosphere owns the light and decides whether it actually shines
+    /// (the surge kills it, so Act 3 stays the sound-navigation act).
+    /// </summary>
+    public readonly struct HandheldLightChanged
+    {
+        public readonly bool Enabled;
+        public readonly Vector3 Position;
+        public readonly Vector3 Forward;
+
+        public HandheldLightChanged(bool enabled, Vector3 position, Vector3 forward)
+        {
+            Enabled = enabled;
+            Position = position;
+            Forward = forward;
+        }
+    }
+
+    /// <summary>
     /// A sound zombies can hear. Gameplay hearing uses RadiusMeters, not the audible
     /// volume, so it stays deterministic and testable.
     /// </summary>

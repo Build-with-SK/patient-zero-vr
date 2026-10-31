@@ -1,0 +1,22 @@
+{
+  "name": "PatientZero.Flow.PlayModeTests",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Flow",
+    "PatientZero.Flow.Logic",
+    "PatientZero.Interaction",
+    "PatientZero.Player",
+    "PatientZero.UI",
+    "Unity.XR.CoreUtils",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ]
+}

@@ -107,3 +107,36 @@ Evidence:
 - `check_rules.py --self-test` → `SELF-TEST PASSED`; `check_rules.py` → `0 error(s), 0 warning(s).`
 Impact: nothing on `main` implements `IExperienceDirector`, so `main` is unaffected. Seat B's `ExperienceDirector` must implement `IsGateReleased` when it merges `main`; seat A's door can now wait on the gate. Shared physics layer names (INT-B-2) are not part of v1.1.
 Not verified: Unity compile of the Core change (no editor).
+
+## 2026-10-28 · Integration round 2: v1.1 merged, both seats integrated, first Unity run attempted
+Kind: INTEGRATION
+What: Owner prompt "CLAUDE CODE — PATIENT ZERO ROUND 2". PR #4 re-verified and merged to `main` as `44ea7b7`. `integration/round2` cut from it; Codex 2 `6bc4c42` and Codex 1 `83b57d3` merged unchanged (no conflicts). Integration exceptions E-1…E-5 (`4911c3c`): the director implements and raises the v1.1 gate, the Act 1 door uses Codex 1's own release hook, FIX-A-1 (step moved to `Player/Editor`), FIX-A-2 (`UnityEngine.UI`), FIX-A-5 (explicit test asmdefs). Claude tooling (`f0d670b`): required-sample import, INT-B-1 radius before the bake, `unity_batch.py first-run`, `tools/review/integration_scan.py` in CI. New findings: FIX-A-6, -7, FIX-B-19 (Act 3 cart built twice), FIX-B-20 (`HapticRequested` never raised), FIX-B-21 (operating theatre, needs D-4). Full record: `INTEGRATION_ROUND2.md`.
+Evidence:
+- PR #4 head `5202249`: CI SUCCESS ×2; `Logic tests: 72 passed, 0 failed.`; 0 removed lines in `Core/Contracts`; 104 enum values unchanged.
+- `integration/round2`: `Logic tests: 166 passed, 0 failed.`; checker `0 error(s), 0 warning(s).`; integration scan `0 error(s), 1 warning(s).` (21 errors on the plain merge); `BuildPlan` probe `errors=0` over 11 steps; packages 0; tooling 30/30.
+- `--seat claude --base 9d3e864 --head 4911c3c`: 13 ownership warnings, exactly the exception files; tooling commit 0.
+- `unity_batch.py first-run` → `BLOCKED: Unity 6000.3.27f1 not found`, exit 2. No Hub, editor, Android SDK, JDK or `adb` on this machine (290 GB free).
+Not verified: Unity compile, package resolution, generated scenes, EditMode/PlayMode in Unity, desktop simulation, APK, headset. `packages-lock.json` and generated `ProjectSettings` were not hand-written.
+Next: owner installs Unity 6000.3.27f1 + Android (or Codex 1 runs `first-run`); Claude runs `first-run`, commits what Unity generates and fixes what it reports; the seats take section 7 of `INTEGRATION_ROUND2.md`.
+
+## 2026-10-30 · First Unity run: project compiles, scenes build, the game plays in the Editor
+Kind: INTEGRATION
+What: Owner installed Unity 6000.3.27f1 (no Android module) and asked "open and run the game". `unity_batch.py first-run` on `integration/round2`, four integration exceptions in seat A for real compiler errors (E-6…E-9), the built-in Video module for the XRI hands demo, and tooling fixes: licence detection, URP set by desktop simulation, composer requires a render pipeline, `first-run` order, `PlayPipeline` (`PatientZero/Play`, `Set Up And Play`). Full record: `INTEGRATION_ROUND2.md` section 11.
+Evidence:
+- `open`: PASS, exit 0. `import-samples`: PASS. `compose`: PASS, 0 errors (recomposed under URP in the Editor: PASS). `desktop-sim`: PASS.
+- `editmode-tests`: 165/166 (FIX-B-22). `playmode-tests`: 6/10 (FIX-A-9, FIX-B-23). `build-apk`, `validate`: BLOCKED, no Android module.
+- Editor play via `PatientZero/Play`: calibration → Ward, countdown 02:00 → 01:54, PA captions, 0 console errors (screenshots in the session). FIX-A-8 found there: a pause during the opening fade leaves the screen black.
+- Tooling unittest: all pass; package policy 0 errors.
+Not verified: batch `first-run` in its new order (the owner's editor held the project), a full 120-second run, APK, headset.
+Next: seats take FIX-A-8, -9 and FIX-B-22, -23 with the earlier fixes; owner adds Android Build Support (+ OpenJDK, SDK & NDK) to 6000.3.27f1 for the APK; Claude re-runs `first-run` and the PR gate.
+
+## 2026-10-31 · Three floors: contract v1.3 and integration exception E-19
+Kind: CONTRACT CHANGE + INTEGRATION
+What: The owner, after the Windows playtest: "i asked for 3 floors". Offered keeping one floor or adding two, they chose "Add 2 new floors of content". The ward becomes Floor 3; Floor 2 (laboratories: fuse, fuse box, stair door override, a researcher lured by the spark) and Floor 1 (lobby: generator valve, lockdown release, a patrolling guard and a sleeping porter, the ending at the main doors) follow by stairs (fade, teleport, `StairArrival`). Design: `GAME_DESIGN.md` section 11. Contract v1.3 is additive (`ARCHITECTURE.md` section 5); every seat file touched is listed under E-19 in `INTEGRATION_ROUND2.md`. Also fixed: a carried plug could never snap on flat screens (`SocketLogic.CanSnapFlat`, 25 cm).
+Evidence:
+- `run_logic_tests.py` → `Logic tests: 218 passed, 0 failed.` (200 before; new: `FloorDressingTests` ×5, six `WardLayoutTests`, four director tests, `LowerFloorRestoresMarkEveryEarlierObjective`, `FlatScreenSocketSnapIsGenerousButBounded`, the fixture-policy floor case). `check_rules.py` → `0 error(s), 7 warning(s)` (the same seven `ReleaseProbe` Debug.Log warnings as before).
+- Unity 6000.3.27f1 `compose`: first FAIL, two compiler errors the offline suite cannot see (it does not compile Runtime or Editor code): `PhysicalPuzzle.Act` property vs its `Act(ActStarted)` handler (renamed `BoundAct`), a duplicate `sign` local in `HospitalBuildSteps`. Then PASS, 0 errors, 59 LayoutTags.
+- `HospitalValidation.ValidateGenerated` in batch mode: `Hospital validation passed: saved navigation, routes, actors, lighting and audio bindings.` (new routes: Lab B to the Floor 2 landing, the lobby patrol, reception to the lobby; 7 zombie actors).
+- `editmode-tests`: first 221/222 (`HospitalGenerationTests` found four `ExitSign` objects; the floors' signs are now `FloorExitSign`, still lit by the lighting controller), then **222/222**. `playmode-tests`: first 22/23 (the autoplay gripped the Floor 2 lever under the stairs fade, which drops held items 0.35 s in), then **23/23**; the autoplay logs Awakening 30.7 s → Machinery 41.3 → Darkness 43.9 → Exit 43.9 → Laboratory 47.4 → Lobby 53.0 → Complete.
+- `build-windows`: PASS, 0 errors, 121 MB. `run_probe.py --rounds 2 --shots`: PASS, 2/2 rounds complete (52.4 s, 50.7 s), 0 errors or exceptions. The screenshots showed the floor name and the new hints cut off at two lines (the ward's Act 1 and Act 4 hints were already cut); `WorldUi` now shrinks hint and clock text to fit and puts the clock on the title row. Rebuilt and re-probed: PASS 2/2, every hint whole.
+Not verified: a person playing Floors 2 and 1 (catch rates of the guard and the researcher are untuned); VR on a headset; the Android phone build with the floors.

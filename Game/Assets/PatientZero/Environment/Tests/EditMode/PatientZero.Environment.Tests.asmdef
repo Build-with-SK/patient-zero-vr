@@ -1,0 +1,21 @@
+{
+  "name": "PatientZero.Environment.Tests",
+  "rootNamespace": "PatientZero.Environment.Tests",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Environment.Logic",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ]
+}

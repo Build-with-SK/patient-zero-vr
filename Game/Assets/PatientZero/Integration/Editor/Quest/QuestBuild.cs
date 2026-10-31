@@ -97,14 +97,73 @@ namespace PatientZero.Integration.Editor.Quest
             PlayerSettings.Android.targetSdkVersion = (AndroidSdkVersions)QuestBuildConfig.TargetAndroidApi;
             PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.Android, false);
             PlayerSettings.SetGraphicsAPIs(BuildTarget.Android, new[] { GraphicsDeviceType.Vulkan });
-            PlayerSettings.colorSpace = ColorSpace.Linear;
             report.Pass("player settings: " + QuestBuildConfig.ApplicationId + ", IL2CPP, ARM64, API " +
-                        QuestBuildConfig.MinAndroidApi + "-" + QuestBuildConfig.TargetAndroidApi + ", Vulkan, Linear");
+                        QuestBuildConfig.MinAndroidApi + "-" + QuestBuildConfig.TargetAndroidApi + ", Vulkan");
 
-            ConfigureUrp(report);
+            // The flat-screen adapters (keyboard and mouse, touch) never ship to the headset. The phone build passes PZ_TOUCH
+            // per build (ReleaseBuild), so it is never stored for Android either.
+            PlayerSettings.GetScriptingDefineSymbols(android, out string[] androidDefines);
+            var kept = new List<string>(androidDefines);
+            foreach (string flat in FlatDefines)
+            {
+                if (!kept.Remove(flat)) continue;
+                report.Pass("android defines: removed " + flat);
+            }
+
+            if (kept.Count != androidDefines.Length) PlayerSettings.SetScriptingDefineSymbols(android, kept.ToArray());
+
+            ConfigureRendering(report);
+            ConfigureInput(report);
             ConfigureLoader(report, BuildTargetGroup.Android, initOnStart: true);
             ConfigureOpenXR(report);
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>Defines that compile the flat-screen adapters; none may be stored for Android (Quest).</summary>
+        public static readonly string[] FlatDefines = { DesktopSimulation.DesktopMouseDefine, DesktopSimulation.TouchDefine };
+
+        /// <summary>Player > Active Input Handling, as stored in ProjectSettings.asset (no public API): 1 = Input System only.</summary>
+        public const int InputSystemOnly = 1;
+
+        /// <summary>
+        /// Project-wide: Active Input Handling = Input System only. "Both" is unsupported on Android (Unity's build warning,
+        /// 2026-10-30), and nothing in the project or its samples reads UnityEngine.Input; XRI and the desktop adapters use the
+        /// Input System. The change takes effect at the next editor start. Also used by desktop simulation.
+        /// </summary>
+        public static void ConfigureInput(EditorReport report)
+        {
+            SerializedProperty handler = InputHandler(out SerializedObject settings);
+            if (handler == null)
+            {
+                report.Warn("input handling: 'activeInputHandler' not found in ProjectSettings. Set Player > Active Input Handling to Input System Package (New) by hand.");
+                return;
+            }
+
+            if (handler.intValue == InputSystemOnly)
+            {
+                report.Pass("input handling: Input System only");
+                return;
+            }
+
+            handler.intValue = InputSystemOnly;
+            settings.ApplyModifiedPropertiesWithoutUndo();
+            AssetDatabase.SaveAssets();
+            report.Pass("input handling: set to Input System only (takes effect at the next editor start)");
+        }
+
+        private static SerializedProperty InputHandler(out SerializedObject settings)
+        {
+            UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/ProjectSettings.asset");
+            settings = assets.Length > 0 && assets[0] != null ? new SerializedObject(assets[0]) : null;
+            return settings?.FindProperty("activeInputHandler");
+        }
+
+        /// <summary>Project-wide rendering for every platform: Linear colour space and the URP asset. Also used by desktop simulation.</summary>
+        public static void ConfigureRendering(EditorReport report)
+        {
+            if (PlayerSettings.colorSpace != ColorSpace.Linear) PlayerSettings.colorSpace = ColorSpace.Linear;
+            report.Pass("colour space: Linear");
+            ConfigureUrp(report);
         }
 
         private static void ConfigureUrp(EditorReport report)
@@ -199,6 +258,21 @@ namespace PatientZero.Integration.Editor.Quest
 
             NamedBuildTarget android = NamedBuildTarget.Android;
             Expect(report, "application id", PlayerSettings.GetApplicationIdentifier(android), QuestBuildConfig.ApplicationId);
+            PlayerSettings.GetScriptingDefineSymbols(android, out string[] androidDefines);
+            bool flatOnQuest = false;
+            foreach (string flat in FlatDefines)
+            {
+                if (Array.IndexOf(androidDefines, flat) < 0) continue;
+                flatOnQuest = true;
+                report.Error("android defines: " + flat + " is set for Android; flat-screen adapters must not ship to Quest. Run configure.");
+            }
+
+            if (!flatOnQuest) report.Pass("android defines: no " + string.Join(" or ", FlatDefines));
+            SerializedProperty inputHandler = InputHandler(out _);
+            if (inputHandler == null) report.Warn("input handling: 'activeInputHandler' not found in ProjectSettings; check Player > Active Input Handling by hand.");
+            else if (inputHandler.intValue == InputSystemOnly) report.Pass("input handling: Input System only");
+            else report.Error("input handling: Active Input Handling is " + (inputHandler.intValue == 2 ? "Both" : "Input Manager (Old)") +
+                              "; Android needs Input System only. Run configure.");
             Expect(report, "scripting backend", PlayerSettings.GetScriptingBackend(android).ToString(), ScriptingImplementation.IL2CPP.ToString());
             Expect(report, "architectures", PlayerSettings.Android.targetArchitectures.ToString(), AndroidArchitecture.ARM64.ToString());
             Expect(report, "min API", ((int)PlayerSettings.Android.minSdkVersion).ToString(), QuestBuildConfig.MinAndroidApi.ToString());
@@ -319,7 +393,7 @@ namespace PatientZero.Integration.Editor.Quest
 
         public static XRGeneralSettings SettingsFor(BuildTargetGroup group, bool create)
         {
-            EditorBuildSettings.TryGetConfigObject(XRGeneralSettings.k_SettingsKey, out XRGeneralSettingsPerBuildTarget perTarget);
+            EditorBuildSettings.TryGetConfigObject(XRGeneralSettings.settingsKey, out XRGeneralSettingsPerBuildTarget perTarget);
             if (perTarget == null)
             {
                 if (!create) return null;
@@ -332,7 +406,7 @@ namespace PatientZero.Integration.Editor.Quest
                     AssetDatabase.CreateAsset(perTarget, XRSettingsAsset);
                 }
 
-                EditorBuildSettings.AddConfigObject(XRGeneralSettings.k_SettingsKey, perTarget, true);
+                EditorBuildSettings.AddConfigObject(XRGeneralSettings.settingsKey, perTarget, true);
             }
 
             XRGeneralSettings settings = perTarget.SettingsForBuildTarget(group);

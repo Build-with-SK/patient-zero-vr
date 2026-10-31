@@ -1,0 +1,11 @@
+{
+  "name": "PatientZero.Atmosphere",
+  "rootNamespace": "PatientZero.Atmosphere",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.Atmosphere.Logic",
+    "PatientZero.AI",
+    "PatientZero.AI.Logic",
+    "PatientZero.Audio"
+  ]
+}

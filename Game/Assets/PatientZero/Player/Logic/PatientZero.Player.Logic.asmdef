@@ -1,0 +1,7 @@
+{
+  "name": "PatientZero.Player.Logic",
+  "references": [
+    "PatientZero.Core"
+  ],
+  "autoReferenced": true
+}

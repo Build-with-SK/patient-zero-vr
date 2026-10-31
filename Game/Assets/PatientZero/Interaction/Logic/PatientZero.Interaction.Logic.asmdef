@@ -1,0 +1,7 @@
+{
+  "name": "PatientZero.Interaction.Logic",
+  "references": [
+    "PatientZero.Core"
+  ],
+  "autoReferenced": true
+}

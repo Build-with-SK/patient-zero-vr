@@ -104,11 +104,12 @@ A gate that cannot run is written as BLOCKED with its reason, never as PASS.
 | # | Task | Owner | Status |
 |---|---|---|---|
 | 1 | Contract review v1 (ACK or CONTRACT REQUESTs) | Codex 2, then Codex 1 | DONE: Codex 1 raised the Act 1 gate request; Claude answered with v1.1 (`GateId`/`GateReleased`); Codex 2 ACKed it (`CODEX_B_LOG.md`, `6bc4c42`) |
-| 2 | B1 port onto `integration/xr-systems` (`REVIEW_XR_SYSTEMS_72be6d8.md` section 5) | Codex 2 | DELIVERED `6bc4c42` (B1–B3), draft PR #3. Review `REVIEW_XR_SYSTEMS_6bc4c42.md`: FIX-B-13…18 open (3 MAJOR, 3 MINOR) |
-| 3 | A1 on `codex/gameplay` (`CODEX_A_BRIEF.md`) | Codex 1 | DELIVERED `83b57d3`, draft PR #1. Review `REVIEW_GAMEPLAY_83b57d3.md`: FIX-A-1…4 open |
+| 2 | B1 port onto `integration/xr-systems` (`REVIEW_XR_SYSTEMS_72be6d8.md` section 5) | Codex 2 | DELIVERED `6bc4c42` (B1–B3), draft PR #3. Review `REVIEW_XR_SYSTEMS_6bc4c42.md`: FIX-B-13…18 open (3 MAJOR, 3 MINOR). Round 2: integrated on `integration/round2` with exception E-1; new FIX-B-19…21 (`INTEGRATION_ROUND2.md`) |
+| 3 | A1 on `codex/gameplay` (`CODEX_A_BRIEF.md`) | Codex 1 | DELIVERED `83b57d3`, draft PR #1. Review `REVIEW_GAMEPLAY_83b57d3.md`. Round 2: integrated on `integration/round2`; FIX-A-1, -2 and new -5 done there as exceptions E-3…E-5, door wired to the v1.1 gate (E-2); FIX-A-3, -4 and new -6, -7 open (`INTEGRATION_ROUND2.md`) |
 | 4 | Integration logic, editor tooling, package pins, CI | Claude | DONE offline, on `main` since `8b5e5cb` (PR #2); Unity-side UNVERIFIED |
-| 5 | First Unity run (section 6) | Claude, after owner step 1 | BLOCKED: no editor |
+| 5 | First Unity run (section 6; now `unity_batch.py first-run`) | Claude, after owner step 1 | BLOCKED: no editor. 2026-10-28 attempt: `first-run` exits 2, `Unity.exe` for 6000.3.27f1 not found |
 | 6 | Design amendments D-1…D-4 (`DESIGN_RECONCILIATION.md`) | owner decides | WAITING |
 | 8 | Contract v1.1: `GateId`/`GateReleased` + `IExperienceDirector.IsGateReleased` (both seats ACK) | owner, then Claude | APPROVED 2026-10-28; added to Core by Claude. Shared physics layer names (INT-B-2) will be a separate proposal |
-| 9 | INT-B-1 NavMesh agent radius 0.25 m in `ProjectSettings`; INT-B-2 layers in `TagManager`; seat B PlayMode tests | Claude, at the first Unity run | BLOCKED: no editor |
+| 9 | INT-B-1 NavMesh agent radius 0.25 m in `ProjectSettings`; INT-B-2 layers in `TagManager`; seat B PlayMode tests | Claude, at the first Unity run | INT-B-1 now applied by the composer before the bake (`NavigationSettings`, UNVERIFIED IN EDITOR); the rest BLOCKED: no editor |
+| 10 | Integration round 2: v1.1 merged, both seats on `integration/round2`, first-run driver, integration scan | Claude | DONE offline (`INTEGRATION_ROUND2.md`); draft integration PR to `main`, gated on `first-run` |
 | 7 | Install Unity 6000.3.27f1 + Android; connect the headset and name its model; Meta XR Audio licence; invite `businessteen`; confirm Codex 1 is `lavanyahd`; repository public or private (asset rule 7) | owner | WAITING |

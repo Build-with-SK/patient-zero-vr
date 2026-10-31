@@ -1,0 +1,16 @@
+{
+  "name": "PatientZero.AI.Editor",
+  "rootNamespace": "PatientZero.AI.Editor",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.AI.Logic",
+    "PatientZero.AI",
+    "PatientZero.Environment.Editor",
+    "PatientZero.Atmosphere",
+    "Unity.AI.Navigation",
+    "PatientZero.Environment.Logic"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

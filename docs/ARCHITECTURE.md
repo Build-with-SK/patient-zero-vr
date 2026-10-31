@@ -125,7 +125,7 @@ A seat edits only its own paths. That includes "one-line fixes" elsewhere: you r
 
 ## 5. Contracts (all in `Core/Contracts`)
 
-**Versions.** v1: approved 2026-10-28 (`b3bab8b`). v1.1: approved by the owner 2026-10-28, additive only: `GateId`, the `GateReleased` channel and `IExperienceDirector.IsGateReleased`, so the Act 1 door can open on the director's gate (requested by Codex 1, acknowledged by Codex 2).
+**Versions.** v1: approved 2026-10-28 (`b3bab8b`). v1.1: approved by the owner 2026-10-28, additive only: `GateId`, the `GateReleased` channel and `IExperienceDirector.IsGateReleased`, so the Act 1 door can open on the director's gate (requested by Codex 1, acknowledged by Codex 2). v1.2: 2026-10-30, additive: the `HandheldLightChanged` channel for the flashlight (E-17). v1.3: 2026-10-31, owner request for three floors (GAME_DESIGN.md section 11, integration exception E-19), additive only: `ActId.Laboratory = 5` and `ActId.Lobby = 6`; `ObjectiveId` 402 (`Act4_StairsReached`), 500-503 and 600-602; the `ObjectiveIds` helper (`All` in play order, `Count`, `IndexOf`, `ActOf`); `ZombieIds.Researcher = 5`, `Guard = 6`, `Porter = 7`, `Count = 7` and `ZombieIds.ActOf`; in `WardLayout` the stairwell and lower-floor rooms, their points, `RoomFloors`, `FloorSeparation`, `StairTriggerRadius`, `FloorOf`, `StartsFloor` and `TryStairLanding`. One meaning changed with it: the open Act 4 door no longer ends the run. The player walks through it to the stairs (`Act4_StairsReached`), and the ending now plays in the lobby on `Act6_MainDoorsOpened`. All three floors are in the one Ward scene, side by side in X, at least `FloorSeparation` apart; the stairs are a fade and a teleport.
 
 ### 5.1 Events: `GameEvents`
 
@@ -149,6 +149,7 @@ Allocation-free typed channels (`EventChannel<T>`). Subscribe in `OnEnable` and 
 | `SettingsChanged` | `ExperienceSettings` | A · settings | everyone | on load and on every change |
 | `TrackingChanged` | modality, left/right tracked | A · rig | B · director (hints), A · UI | the modality or tracking state changes |
 | `HapticRequested` | hand, amplitude, seconds | B · AI/director | A · haptics (controllers only) | zombie proximity, scares |
+| `HandheldLightChanged` (v1.2) | enabled, position, forward | A · interaction (torch switch and pose) | B · atmosphere (owns the light) | the switch changes, and every frame while it is on |
 
 ### 5.2 Services: `Services<T>`
 

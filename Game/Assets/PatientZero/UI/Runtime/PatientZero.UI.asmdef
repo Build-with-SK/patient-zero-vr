@@ -1,0 +1,12 @@
+{
+  "name": "PatientZero.UI",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.UI.Logic",
+    "UnityEngine.UI",
+    "Unity.InputSystem",
+    "PatientZero.Flow",
+    "PatientZero.Flow.Logic",
+    "PatientZero.Player"
+  ]
+}

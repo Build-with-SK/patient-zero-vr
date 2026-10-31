@@ -1,0 +1,13 @@
+diff --git a/Game/Packages/manifest.json b/Game/Packages/manifest.json
+index c856563..e7a7d85 100644
+--- a/Game/Packages/manifest.json
++++ b/Game/Packages/manifest.json
+@@ -21,6 +21,7 @@
+     "com.unity.modules.uielements": "1.0.0",
+     "com.unity.modules.unitywebrequest": "1.0.0",
+     "com.unity.modules.vr": "1.0.0",
+-    "com.unity.modules.xr": "1.0.0"
++    "com.unity.modules.xr": "1.0.0",
++    "com.unity.modules.video": "1.0.0"
+   }
+ }

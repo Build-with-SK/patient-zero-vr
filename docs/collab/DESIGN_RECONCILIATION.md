@@ -29,6 +29,8 @@ Seven of the eleven beats match. All four differences sit in the first minute, a
 
 ### D-1 Flashlight — recommend **decline for v1**; fallback option D-1b
 
+**Decided 2026-10-30: D-1b.** The owner's final-release mission asks for "flashlight gameplay". Contract v1.2 adds `HandheldLightChanged` exactly as seat B requested (enabled, position, forward; writer Interaction, reader Atmosphere, cleared by `ResetAll`). Flat-screen builds (Windows, phone, iPad) carry the torch from the start (F / LIGHT); seat B's `HandheldLight` owns the light, and the surge kills it, so Act 3 stays the sound-navigation act. The Quest penlight pickup (`WardLayout.A1_Penlight`, hand pose, battery) is not built yet: Quest has no torch in 1.0.0. Integration exception E-17.
+
 - **Conflicts with the approved design.** Pillar 1 ("sound is both the threat and the map") and Act 3 ("exit sign is the only light"). Act 3 navigation by ear is a beat the prompt itself keeps; a working flashlight in Act 3 removes it.
 - **Ownership.** The held object is seat A (Interaction); every light is seat B (Atmosphere). It needs a new Core contract (a light-request channel plus a layout id) and a contract amendment. Neither seat may add it alone.
 - **Performance.** A held spot light is the costliest dynamic light on Quest. Budget: one extra per-pixel light, no shadows.

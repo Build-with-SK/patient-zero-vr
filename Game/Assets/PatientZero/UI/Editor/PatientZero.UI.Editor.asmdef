@@ -1,0 +1,15 @@
+{
+  "name": "PatientZero.UI.Editor",
+  "references": [
+    "PatientZero.Core",
+    "PatientZero.UI",
+    "PatientZero.Flow",
+    "PatientZero.Player",
+    "UnityEngine.UI",
+    "Unity.XR.Interaction.Toolkit",
+    "Unity.InputSystem"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

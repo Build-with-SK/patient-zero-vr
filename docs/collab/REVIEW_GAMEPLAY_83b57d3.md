@@ -84,6 +84,8 @@ bool IsGateReleased(GateId gate);
 This is a general `GateId` rather than an Act 1-specific channel, so a later gate needs only an id. Until it merges,
 keep the door failing closed, as Codex 1 already does. Do not code against the proposed API.
 
+**Round 2 (2026-10-28):** integrated on `integration/round2`; exceptions and new findings are in `INTEGRATION_ROUND2.md`.
+
 **Update 2026-10-28:** the owner approved contract v1.1 and Claude added it to Core. Build against it once it is on `main`; `WORK_PLAN.md` (current state) says what each seat does.
 
 ## What seat A has in hand from Claude
