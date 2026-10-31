@@ -53,7 +53,8 @@ namespace PatientZero.Environment.Logic
                         doors.Add(new DoorOpening(a.Id, b.Id, new Vector3(x, 0, z), false, 1.6f));
                     }
                 }
-            doors.Add(new DoorOpening("Vestibule", "Outside", WardLayout.A4_ExitDoor.Position, false, 1.5f));
+            // v1.3: the emergency door now opens onto the Floor 3 stairwell (room Stair3), whose doorway is derived above
+            // like every other; it replaced the explicit Vestibule-to-outside opening.
             Doors = doors.ToArray();
             var walls = new List<WallSpan>();
             for (int r = 0; r < Floors.Length; r++)

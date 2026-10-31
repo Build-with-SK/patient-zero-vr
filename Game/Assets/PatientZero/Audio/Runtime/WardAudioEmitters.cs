@@ -28,6 +28,13 @@ namespace PatientZero.Audio
                     Loop(CueId.BlackoutTone, WardLayout.A3_Start.Position); Loop(CueId.WaterDrip, WardLayout.A3_Drip.Position); break;
                 case ActId.Exit:
                     Loop(CueId.AlarmKlaxon, WardLayout.A4_ExitDoor.Position); Loop(CueId.RestraintStrain, WardLayout.Z4_Gurney.Position); break;
+                // v1.3 (Claude integration E-19): the lower floors reuse the ward's loops.
+                case ActId.Laboratory:
+                    Loop(CueId.Ventilation, WardLayout.A5_Hall2.Position); Loop(CueId.MonitorBeep, WardLayout.Z5_Dormant.Position);
+                    Loop(CueId.FluorescentBuzz, WardLayout.A5_Bench.Position); break;
+                case ActId.Lobby:
+                    Loop(CueId.AlarmKlaxon, WardLayout.A6_MainDoors.Position); Loop(CueId.Ventilation, WardLayout.A6_Generator.Position);
+                    Loop(CueId.ExteriorWind, WardLayout.A6_Exit.Position); break;
             }
         }
         private void StateChanged(GameStateChanged e) { if (e.To == GameState.Ending) StopLoops(2); }

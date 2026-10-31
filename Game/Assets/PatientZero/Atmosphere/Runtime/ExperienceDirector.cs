@@ -76,6 +76,9 @@ namespace PatientZero.Atmosphere
                 TryAmbient(WardLayout.Z2_Dormant.Position + Vector3.up, player);
                 TryAmbient(WardLayout.Z3_PatrolNorth.Position + Vector3.up, player);
                 TryAmbient(WardLayout.Z4_Gurney.Position + Vector3.up, player);
+                TryAmbient(WardLayout.Z5_Dormant.Position + Vector3.up, player); // v1.3 (E-19): the lower floors
+                TryAmbient(WardLayout.Z6_PatrolNorth.Position + Vector3.up, player);
+                TryAmbient(WardLayout.Z7_Dormant.Position + Vector3.up, player);
                 Pump();
             }
         }

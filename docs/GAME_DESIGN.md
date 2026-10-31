@@ -356,3 +356,37 @@ First launch runs **Calibration** (state `Calibration`), with every option reach
 | GD-08 | The reveal plays fully in both hands mode and controllers mode, and Complete offers Play again |
 | GD-09 | Pause from the menu button, the hand gesture and headset removal all freeze zombies, audio and timers. Resume continues exactly |
 | GD-10 | No hint or assist fires while the player is making progress. Each ladder step fires at +10/+20/+30 s of no progress |
+
+---
+
+## 11. Three floors (owner request, 2026-10-31; contract v1.3)
+
+The owner asked for three floors. The ward above (acts 1-4) is **Floor 3, the Isolation Ward**. Two floors follow it, each
+reached by a stairwell. All three floors live in the same Ward scene, side by side in X, so `RoomGeometry` builds their
+walls, doors and floors from `WardLayout.Rooms` like the ward's. The floors never touch, so no doorway joins them.
+
+| Floor | Act | Rooms (x range) | Objectives | Zombies | Lighting |
+|---|---|---|---|---|---|
+| 3 · Isolation Ward | 1-4 | B-7 … Vestibule, **Stair3** (17-19.5) | as before, then `Act4_StairsReached` (402) | Z1-Z4 | as before; the release no longer brings daylight |
+| 2 · Laboratories | 5 `Laboratory` | Stair2, LabCorridor, LabA (north), LabB (south), Stair2Down (30-48.5) | `Act5_FuseInserted` (500), `Act5_OverridePulled` (501), `Act5_StairDoorOpened` (502), `Act5_StairsReached` (503) | Z5 Researcher: dormant in Lab B, hears like Z2 | `WardDim` |
+| 1 · Main Lobby | 6 `Lobby` | Stair1, Lobby, Security (north), Entrance (60-77) | `Act6_GeneratorPrimed` (600), `Act6_LockdownReleased` (601), `Act6_MainDoorsOpened` (602) | Z6 Guard: patrols across the lobby (x 70.2); Z7: dormant behind the reception desk | `EmergencyRed`, then `ExitDaylight` |
+
+**Floor change.** When the stair door of a floor is open and the player reaches the landing anchor (`A4.Stairs`,
+`A5.Stairs`), the stairs objective completes and the director enters the next act. The player rig fades to black, moves
+to the next floor's start anchor, and fades in while the floor's name is shown. A restore after a catch starts the
+current floor again, never an earlier one.
+
+**Floor 2.** Lab B's door is open and Z5 sleeps inside. The fuse lies on a bench in Lab A. Carry it to the fuse box on the
+corridor's south wall (the Act 2 socket mechanic). The spark is loud, so the director answers it with a crash at the
+west landing that draws Z5 out of Lab B and away from the player. The door override lever (Act 4 mechanic, 2 s hold)
+works only once the fuse is in; it opens the stairwell door at x 46.
+
+**Floor 1.** The generator valve (Act 2 valve mechanic) is in the Security office north of the lobby. The lockdown
+lever by the main doors works only once the generator is primed. Z6 walks the lobby north to south and back on a line
+at least 0.8 m from every anchor, pausing 3-4 s at each end; red light limits its sight to 3 m. Pulling the lever
+floods the lobby with daylight; when the main doors are fully open the ending (section 4) plays in the lobby, with Z6
+and Z7 kneeling.
+
+Each new mechanic is an existing one placed again: puzzles carry their act and objective as serialized fields whose
+defaults are the original Act 1-4 bindings, so the ward's puzzles are unchanged. A lever can require another objective
+first (`requires`).

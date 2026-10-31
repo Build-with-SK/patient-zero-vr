@@ -14,7 +14,7 @@ namespace PatientZero.Environment.Tests
         }
         [Test] public void DoorOpeningsMatchApprovedMarkersAndAreClearOfWalls()
         {
-            var g = new RoomGeometry(); Assert.AreEqual(6, g.Doors.Length);
+            var g = new RoomGeometry(); Assert.AreEqual(13, g.Doors.Length); // v1.3: ward 6 (Stair3 replaced Outside), Floor 2 four, Floor 1 three
             foreach (var door in g.Doors)
                 foreach (var wall in g.Walls)
                     Assert.GreaterOrEqual(WardLayout.HorizontalDistanceToSegment(door.Centre, wall.A, wall.B), door.Width / 2 - .001f);

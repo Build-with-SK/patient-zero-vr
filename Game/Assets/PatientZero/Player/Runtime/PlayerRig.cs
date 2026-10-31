@@ -1,4 +1,5 @@
 // UNVERIFIED IN EDITOR — pinned Unity 6000.3.27f1 is not installed locally.
+using System.Collections;
 using PatientZero.Core;
 using PatientZero.Player.Logic;
 using Unity.XR.CoreUtils;
@@ -31,7 +32,18 @@ namespace PatientZero.Player
         private void Update(){recovery.Tick(Modality,left,right,focused,Time.unscaledDeltaTime);if(recovery.DropLeft)cancelLeft.Invoke();if(recovery.DropRight)cancelRight.Invoke();headSpeed.Sample(HeadPosition,true,Time.deltaTime);leftSpeed.Sample(leftPose?leftPose.position:Vector3.zero,left,Time.deltaTime);rightSpeed.Sample(rightPose?rightPose.position:Vector3.zero,right,Time.deltaTime);}
         private void OnSettings(SettingsChanged s){ApplySettings(s.Settings);}
         private void ApplySettings(ExperienceSettings s){if(heightRoot && head)heightRoot.localPosition=baseHeight+Vector3.up*ReachRules.CalibratedOffset(head.localPosition.y,s);}
-        private void OnAct(ActStarted act){if(placed && !act.IsRestore && act.Act!=ActId.Awakening)return;placed=true;var point=WardLayout.ActStart(act.Act);origin.MoveCameraToWorldLocation(point.Position+Vector3.up*(HeadPosition.y-FloorPosition.y));origin.MatchOriginUpCameraForward(Vector3.up,Quaternion.Euler(0,point.YawDegrees,0)*Vector3.forward);}
+        private void OnAct(ActStarted act){bool stairs=placed && !act.IsRestore && act.Act!=ActId.Awakening && WardLayout.StartsFloor(act.Act);if(placed && !act.IsRestore && act.Act!=ActId.Awakening && !stairs)return;placed=true;StopAllCoroutines();if(stairs){StartCoroutine(TakeStairs(act.Act));return;}Place(act.Act);}
+        private void Place(ActId act){var point=WardLayout.ActStart(act);origin.MoveCameraToWorldLocation(point.Position+Vector3.up*(HeadPosition.y-FloorPosition.y));origin.MatchOriginUpCameraForward(Vector3.up,Quaternion.Euler(0,point.YawDegrees,0)*Vector3.forward);Physics.SyncTransforms();}
+        /// <summary>v1.3 (Claude integration E-19): a floor's first act starts on its stair landing. Fade to black, drop what is held
+        /// (it stays on the floor above), move, then fade back in. The desktop capsule is synced so its next Move starts there.</summary>
+        private IEnumerator TakeStairs(ActId act)
+        {
+            if(Services<IScreenFader>.TryGet(out var fader))fader.FadeTo(1,StairFadeOutSeconds);
+            float until=Time.unscaledTime+StairFadeOutSeconds+.05f;while(Time.unscaledTime<until)yield return null;
+            cancelLeft.Invoke();cancelRight.Invoke();Place(act);
+            if(Services<IScreenFader>.TryGet(out fader))fader.FadeTo(0,StairFadeInSeconds);
+        }
+        public const float StairFadeOutSeconds=.35f,StairFadeInSeconds=1.2f;
         private void OnState(GameStateChanged state){if(!GameStateRules.IsSimulationLive(state.To)){cancelLeft.Invoke();cancelRight.Invoke();}}
         private void OnApplicationFocus(bool focus){focused=focus;}
     }

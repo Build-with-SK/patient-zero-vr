@@ -118,7 +118,9 @@ namespace PatientZero.Integration
                     if (!acted && ready)
                     {
                         acted = true;
-                        yield return new WaitForSeconds(1.5f);
+                        // A new floor starts under the stairs fade (v1.3): wait for it to clear before the photo and the first grip.
+                        bool stairs = previous != ActId.Awakening && WardLayout.StartsFloor(previous);
+                        yield return new WaitForSeconds(stairs ? PlayerRig.StairFadeOutSeconds + PlayerRig.StairFadeInSeconds + .75f : 1.5f);
                         if (round == 1) yield return Shot((int)previous + "-" + previous);
                         if (round == 1 && previous == ActId.Awakening && shots != null)
                         {
@@ -143,7 +145,7 @@ namespace PatientZero.Integration
                 if (!ok) break;
                 completed++;
                 yield return new WaitForSecondsRealtime(2f); // the results screen
-                if (round == 1) yield return Shot("5-results");
+                if (round == 1) yield return Shot("7-results");
             }
 
             bool pass = completed == rounds && problems == 0;
@@ -153,7 +155,10 @@ namespace PatientZero.Integration
             Application.Quit(pass ? 0 : 1);
         }
 
-        /// <summary>One act's objectives, exactly as IntegrationPlayTests.AutoplayObjectivesReachCompleteWithoutBypassingDirectorGate.</summary>
+        /// <summary>
+        /// One act's objectives, exactly as IntegrationPlayTests.AutoplayObjectivesReachCompleteWithoutBypassingDirectorGate.
+        /// v1.3 (E-19): each puzzle is worked only in its own act, and a floor's stairs are taken by standing on the landing.
+        /// </summary>
         private IEnumerator Act(ActId act)
         {
             PhysicalPuzzle[] puzzles = Ward<PhysicalPuzzle>();
@@ -162,7 +167,7 @@ namespace PatientZero.Integration
                 case ActId.Awakening:
                     foreach (PhysicalPuzzle p in puzzles)
                     {
-                        if (p.mechanic != PhysicalPuzzle.Mechanic.Plank) continue;
+                        if (p.mechanic != PhysicalPuzzle.Mechanic.Plank || p.BoundAct != act) continue;
                         Vector3 point = p.transform.position;
                         p.BeginGrip(point);
                         p.SampleGrip(point + p.transform.TransformDirection(p.axis) * .081f, .1f);
@@ -170,37 +175,78 @@ namespace PatientZero.Integration
                     }
                     break;
                 case ActId.Machinery:
-                    foreach (PhysicalPuzzle p in puzzles)
-                    {
-                        if (p.mechanic != PhysicalPuzzle.Mechanic.Valve) continue;
-                        Vector3 center = p.transform.position;
-                        p.BeginGrip(center + Vector3.right * .2f);
-                        for (int step = 1; step <= 6; step++)
-                            p.SampleGrip(center + Quaternion.AngleAxis(step * 90, p.transform.TransformDirection(p.axis)) * Vector3.right * .2f, 1);
-                        p.EndGrip();
-                    }
-
-                    CableSocket[] sockets = Ward<CableSocket>();
-                    if (sockets.Length == 0) { Debug.LogError("[PZ-PROBE] no CableSocket in Ward"); break; }
-                    sockets[0].plug.transform.SetPositionAndRotation(sockets[0].transform.position, sockets[0].transform.rotation);
-                    if (!sockets[0].TryConnect()) Debug.LogWarning("[PZ-PROBE] cable did not connect");
+                    Valves(puzzles, act);
+                    Plug(act);
                     break;
                 case ActId.Darkness:
-                    if (Services<IPlayerQuery>.Instance is PlayerRig rig && rig.origin)
-                        rig.origin.MoveCameraToWorldLocation(WardLayout.A3_End.Position + Vector3.up * (rig.HeadPosition.y - rig.FloorPosition.y));
+                    MoveTo(WardLayout.A3_End.Position);
                     break;
                 case ActId.Exit:
-                    foreach (PhysicalPuzzle p in puzzles)
-                    {
-                        if (p.mechanic != PhysicalPuzzle.Mechanic.Lever) continue;
-                        Vector3 point = p.transform.position;
-                        p.BeginGrip(point);
-                        p.SampleGrip(point - Vector3.up * .05f, .1f);
-                        yield return new WaitForSeconds(2.1f);
-                        p.EndGrip();
-                    }
+                    yield return Levers(puzzles, act);
+                    Stairs(act);
+                    break;
+                case ActId.Laboratory:
+                    Plug(act);
+                    yield return Levers(puzzles, act);
+                    Stairs(act);
+                    break;
+                case ActId.Lobby:
+                    Valves(puzzles, act);
+                    yield return Levers(puzzles, act);
                     break;
             }
+        }
+
+        private static void Valves(PhysicalPuzzle[] puzzles, ActId act)
+        {
+            foreach (PhysicalPuzzle p in puzzles)
+            {
+                if (p.mechanic != PhysicalPuzzle.Mechanic.Valve || p.BoundAct != act) continue;
+                Vector3 center = p.transform.position;
+                p.BeginGrip(center + Vector3.right * .2f);
+                for (int step = 1; step <= 6; step++)
+                    p.SampleGrip(center + Quaternion.AngleAxis(step * 90, p.transform.TransformDirection(p.axis)) * Vector3.right * .2f, 1);
+                p.EndGrip();
+            }
+        }
+
+        private static IEnumerator Levers(PhysicalPuzzle[] puzzles, ActId act)
+        {
+            foreach (PhysicalPuzzle p in puzzles)
+            {
+                if (p.mechanic != PhysicalPuzzle.Mechanic.Lever || p.BoundAct != act) continue;
+                Vector3 point = p.transform.position;
+                p.BeginGrip(point);
+                p.SampleGrip(point - Vector3.up * .05f, .1f);
+                yield return new WaitForSeconds(2.1f);
+                p.EndGrip();
+            }
+        }
+
+        /// <summary>Carries the act's plug or fuse into its socket.</summary>
+        private static void Plug(ActId act)
+        {
+            foreach (CableSocket socket in Ward<CableSocket>())
+            {
+                if (socket.socketAct != act || !socket.plug) continue;
+                socket.plug.transform.SetPositionAndRotation(socket.transform.position, socket.transform.rotation);
+                if (!socket.TryConnect()) Debug.LogWarning("[PZ-PROBE] " + act + " socket did not connect");
+                return;
+            }
+            Debug.LogError("[PZ-PROBE] no CableSocket for " + act + " in Ward");
+        }
+
+        /// <summary>Stands on the act's stair landing; StairArrival completes the objective once the stair door is open.</summary>
+        private static void Stairs(ActId act)
+        {
+            if (WardLayout.TryStairLanding(act, out LayoutPoint landing)) MoveTo(landing.Position);
+        }
+
+        private static void MoveTo(Vector3 floor)
+        {
+            if (!(Services<IPlayerQuery>.Instance is PlayerRig rig) || !rig.origin) return;
+            rig.origin.MoveCameraToWorldLocation(floor + Vector3.up * (rig.HeadPosition.y - rig.FloorPosition.y));
+            Physics.SyncTransforms();
         }
 
         private static T[] Ward<T>() where T : Component
