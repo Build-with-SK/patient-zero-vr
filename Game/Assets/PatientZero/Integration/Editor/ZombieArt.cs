@@ -241,28 +241,44 @@ namespace PatientZero.Integration.Editor
             }
         }
 
-        /// <summary>Lowest and highest vertex of the posed mesh, world Y.</summary>
+        /// <summary>
+        /// Lowest and highest vertex of the posed mesh, world Y, skinned on the CPU from the bones' current transforms.
+        /// Not BakeMesh: it ignores the scale of the renderer's parents, and this armature is scaled by 100.
+        /// </summary>
         private static Vector2 VerticalExtent(SkinnedMeshRenderer renderer)
         {
-            var mesh = new Mesh();
-            try
-            {
-                renderer.BakeMesh(mesh, true);
-                Transform t = renderer.transform;
-                float min = float.MaxValue, max = float.MinValue;
-                foreach (Vector3 v in mesh.vertices)
-                {
-                    float y = (t.position + t.rotation * v).y;
-                    if (y < min) min = y;
-                    if (y > max) max = y;
-                }
+            Mesh mesh = renderer.sharedMesh;
+            Transform[] bones = renderer.bones;
+            Matrix4x4[] bindposes = mesh.bindposes;
+            BoneWeight[] weights = mesh.boneWeights;
+            Vector3[] vertices = mesh.vertices;
+            if (bones.Length == 0 || bindposes.Length != bones.Length || weights.Length != vertices.Length)
+                throw new InvalidOperationException(ModelPath + ": '" + renderer.name + "' has " + bones.Length + " bones, " +
+                                                    bindposes.Length + " bind poses and " + weights.Length + " weights for " +
+                                                    vertices.Length + " vertices.");
 
-                return new Vector2(min, max);
-            }
-            finally
+            var skin = new Matrix4x4[bones.Length];
+            for (int i = 0; i < bones.Length; i++)
             {
-                Object.DestroyImmediate(mesh);
+                if (!bones[i]) throw new InvalidOperationException(ModelPath + ": bone " + i + " of '" + renderer.name + "' is missing.");
+                skin[i] = bones[i].localToWorldMatrix * bindposes[i];
             }
+
+            float min = float.MaxValue, max = float.MinValue;
+            for (int v = 0; v < vertices.Length; v++)
+            {
+                BoneWeight w = weights[v];
+                float sum = w.weight0 + w.weight1 + w.weight2 + w.weight3;
+                if (sum <= 0) continue;
+                Vector3 p = vertices[v];
+                Vector3 world = (skin[w.boneIndex0].MultiplyPoint3x4(p) * w.weight0 + skin[w.boneIndex1].MultiplyPoint3x4(p) * w.weight1 +
+                                 skin[w.boneIndex2].MultiplyPoint3x4(p) * w.weight2 + skin[w.boneIndex3].MultiplyPoint3x4(p) * w.weight3) / sum;
+                if (world.y < min) min = world.y;
+                if (world.y > max) max = world.y;
+            }
+
+            if (min > max) throw new InvalidOperationException(ModelPath + ": '" + renderer.name + "' has no weighted vertices.");
+            return new Vector2(min, max);
         }
     }
 }

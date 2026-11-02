@@ -7,6 +7,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using Object = UnityEngine.Object;
 
 namespace PatientZero.Integration.Editor
 {
@@ -75,7 +76,7 @@ namespace PatientZero.Integration.Editor
             throw new InvalidOperationException("Bootstrap must hold exactly one player camera (found " + cameras.Count + ", " + tagged.Count + " tagged MainCamera).");
         }
 
-        /// <summary>Bloom, ACES, grading, a slight lift in the blacks, vignette and film grain. Updated in place, so its GUID never changes.</summary>
+        /// <summary>Bloom, ACES, grading, vignette and film grain. Updated in place, so its GUID never changes.</summary>
         private static VolumeProfile Profile()
         {
             ArtTextures.CreateFolders();
@@ -95,13 +96,18 @@ namespace PatientZero.Integration.Editor
             Component<Tonemapping>(profile).mode.Override(TonemappingMode.ACES);
 
             var grade = Component<ColorAdjustments>(profile);
-            grade.postExposure.Override(.3f);
-            grade.contrast.Override(14f);
-            grade.saturation.Override(-20f);
+            grade.postExposure.Override(.45f);
+            grade.contrast.Override(16f);
+            grade.saturation.Override(-15f);
             grade.colorFilter.Override(new Color(.93f, 1f, .97f));
 
-            // A little light in the blacks keeps shapes readable in the dark instead of crushing them to flat black.
-            Component<LiftGammaGain>(profile).lift.Override(new Vector4(1f, 1f, 1f, .015f));
+            // No lift in the blacks: lift works in linear light, so even 0.015 put a grey veil of about 33/255 over every
+            // dark area (measured on the probe screenshots). ACES's toe keeps the shadow detail on its own.
+            if (profile.TryGet(out LiftGammaGain lift))
+            {
+                profile.Remove<LiftGammaGain>();
+                Object.DestroyImmediate(lift, true);
+            }
 
             var vignette = Component<Vignette>(profile);
             vignette.intensity.Override(.38f);
@@ -109,7 +115,7 @@ namespace PatientZero.Integration.Editor
 
             var grain = Component<FilmGrain>(profile);
             grain.type.Override(FilmGrainLookup.Thin2);
-            grain.intensity.Override(.28f);
+            grain.intensity.Override(.2f);
             grain.response.Override(.8f);
 
             EditorUtility.SetDirty(profile);

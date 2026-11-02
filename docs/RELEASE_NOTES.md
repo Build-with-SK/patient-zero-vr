@@ -23,6 +23,17 @@ Win: the main doors open, and the ending reveals that you were Patient Zero ("YO
 (Play again, Credits, Quit). Loss: a zombie catches you ("YOU WERE CAUGHT"), and the act restarts. Throwing objects
 makes noise where they land, which lures zombies away. The countdown is atmosphere: nothing fails at 00:00.
 
+## Update 2026-10-31: art pass
+
+* **Animated zombies**: every zombie is now the CC0 "Animated Zombie" by Quaternius, idling, walking and running at the
+  speed the AI moves it, instead of the box mannequin.
+* **Textured hospital**: terrazzo floor tiles, two-tone painted blockwork with a chair rail, ceiling tiles, scratched
+  metal, curtains and wooden planks, all generated in the project with normal maps and sized in real metres on every
+  surface.
+* **Post-processing on flat screens** (Windows, phone): bloom, ACES tone mapping, colour grading, a vignette and film
+  grain, with a little detail kept in the darkest areas. It switches off whenever a headset is active, so VR renders
+  without it, as before.
+
 ## Update 2026-10-31: three floors
 
 * **Two new floors** after the ward, reached by the stairwell behind the emergency door (the screen fades as you go
@@ -60,6 +71,7 @@ makes noise where they land, which lures zombies away. The countdown is atmosphe
 * **Android phone**: signed with the debug key (sideloading only; Google Play needs the owner's upload key).
 * **Windows**: the exe is not code-signed, so SmartScreen warns on first launch. Keys cannot be rebound in 1.0.0.
   Mouse look is free while playing (the cursor is captured); menus and pause release it.
-* Art is original greybox geometry and procedural audio; no paid or third-party art assets.
+* Art is original geometry with textures generated in the project, procedural audio, and one third-party model: the
+  CC0 Quaternius animated zombie. No paid assets. The zombie model has never been seen in a headset (NOT TESTED in VR).
 * **Floors 2 and 1 (2026-10-31)** have been played through only by the automated tests and the release probe, never by a
   person yet: how often the lobby guard or the lab researcher catches a real player is not tuned. In VR they are NOT TESTED.
