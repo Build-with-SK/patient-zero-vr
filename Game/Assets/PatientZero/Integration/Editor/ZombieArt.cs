@@ -1,6 +1,7 @@
 // Claude-owned integration (art pass, 2026-10-31; E-20).
 using System;
 using PatientZero.AI;
+using PatientZero.Core;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
@@ -17,6 +18,8 @@ namespace PatientZero.Integration.Editor
     {
         public const string ModelPath = "Assets/ThirdParty/Quaternius/AnimatedZombie/Zombie.glb";
         public const string ControllerPath = ArtTextures.Folder + "/Zombie.controller";
+        /// <summary>E-21: the single-clip controller of the scripted jump-scare zombie.</summary>
+        public const string PuppetControllerPath = ArtTextures.Folder + "/ZombieJumpScare.controller";
         public const string ModelName = "Zombie model (Quaternius, CC0)";
         public const string Version = "pz-art-zombie-1";
         public const float TargetHeight = 1.75f;
@@ -31,6 +34,8 @@ namespace PatientZero.Integration.Editor
             public GameObject Model;
             public AnimatorController Controller;
             public Material Skin;
+            /// <summary>E-21: the horde wears these in turn (the first is Skin), so a pack is not a row of twins.</summary>
+            public Material[] Skins;
             public float Scale;
             /// <summary>Height of the lowest vertex in the Idle pose, model units (scale 1).</summary>
             public float IdleFloor;
@@ -42,7 +47,12 @@ namespace PatientZero.Integration.Editor
             GameObject model = Model();
             var clips = new AnimationClip[Clips.Length];
             for (int i = 0; i < Clips.Length; i++) clips[i] = LoopingCopy(Clips[i]);
-            var kit = new Kit { Model = model, Controller = Controller(clips), Skin = Skin() };
+            Material skin = Skin("Zombie_Skin", new Color(.8f, .84f, .76f, 1));
+            var kit = new Kit
+            {
+                Model = model, Controller = Controller(clips), Skin = skin,
+                Skins = new[] { skin, Skin("Zombie_Skin_Pale", new Color(.9f, .94f, .96f, 1)), Skin("Zombie_Skin_Dark", new Color(.6f, .55f, .5f, 1)) },
+            };
             Measure(kit, clips[0]);
             AssetDatabase.SaveAssets();
             return kit;
@@ -61,9 +71,15 @@ namespace PatientZero.Integration.Editor
             instance.name = ModelName;
             Transform t = instance.transform;
             Transform actor = zombie.transform;
+            // E-21: a horde zombie gets one of the skins and a height between 92% and 108%; the story zombies stay as they were.
+            var shell = zombie.GetComponent<ZombieAgentShell>();
+            int id = shell ? shell.ZombieId : 0;
+            bool horde = ZombieIds.IsHorde(id);
+            Material skin = horde ? kit.Skins[id % kit.Skins.Length] : kit.Skin;
+            float scale = kit.Scale * (horde ? .92f + id * 37 % 17 / 100f : 1f);
             t.rotation = actor.rotation;
-            t.localScale = Vector3.one * (kit.Scale / Mathf.Max(1e-4f, Mathf.Abs(zombie.Body.lossyScale.y)));
-            t.position = actor.position - actor.up * (kit.IdleFloor * kit.Scale);
+            t.localScale = Vector3.one * (scale / Mathf.Max(1e-4f, Mathf.Abs(zombie.Body.lossyScale.y)));
+            t.position = actor.position - actor.up * (kit.IdleFloor * scale);
 
             var animator = instance.GetComponent<Animator>();
             if (!animator) animator = instance.AddComponent<Animator>();
@@ -76,7 +92,7 @@ namespace PatientZero.Integration.Editor
             var followers = new System.Collections.Generic.List<Renderer>();
             foreach (Renderer renderer in instance.GetComponentsInChildren<Renderer>(true))
             {
-                renderer.sharedMaterial = kit.Skin;
+                renderer.sharedMaterial = skin;
                 renderer.enabled = visible;
                 if (!body && renderer is SkinnedMeshRenderer skinned && renderer.name == "Zombie") body = skinned;
                 else followers.Add(renderer);
@@ -89,6 +105,35 @@ namespace PatientZero.Integration.Editor
             mirror.followers = followers.ToArray();
 
             if (mannequin) mannequin.enabled = false; // the box mannequin stays in the hierarchy (its bones carry Head and the foot emitter) but never draws
+        }
+
+        /// <summary>
+        /// E-21: an AI-free copy of the zombie for a scripted scene, under a pivot that stands on the floor (its forward is the
+        /// way the model faces): the same model and skin, playing one looping clip from the model.
+        /// </summary>
+        public static Transform Puppet(Kit kit, Transform parent, string clip)
+        {
+            var pivot = new GameObject("Jump scare zombie").transform;
+            pivot.SetParent(parent, false);
+            var instance = PrefabUtility.InstantiatePrefab(kit.Model, pivot) as GameObject;
+            if (!instance) instance = Object.Instantiate(kit.Model, pivot);
+            instance.name = ModelName;
+            instance.transform.localPosition = Vector3.down * (kit.IdleFloor * kit.Scale);
+            instance.transform.localRotation = Quaternion.identity;
+            instance.transform.localScale = Vector3.one * kit.Scale;
+
+            var animator = instance.GetComponent<Animator>();
+            if (!animator) animator = instance.AddComponent<Animator>();
+            animator.runtimeAnimatorController = SingleClip(PuppetControllerPath, LoopingCopy(clip));
+            animator.applyRootMotion = false;
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            foreach (Renderer renderer in instance.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.sharedMaterial = kit.Skin;
+                if (renderer is SkinnedMeshRenderer skinned) skinned.updateWhenOffscreen = true; // it ends up inside the camera's near view
+            }
+
+            return pivot;
         }
 
         // ------------------------------------------------------------------ assets
@@ -177,6 +222,23 @@ namespace PatientZero.Integration.Editor
             return controller;
         }
 
+        private static AnimatorController SingleClip(string path, AnimationClip clip)
+        {
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
+            AssetImporter importer = controller ? AssetImporter.GetAtPath(path) : null;
+            if (controller && importer != null && importer.userData == Version + "/" + clip.name) return controller;
+
+            if (controller) AssetDatabase.DeleteAsset(path);
+            controller = AnimatorController.CreateAnimatorControllerAtPath(path);
+            controller.AddMotion(clip);
+            EditorUtility.SetDirty(controller);
+            AssetDatabase.SaveAssets();
+            importer = AssetImporter.GetAtPath(path);
+            importer.userData = Version + "/" + clip.name;
+            AssetDatabase.WriteImportSettingsIfDirty(path);
+            return controller;
+        }
+
         private static bool HasParameters(AnimatorController controller)
         {
             bool speed = false, alert = false;
@@ -190,7 +252,7 @@ namespace PatientZero.Integration.Editor
         }
 
         /// <summary>URP Lit on the model's colour atlas, a little desaturated and damp, so it sits in the ward's light.</summary>
-        private static Material Skin()
+        private static Material Skin(string name, Color tint)
         {
             Texture2D atlas = null;
             foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(ModelPath))
@@ -199,9 +261,9 @@ namespace PatientZero.Integration.Editor
             }
 
             if (!atlas) throw new InvalidOperationException(ModelPath + " has no texture atlas.");
-            Material skin = ArtSurfaces.LitMaterial("Zombie_Skin");
+            Material skin = ArtSurfaces.LitMaterial(name);
             skin.SetTexture("_BaseMap", atlas);
-            skin.SetColor("_BaseColor", new Color(.8f, .84f, .76f, 1));
+            skin.SetColor("_BaseColor", tint);
             skin.SetTexture("_BumpMap", null);
             skin.DisableKeyword("_NORMALMAP");
             skin.SetFloat("_Metallic", 0);

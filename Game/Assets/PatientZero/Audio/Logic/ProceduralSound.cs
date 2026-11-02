@@ -86,6 +86,15 @@ namespace PatientZero.Audio.Logic
                 case CueId.ZombieGlassTap: case CueId.RestraintSnap: case CueId.PlankPop:
                     double weight = r.Id == CueId.ImpactLight || r.Id == CueId.ZombieGlassTap || r.Id == CueId.DoorUnlatch ? 1.6 : 1;
                     return (Sin(73 * weight, t) * .7 + Sin(187 * weight, t) * .3 + noise * .8) * Math.Exp(-t * 9 * weight);
+                // E-21 placeholders, used only when a recording is missing: a wavering wail, crowd murmur, static, a low hit.
+                case CueId.VictimCrying: case CueId.DistantScream: case CueId.JumpScareScream:
+                    return (Sin(330 + 60 * Sin(5, t), t) * .35 + noise * .1) * (.4 + .6 * Math.Max(0, Sin(1.5, t)));
+                case CueId.CrowdPanic:
+                    return (low * 2.5 + noise * .08) * (1 + .4 * Sin(.7, t));
+                case CueId.NewsBroadcast:
+                    return (low - slower) * 2 * (.25 + .75 * Math.Max(0, Sin(3, t)));
+                case CueId.JumpScareStinger:
+                    return (Sin(55, t) * .8 + noise * .6) * Math.Exp(-t * 3);
                 default: return 0;
             }
         }

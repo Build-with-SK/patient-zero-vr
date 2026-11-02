@@ -1,5 +1,6 @@
 // UNVERIFIED IN EDITOR
 using System;
+using PatientZero.AI.Logic;
 using PatientZero.Atmosphere;
 using PatientZero.Core;
 using PatientZero.Environment.Editor;
@@ -18,6 +19,7 @@ namespace PatientZero.AI.Editor
             var director = WardPrimitives.FindInScene<ExperienceDirector>(root);
             if (!director) throw new InvalidOperationException("Atmosphere step 200 must precede AI step 500");
             var material = WardPrimitives.Material("GeneratedPatient", new Color(.24f, .28f, .22f));
+            var masks = WardCollisionBinding.Resolve();
             var actors = new ZombieAgentShell[ZombieIds.Count]; // v1.3 (E-19): Z5-Z7 on the lower floors
             for (int i = 0; i < actors.Length; i++)
             {
@@ -25,21 +27,51 @@ namespace PatientZero.AI.Editor
                 var marker = id == 1 ? WardLayout.Z1_WalkFrom : id == 2 ? WardLayout.Z2_Dormant : id == 3 ? WardLayout.Z3_PatrolNorth :
                     id == 4 ? WardLayout.Z4_Gurney : id == ZombieIds.Researcher ? WardLayout.Z5_Dormant :
                     id == ZombieIds.Guard ? WardLayout.Z6_PatrolNorth : WardLayout.Z7_Dormant;
-                var actor = new GameObject("Zombie_" + id); actor.transform.SetParent(root, false); actor.transform.position = marker.Position;
-                actor.layer = 2; // Ignore Raycast: the environment mask must not count the zombie itself.
-                var agent = actor.AddComponent<NavMeshAgent>(); agent.radius = .22f; agent.height = 1.7f;
-                agent.stoppingDistance = id == 1 ? .05f : .25f; agent.speed = .9f; agent.acceleration = 4;
-                agent.angularSpeed = 120; agent.obstacleAvoidanceType = ObstacleAvoidanceType.LowQualityObstacleAvoidance;
-                var navigation = actor.AddComponent<ZombieNavigation>();
-                var masks = WardCollisionBinding.Resolve(); navigation.Obstacles = masks.Movement;
-                var animation = actor.AddComponent<ZombieAnimationController>(); Mannequin(actor.transform, animation, material);
-                var shell = actor.AddComponent<ZombieAgentShell>(); shell.ZombieId = id; shell.Animation = animation;
-                shell.SightBlockers = masks.Sight; shell.HearingOccluders = masks.Hearing;
-                shell.Head = animation.Head; shell.FootEmitter = animation.FootEmitter; actors[i] = shell;
+                actors[i] = Actor(root, id, marker.Position, 0, material, masks);
                 string folder = WardPrimitives.GeneratedFolder("AI");
-                PrefabUtility.SaveAsPrefabAsset(actor, folder + "/Zombie_" + id + ".prefab");
+                PrefabUtility.SaveAsPrefabAsset(actors[i].gameObject, folder + "/Zombie_" + id + ".prefab");
             }
             director.Zombies = actors;
+
+            // v1.4 (E-21): the horde. Scene-only (no prefabs) and never commanded by the director; each follower is tied to its
+            // hunter here, a story zombie or a horde hunter.
+            if (HordeLayout.Members.Count != ZombieIds.HordeCount) throw new InvalidOperationException("HordeLayout must list " + ZombieIds.HordeCount + " zombies.");
+            var horde = new ZombieAgentShell[HordeLayout.Members.Count];
+            for (int i = 0; i < horde.Length; i++)
+            {
+                HordeLayout.Member member = HordeLayout.Members[i];
+                horde[i] = Actor(root, member.Id, member.Spawn, member.Yaw, material, masks);
+            }
+            for (int i = 0; i < horde.Length; i++)
+            {
+                HordeLayout.Member member = HordeLayout.Members[i];
+                if (member.Hunter) continue;
+                horde[i].Leader = member.Leader <= ZombieIds.Count ? actors[member.Leader - 1] : horde[member.Leader - ZombieIds.HordeFirst];
+                if (!horde[i].Leader || horde[i].Leader.ZombieId != member.Leader) throw new InvalidOperationException("Horde zombie " + member.Id + " has no leader " + member.Leader);
+            }
+            Debug.Log("[PZ] zombies: " + actors.Length + " story, " + horde.Length + " horde (" + (horde.Length - Followers()) + " hunters, " + Followers() + " followers)");
+        }
+        private static int Followers()
+        {
+            int count = 0;
+            foreach (HordeLayout.Member member in HordeLayout.Members) if (!member.Hunter) count++;
+            return count;
+        }
+        private static ZombieAgentShell Actor(Transform root, int id, Vector3 position, float yaw, Material material, PatientZero.Environment.Logic.WardCollisionPolicy masks)
+        {
+            var actor = new GameObject("Zombie_" + id); actor.transform.SetParent(root, false); actor.transform.position = position;
+            actor.transform.rotation = Quaternion.Euler(0, yaw, 0);
+            actor.layer = 2; // Ignore Raycast: the environment mask must not count the zombie itself.
+            var agent = actor.AddComponent<NavMeshAgent>(); agent.radius = .22f; agent.height = 1.7f;
+            agent.stoppingDistance = id == 1 ? .05f : .25f; agent.speed = .9f; agent.acceleration = 4;
+            agent.angularSpeed = 120; agent.obstacleAvoidanceType = ObstacleAvoidanceType.LowQualityObstacleAvoidance;
+            var navigation = actor.AddComponent<ZombieNavigation>();
+            navigation.Obstacles = masks.Movement;
+            var animation = actor.AddComponent<ZombieAnimationController>(); Mannequin(actor.transform, animation, material);
+            var shell = actor.AddComponent<ZombieAgentShell>(); shell.ZombieId = id; shell.Animation = animation;
+            shell.SightBlockers = masks.Sight; shell.HearingOccluders = masks.Hearing;
+            shell.Head = animation.Head; shell.FootEmitter = animation.FootEmitter;
+            return shell;
         }
         private static Transform Bone(Transform parent, string name, Vector3 local)
         { var go = new GameObject(name); go.transform.SetParent(parent, false); go.transform.localPosition = local; return go.transform; }

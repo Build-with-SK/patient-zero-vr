@@ -91,7 +91,14 @@ namespace PatientZero.Audio.Logic
             F(CueId.TensionDrone, MixerBus.Music, true),
             F(CueId.BlackoutTone, MixerBus.Ambience, true),
             W(CueId.ExteriorWind, 2, 30, true, 0, MixerBus.Ambience),
-            F(CueId.UiSelect, MixerBus.UI), F(CueId.UiBack, MixerBus.UI), F(CueId.UiPause, MixerBus.UI)
+            F(CueId.UiSelect, MixerBus.UI), F(CueId.UiBack, MixerBus.UI), F(CueId.UiPause, MixerBus.UI),
+            // Horror pass (Claude integration E-21): recordings from Assets/ThirdParty/OpenGameArt replace these placeholders.
+            W(CueId.VictimCrying, 1, 14, false, 0, MixerBus.Ambience, CaptionPolicy.Always, "[someone sobbing behind a door]"),
+            W(CueId.DistantScream, 4, 40, false, 0, MixerBus.Ambience, CaptionPolicy.Always, "[a scream, far off]"),
+            W(CueId.CrowdPanic, 3, 30, true, 0, MixerBus.Ambience, CaptionPolicy.Always, "[a panicking crowd outside]"),
+            W(CueId.NewsBroadcast, 1.5f, 14, false, 0, MixerBus.Voice, CaptionPolicy.None, "[emergency news broadcast]"),
+            F(CueId.JumpScareStinger, MixerBus.Music),
+            W(CueId.JumpScareScream, .5f, 12, false, 0, MixerBus.World, CaptionPolicy.Always, "[a scream in your face]")
         };
         public static int Count => Rows.Length;
         public static CueDefinition At(int index) => Rows[index];

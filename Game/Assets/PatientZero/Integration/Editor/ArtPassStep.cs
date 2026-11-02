@@ -14,7 +14,8 @@ namespace PatientZero.Integration.Editor
     /// <summary>
     /// The art pass, done at compose time so no seat file changes:
     ///   Ward 980:      every zombie wears the CC0 Quaternius model (ZombieArt) instead of the box mannequin; every box
-    ///                  built with a seat material gets a textured material and world-metre UVs (ArtSurfaces).
+    ///                  built with a seat material gets a textured material and world-metre UVs (ArtSurfaces); blood on
+    ///                  the white tiles, floors and ceilings (ArtBlood).
     ///   Bootstrap 980: the flat-screen post-processing volume (FlatScreenPost), off while a headset is active.
     /// Runs after every seat step (and after WorldTextStep 970), so it sees the finished scene.
     /// </summary>
@@ -36,8 +37,9 @@ namespace PatientZero.Integration.Editor
             var surfaces = new ArtSurfaces();
             surfaces.Apply(sceneRoots, renderer => renderer.GetComponentInParent<ZombieAnimationController>(true));
             if (surfaces.Swapped == 0) throw new InvalidOperationException("The art pass recognised no material in Ward: seat material names changed?");
+            ArtBlood.Counts blood = ArtBlood.Place(sceneRoots, root);
             Debug.Log("[PZ] art pass: " + zombies.Count + " zombies dressed, " + surfaces.Swapped + " renderers re-materialled, " +
-                      surfaces.Meshes + " boxes given world-metre UVs");
+                      surfaces.Meshes + " boxes given world-metre UVs; blood: " + blood);
         }
 
         [SceneBuildStep(BuildScene.Bootstrap, 980)]

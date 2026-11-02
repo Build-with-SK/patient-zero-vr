@@ -54,3 +54,8 @@ Thumbs.db
 
 # Unity 6 editor temp folder
 /Game/.utmp/
+
+# Mixamo characters and animations (Adobe terms): the owner downloads them with their own account. This repo is public,
+# so they are never committed (asset rule 7); a build may use them, the repository may not carry them.
+/Game/Assets/ThirdParty/Mixamo/
+/Game/Assets/ThirdParty/Mixamo.meta

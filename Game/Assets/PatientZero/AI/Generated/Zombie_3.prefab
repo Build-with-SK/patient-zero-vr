@@ -189,7 +189,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2990903793270148260}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 10.5, y: 0, z: 6.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -278,6 +278,7 @@ MonoBehaviour:
   Head: {fileID: 9170564763804118306}
   FootEmitter: {fileID: 6037274966568196342}
   Animation: {fileID: 2493040455523698210}
+  Leader: {fileID: 0}
 --- !u!1 &5378020528936589835
 GameObject:
   m_ObjectHideFlags: 0

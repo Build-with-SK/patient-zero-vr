@@ -6,7 +6,11 @@ using UnityEngine;
 
 namespace PatientZero.AI
 {
-    /// <summary>Ward zombie shell: 10 Hz phased AI, contract-only player queries, cue-before-chase ordering.</summary>
+    /// <summary>
+    /// Ward zombie shell: 10 Hz phased AI, contract-only player queries, cue-before-chase ordering.
+    /// v1.4 (E-21): a horde member takes its spawn, facing and beat from HordeLayout. A horde hunter is in play in its own act;
+    /// a follower is in play exactly while its Leader is in play and in view, and keeps its place in the Leader's pack.
+    /// </summary>
     [RequireComponent(typeof(ZombieNavigation))]
     public sealed class ZombieAgentShell : MonoBehaviour
     {
@@ -17,7 +21,11 @@ namespace PatientZero.AI
         public LayerMask HearingOccluders = 0;
         public Transform Head, FootEmitter;
         public ZombieAnimationController Animation;
+        [Tooltip("v1.4 horde follower: the hunter whose pack it keeps to (set at compose). Empty for every other zombie.")]
+        public ZombieAgentShell Leader;
         private ZombieBrain brain;
+        private bool horde, formed;
+        private HordeLayout.Member member;
         private ZombieNavigation navigation;
         private GameState state = GameState.Boot;
         private LightingState lighting = LightingState.Awakening;
@@ -27,15 +35,20 @@ namespace PatientZero.AI
         private CueHandle breathing, shuffling;
         private static readonly ProfilerMarker TickMarker = new ProfilerMarker("PatientZero.AI.Tick");
         public ZombieBrain Brain => brain;
+        /// <summary>In play this act (its simulation runs).</summary>
+        public bool Active => active;
+        /// <summary>In play and in view (the Walker stays out of view until its window pass).</summary>
+        public bool Shown { get; private set; }
         private void Awake()
         {
             navigation = GetComponent<ZombieNavigation>();
+            horde = HordeLayout.TryGet(ZombieId, out member);
             Vector3 spawn = Spawn();
-            // v1.3 (E-19): the lobby guard walks its own line; every other patroller uses the ward's.
+            // v1.3 (E-19): the lobby guard walks its own line; every other patroller uses the ward's. v1.4: a horde hunter its own.
             bool guard = ZombieId == ZombieIds.Guard;
             brain = new ZombieBrain(ZombieId, spawn, new System.Random(1200 + ZombieId),
-                guard ? WardLayout.Z6_PatrolNorth.Position : WardLayout.Z3_PatrolNorth.Position,
-                guard ? WardLayout.Z6_PatrolSouth.Position : WardLayout.Z3_PatrolSouth.Position);
+                horde ? member.PatrolA : guard ? WardLayout.Z6_PatrolNorth.Position : WardLayout.Z3_PatrolNorth.Position,
+                horde ? member.PatrolB : guard ? WardLayout.Z6_PatrolSouth.Position : WardLayout.Z3_PatrolSouth.Position);
             lastTick = Time.time; nextTick = Time.time + ZombieId * .017f;
         }
         private void OnEnable()
@@ -53,6 +66,7 @@ namespace PatientZero.AI
         }
         private Vector3 Spawn()
         {
+            if (horde) return member.Spawn;
             switch (ZombieId)
             {
                 case ZombieIds.Walker: return WardLayout.Z1_WalkFrom.Position;
@@ -67,15 +81,48 @@ namespace PatientZero.AI
         private void ActStarted(ActStarted e)
         {
             state = GameState.Playing; // Ward can load after Bootstrap's Playing notification.
-            active = ZombieIds.ActOf(ZombieId) == e.Act; StopLoops(); // v1.3: two zombies share the lobby lastTick = Time.time; nextTick = Time.time + ZombieId * .017f;
+            // v1.4: a follower is never in play at the start of an act; it joins when its leader shows (Update).
+            active = horde ? member.Hunter && member.Act == e.Act : ZombieIds.ActOf(ZombieId) == e.Act;
+            StopLoops(); // v1.3: two zombies share the lobby lastTick = Time.time; nextTick = Time.time + ZombieId * .017f;
             brain.Reset(ZombieId == 4 ? ZombieMode.Restrained : ZombieMode.Dormant);
+            formed = false;
             if (navigation) { navigation.SetSimulationActive(active); if (active) navigation.Warp(Spawn()); }
+            if (horde) transform.rotation = Quaternion.Euler(0, member.Yaw, 0);
             if (Animation) Animation.ResetPose();
-            if (Animation) Animation.SetVisible(active && ZombieId != 1);
-            if (active && ZombieId != 1) StartBreathing();
+            Shown = active && ZombieId != 1;
+            if (Animation) Animation.SetVisible(Shown);
+            if (Shown) StartBreathing();
+            if (active && horde && member.Patrols) brain.SetMode(ZombieMode.Patrol);
+        }
+        /// <summary>A follower comes into play with its leader and leaves with it: a pack is never split across acts.</summary>
+        private void TrackLeader()
+        {
+            bool join = Leader.active && Leader.Shown;
+            if (join == active) return;
+            active = join; formed = false;
+            StopLoops(); brain.Reset(ZombieMode.Dormant);
+            navigation.SetSimulationActive(join);
+            if (join)
+            {
+                navigation.Warp(Spawn()); transform.rotation = Quaternion.Euler(0, member.Yaw, 0);
+                brain.SetMode(ZombieMode.Follow); lastTick = Time.time; nextTick = Time.time + ZombieId % 10 * .01f;
+            }
+            if (Animation) { Animation.ResetPose(); Animation.SetVisible(join); }
+            Shown = join; // followers do not breathe: a pack is heard by its shuffling, and the voice budget stays with the hunters
+        }
+        /// <summary>Its place in the pack: where it spawned until the leader first moves off, then behind the leader.</summary>
+        private Vector3 Slot()
+        {
+            Vector3 lead = Leader.transform.position;
+            if (!formed && WardLayout.HorizontalDistance(lead, Leader.Spawn()) > 1) formed = true;
+            return formed ? HordeLayout.Slot(in member, lead, Leader.transform.forward) : Spawn();
         }
         private void StateChanged(GameStateChanged e)
-        { state = e.To; lastTick = Time.time; if (!GameStateRules.IsSimulationLive(state)) navigation.Stop(); }
+        {
+            state = e.To; lastTick = Time.time; if (!GameStateRules.IsSimulationLive(state)) navigation.Stop();
+            // The director stands the story zombies down for the ending; the horde (which it does not command) kneels with them.
+            if (horde && active && e.To == GameState.Ending) { SetMode(ZombieMode.Passive); Kneel(); }
+        }
         private void LightingChanged(LightingChanged e) => lighting = e.State;
         private void SettingsChanged(SettingsChanged e) { settings = e.Settings; brain.Reduced = settings.Scares == ScareIntensity.Reduced; }
         private void Hear(NoiseEvent noise)
@@ -87,6 +134,7 @@ namespace PatientZero.AI
         }
         private void Update()
         {
+            if (Leader) TrackLeader();
             if (!active || Time.time < nextTick) return;
             float now = Time.time, delta = Mathf.Max(0, now - lastTick); lastTick = now; nextTick = now + .1f;
             bool live = GameStateRules.IsSimulationLive(state);
@@ -101,6 +149,8 @@ namespace PatientZero.AI
             var frame = new PerceptionFrame(transform.position, transform.forward, player.FloorPosition,
                 player.HeadSpeed, player.FastestHandSpeed, clear, navigation.PathFailed, lighting);
             brain.Reduced = settings.Scares == ScareIntensity.Reduced;
+            if (Leader && brain.Mode == ZombieMode.Follow)
+                brain.Follow(Leader.brain.Level == AlertLevel.Chasing, Leader.brain.Target, Slot(), now);
             var signals = brain.Tick(now, delta, true, in frame);
             // The audible/captioned warning is applied before alert publication or navigation.
             if ((signals & ZombieSignals.Snarl) != 0) Cues.Play(CueId.ZombieSnarl, eye, NoiseOrigin.Zombie);
@@ -125,6 +175,7 @@ namespace PatientZero.AI
             navigation.SetSimulationActive(value);
             if (value) navigation.Warp(transform.position);
             if (Animation) Animation.SetVisible(value);
+            Shown = value;
             if (!value) { navigation.Stop(); StopLoops(); } else StartBreathing();
         }
         public void SetMode(ZombieMode mode) { brain.SetMode(mode); if (mode == ZombieMode.Passive) { navigation.Stop(); StopLoops(2); } }

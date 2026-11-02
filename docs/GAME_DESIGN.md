@@ -283,6 +283,12 @@ All world cues use **spatial blend 1, Doppler 0, a custom rolloff curve that is 
 | BlackoutTone | Act 3 bed | 2D | — | yes | 0 | Ambience | — |
 | ExteriorWind | daylight beyond the exit | 3D | 2–30 | yes | 0 | Ambience | — |
 | UiSelect / UiBack / UiPause | menus | 2D, ignores pause | — | no | 0 | UI | — |
+| VictimCrying (v1.4) | someone sobbing behind a door on the player's floor, in bouts | 3D | 1–14 | no | 0 | Ambience | ● [someone sobbing behind a door] |
+| DistantScream (v1.4) | a scream 9–30 m away on the player's floor, every 22–50 s (not during the news) | 3D | 4–40 | no | 0 | Ambience | ● [a scream, far off] |
+| CrowdPanic (v1.4) | the crowd outside the main doors, ground floor | 3D | 3–30 | yes | 0 | Ambience | ● [a panicking crowd outside] |
+| NewsBroadcast (v1.4) | the ceiling TV in B-7 at the start of a run | 3D | 1.5–14 | no | 0 | Voice | the anchor's words, timed from the recording's transcript |
+| JumpScareStinger (v1.4) | the exit jump scare | 2D | — | no | 0 | Music | — |
+| JumpScareScream (v1.4) | the exit zombie, in the player's face | 3D | .5–12 | no | 0 | World | ● [a scream in your face] |
 
 `i` = the intensity argument (0..1) passed to `Cues.Play`.
 **Fairness rule (tested):** every zombie vocal's Max is ≥ 9 m (1.5 × the largest common player noise radius of 6 m), so **you always hear a zombie before it can hear you.** Noise radius ≤ Max for every cue.
@@ -390,3 +396,28 @@ and Z7 kneeling.
 Each new mechanic is an existing one placed again: puzzles carry their act and objective as serialized fields whose
 defaults are the original Act 1-4 bindings, so the ward's puzzles are unchanged. A lever can require another objective
 first (`requires`).
+
+## 12. Horror pass (owner request, 2026-11-02; contract v1.4, integration exception E-21)
+
+The owner asked for "real" stairs, a horde, a Resident Evil-like hospital (white tiles, blood, people crying), a jump
+scare at the final exit and an opening news broadcast that holds the player. Genre and mood only: no content from any
+existing game.
+
+* **News broadcast.** A television hangs from the ceiling of B-7. When a new run starts it plays a 64 s emergency
+  bulletin (a CC0 recording) with its own headlines, ticker and a failing picture. The player cannot walk away until it
+  ends: on a flat screen the view turns to the set and stays there; in a headset the body is turned to it once and
+  movement is held, the head stays free. The PA ducks it. A restored act does not replay it.
+* **Hospital.** White tiled walls; blood on walls, floors and ceilings, and two messages written in blood.
+* **Soundscape.** People sob behind doors on the player's floor, screams come from elsewhere in the building, and a
+  crowd panics outside the main doors. None of it is a noise a zombie can hear. Reduced scares: fewer, quieter screams.
+* **The horde (v1.4).** 28 zombies. Eight hunt with their own senses: the five story hunters and three new ones (a pack
+  walking the floor-3 corridor in Act 4, a nest in Lab B, a pack by the main doors). The other 18 follow a hunter: they
+  keep their place in its pack, go where it goes, and when it gives chase the pack chases too. Followers are deaf, see
+  only at arm's length (1.8 m) and are slower (1.3 m/s chasing against 1.6); the Walker's two cannot see or catch. A
+  follower is in play exactly while its hunter is. Ids 101–121, `HordeLayout` (AI) is authoritative.
+* **Stairs.** On a flat screen the player walks down a real stairwell between floors: twenty risers (0.18 m, going 0.28 m)
+  with a fire-door lobby halfway. Stepping on the stair landing still finishes the act; the top door then opens. In a
+  headset the fade between floors stays (movement there is by teleport anchors only).
+* **Exit jump scare.** As the main doors open, a zombie throws itself at the player's face from the doorway, with a
+  stinger and a scream; the picture cuts to black for 0.75 s and the ending plays. Skipped with reduced scares. No
+  controller rumble (only AI and Atmosphere may raise haptics).

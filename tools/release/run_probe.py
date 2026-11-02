@@ -68,7 +68,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--rounds", type=int, default=3)
     parser.add_argument("--runs", type=int, default=1)
-    parser.add_argument("--timeout", type=float, default=0, help="seconds per run (default: 300 per round + 60)")
+    parser.add_argument("--timeout", type=float, default=0, help="seconds per run (default: 360 per round + 60)")
     parser.add_argument("--width", type=int, default=1280)
     parser.add_argument("--height", type=int, default=720)
     parser.add_argument("--exe", type=Path, default=EXE)
@@ -78,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"BLOCKED: {args.exe} does not exist. Build it: python tools/unity/unity_batch.py build-windows")
         return 2
     LOGS.mkdir(parents=True, exist_ok=True)
-    timeout = args.timeout or 300 * args.rounds + 60
+    timeout = args.timeout or 360 * args.rounds + 60
     results = []
     for i in range(1, args.runs + 1):
         print(f"run {i}/{args.runs}: {args.rounds} round(s), timeout {timeout:.0f} s")

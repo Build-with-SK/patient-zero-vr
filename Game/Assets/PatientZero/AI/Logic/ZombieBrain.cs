@@ -4,7 +4,8 @@ using UnityEngine;
 
 namespace PatientZero.AI.Logic
 {
-    public enum ZombieMode { Dormant, Idle, Patrol, Scripted, Restrained, Passive }
+    // Follow (v1.4): a horde follower keeping its place in its hunter's pack.
+    public enum ZombieMode { Dormant, Idle, Patrol, Scripted, Restrained, Passive, Follow }
     [Flags]
     public enum ZombieSignals { None = 0, Sniff = 1, Snarl = 2, Groan = 4, Caught = 8, AlertChanged = 16 }
 
@@ -26,6 +27,9 @@ namespace PatientZero.AI.Logic
         private readonly System.Random random;
         private readonly int id;
         private readonly Vector3 spawn, patrolNorth, patrolSouth;
+        // v1.4 horde: followers are deaf and nearly blind and go where their hunter goes; the Walker's are blind and cannot catch.
+        private readonly bool horde, follower, blind;
+        private Vector3 followSlot;
         private float clock, stateAge, searchAge, lastRetarget = -100, lastPlayerStimulus = -100;
         private float salience = -1, catchAge, stunRemaining, patrolPause, nextSearchPoint;
         private Vector3 searchCentre;
@@ -38,14 +42,21 @@ namespace PatientZero.AI.Logic
         public bool Reduced { get; set; }
         public bool AssistedSpeed { get; set; }
         public float HearingMultiplier => id == ZombieIds.Patroller ? 1.2f : 1;
-        public float WalkSpeed => id == ZombieIds.Patroller ? .8f : .9f;
-        public float ChaseSpeed => (id == ZombieIds.Patroller ? 1.5f : 1.6f) * (Reduced || AssistedSpeed ? .8f : 1);
+        public float WalkSpeed => horde ? .85f : id == ZombieIds.Patroller ? .8f : .9f;
+        /// <summary>The horde is slower than the story hunters, so a pack strings out behind the one leading it.</summary>
+        public float ChaseSpeed => (follower ? 1.3f : horde ? 1.45f : id == ZombieIds.Patroller ? 1.5f : 1.6f) * (Reduced || AssistedSpeed ? .8f : 1);
+        public bool IsFollower => follower;
         public bool IsStunned => stunRemaining > 0;
 
         public ZombieBrain(int id, Vector3 spawn, System.Random random, Vector3 patrolNorth = default, Vector3 patrolSouth = default)
         {
-            if (id < 1 || id > ZombieIds.Count || !Hearing.Finite(spawn)) throw new ArgumentException("Invalid zombie setup");
+            if (!ZombieIds.IsValid(id) || !Hearing.Finite(spawn)) throw new ArgumentException("Invalid zombie setup");
             this.id = id; this.spawn = spawn; this.random = random ?? throw new ArgumentNullException(nameof(random));
+            horde = HordeLayout.TryGet(id, out HordeLayout.Member member);
+            if (ZombieIds.IsHorde(id) && !horde) throw new ArgumentException("Horde zombie " + id + " is not in HordeLayout");
+            follower = horde && !member.Hunter;
+            blind = follower && member.Leader == ZombieIds.Walker;
+            followSlot = spawn;
             this.patrolNorth = patrolNorth; this.patrolSouth = patrolSouth;
             Reset(id == ZombieIds.FinalPatient ? ZombieMode.Restrained : ZombieMode.Dormant);
         }
@@ -67,11 +78,25 @@ namespace PatientZero.AI.Logic
         public void ScriptedMove(Vector3 target)
         { if (!Hearing.Finite(target)) return; Mode = ZombieMode.Scripted; Target = target; HasMoveTarget = true; }
         public void ReleaseRestraint() { released = true; }
+
+        /// <summary>
+        /// A follower's link to its pack (v1.4), given before each tick: where its place in the pack is now, and whether its
+        /// hunter is chasing. A chasing hunter takes the pack with it, straight for what it is chasing.
+        /// </summary>
+        public void Follow(bool leaderChasing, Vector3 leaderTarget, Vector3 slot, float now)
+        {
+            if (!follower || Mode != ZombieMode.Follow || caught || !Hearing.Finite(slot) || !Hearing.Finite(leaderTarget) ||
+                !Hearing.Finite(now) || now < clock) return;
+            followSlot = slot;
+            if (!leaderChasing || blind) return;
+            Target = leaderTarget; searchCentre = Target; lastPlayerStimulus = now;
+            BeginChase();
+        }
         public void Stun(float seconds) { if (Hearing.Finite(seconds)) stunRemaining = Math.Max(stunRemaining, seconds); }
 
         public bool Hear(in NoiseEvent noise, Vector3 position, float occlusion, float now, bool live)
         {
-            if (!live || IsStunned || caught || Mode == ZombieMode.Passive || Mode == ZombieMode.Scripted ||
+            if (follower || !live || IsStunned || caught || Mode == ZombieMode.Passive || Mode == ZombieMode.Scripted ||
                 Mode == ZombieMode.Restrained || !Hearing.Finite(now) || now < clock ||
                 !Hearing.CanHear(in noise, position, HearingMultiplier, occlusion, now)) return false;
             float strength = Hearing.Salience(in noise, position, HearingMultiplier, occlusion);
@@ -111,7 +136,7 @@ namespace PatientZero.AI.Logic
                 Catch(delta, released && distance <= WardLayout.FinalPatientReach && frame.LineClear && Math.Abs(spawn.y - frame.Player.y) <= 1.2f);
                 return Flush();
             }
-            bool sees = CanSee(in frame);
+            bool sees = !blind && CanSee(in frame);
             if (sees && (Level == AlertLevel.Investigating || Level == AlertLevel.Searching || Level == AlertLevel.Chasing))
             { Target = frame.Player; lastPlayerStimulus = now; BeginChase(); }
             else if (sees && Level == AlertLevel.Unaware)
@@ -145,7 +170,7 @@ namespace PatientZero.AI.Logic
                 case AlertLevel.Chasing:
                     HasMoveTarget = true;
                     if (frame.PathFailed || now - lastPlayerStimulus >= 3) { StartSearch(); catchAge = 0; }
-                    else Catch(delta, frame.LineClear && Math.Abs(frame.Zombie.y - frame.Player.y) <= 1.2f &&
+                    else Catch(delta, !blind && frame.LineClear && Math.Abs(frame.Zombie.y - frame.Player.y) <= 1.2f &&
                         WardLayout.HorizontalDistance(frame.Zombie, frame.Player) <= (Reduced ? .6f : .8f));
                     break;
             }
@@ -156,6 +181,9 @@ namespace PatientZero.AI.Logic
             if (Reduced || id == ZombieIds.Patroller || frame.Lighting == LightingState.Blackout || !frame.LineClear ||
                 !(frame.HeadSpeed > .6f || frame.HandSpeed > 1.2f)) return false;
             float range = frame.Lighting == LightingState.WardDim ? 6 : frame.Lighting == LightingState.EmergencyRed ? 3 : 0;
+            // The horde's hunters see two thirds as far; a follower notices only what is right in front of it.
+            if (follower) range = Math.Min(range, 1.8f);
+            else if (horde) range *= .67f;
             Vector3 offset = frame.Player - frame.Zombie; offset.y = 0;
             Vector3 facing = frame.Forward; facing.y = 0;
             return range > 0 && offset.sqrMagnitude <= range * range &&
@@ -163,6 +191,14 @@ namespace PatientZero.AI.Logic
         }
         private void TickPatrol(float delta, in PerceptionFrame frame)
         {
+            if (Mode == ZombieMode.Follow)
+            {
+                // Keep to the pack: walk to the slot once it is a step away, stop when there.
+                returning = false;
+                Target = followSlot;
+                HasMoveTarget = WardLayout.HorizontalDistance(frame.Zombie, followSlot) > (HasMoveTarget ? .35f : .9f);
+                return;
+            }
             if (returning)
             {
                 if (WardLayout.HorizontalDistance(frame.Zombie, spawn) > .35f) return;

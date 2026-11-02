@@ -11,7 +11,10 @@ namespace PatientZero.Player
     [DefaultExecutionOrder(-50)]
     public sealed class DesktopLocomotion : MonoBehaviour
     {
-        public PlayerRig rig;public GameFlow flow;public CharacterController capsule;public Camera cameraView;public bool desktopSimulation=true;private float pitch;private bool live;private float footstep;private Vector3 viewBase;private float bob;
+        public PlayerRig rig;public GameFlow flow;public CharacterController capsule;public Camera cameraView;public bool desktopSimulation=true;
+        /// <summary>Integration E-21: while set, look, move and teleport are ignored (pause still works); a broadcast holds the view.</summary>
+        public bool viewLocked;
+        private float pitch;private bool live;private float footstep;private Vector3 viewBase;private float bob;
         private void OnEnable(){GameEvents.StateChanged.Subscribe(State);}
         private void OnDisable(){GameEvents.StateChanged.Unsubscribe(State);}
         private void State(GameStateChanged state){live=GameStateRules.IsSimulationLive(state.To);}
@@ -43,7 +46,7 @@ namespace PatientZero.Player
             rig.SetTracking(InputModality.Controllers,true,true);
             if(FlatInput.Pause && flow){if(flow.Core.State==GameState.Paused)flow.Resume();else flow.Pause();}
             if(FlatInput.Confirm && flow && flow.Core.State==GameState.Calibration)flow.ConfirmCalibration();
-            if(!live || !flow || flow.Core.IsTransitioning)return;
+            if(!live || !flow || flow.Core.IsTransitioning || viewLocked)return;
             // E-11: look starts from the current facing (no snap); yaw is read back from the rig every frame.
             if(FlatInput.Look!=Vector2.zero){float yaw=rig.origin.transform.eulerAngles.y+FlatInput.Look.x;pitch=Mathf.Clamp(pitch+FlatInput.Look.y,-75,75);rig.origin.transform.rotation=Quaternion.Euler(0,yaw,0);cameraView.transform.localRotation=Quaternion.Euler(pitch,0,0);}
             if(FlatInput.Teleport)TeleportNext();

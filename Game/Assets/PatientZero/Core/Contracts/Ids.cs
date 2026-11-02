@@ -94,8 +94,15 @@ namespace PatientZero.Core
         public const int Guard = 6;         // Z6, Act 6 (v1.3), patrols across the lobby
         public const int Porter = 7;        // Z7, Act 6 (v1.3), asleep behind the reception desk, investigates noise
         public const int Count = 7;
+        // v1.4 (E-21): the horde. 21 more zombies, ids HordeFirst..HordeFirst+HordeCount-1: three more hunters and the
+        // packs that follow the hunters (AI's HordeLayout says which). The director never commands them; they act on their own.
+        public const int HordeFirst = 101;
+        public const int HordeCount = 21;
 
-        /// <summary>The act in which a zombie is in play; None for an unknown id.</summary>
+        public static bool IsHorde(int id) => id >= HordeFirst && id < HordeFirst + HordeCount;
+        public static bool IsValid(int id) => (id >= Walker && id <= Count) || IsHorde(id);
+
+        /// <summary>The act in which a story zombie is in play; None for an unknown id and for the horde (AI's HordeLayout).</summary>
         public static ActId ActOf(int id)
         {
             if (id >= Walker && id <= Researcher) return (ActId)id;
@@ -268,5 +275,13 @@ namespace PatientZero.Core
         UiSelect = 800,
         UiBack = 801,
         UiPause = 802,
+
+        // Horror pass (contract v1.4, Claude integration E-21): recorded voices of the outbreak.
+        VictimCrying = 900,      // someone sobbing behind a door
+        DistantScream = 901,
+        CrowdPanic = 902,        // loop; the crowd outside the main doors
+        NewsBroadcast = 903,     // the opening TV broadcast; Audio captions it from the recording's timed transcript
+        JumpScareStinger = 904,  // 2D hit for the exit jump scare
+        JumpScareScream = 905,   // the zombie's scream in the player's face
     }
 }

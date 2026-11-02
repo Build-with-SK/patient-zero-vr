@@ -21,10 +21,10 @@ namespace PatientZero.Integration.Editor
         public int Swapped { get; private set; }
         public int Meshes { get; private set; }
 
-        private Material Floor => floor ? floor : floor = Textured("Floor", ArtTextures.Floor(), Color.white, 0, 1, 1);
-        private Material Wall => wall ? wall : wall = Textured("Wall", ArtTextures.Wall(), Color.white, 0, 1, 1, ArtTextures.WallHeight);
-        private Material Ceiling => ceiling ? ceiling : ceiling = Textured("Ceiling", ArtTextures.Ceiling(), Color.white, 0, 1, 1);
-        private Material Metal => metal ? metal : metal = Textured("Metal", ArtTextures.Metal(), Color.white, .6f, 1, .6f);
+        internal Material Floor => floor ? floor : floor = Textured("Floor", ArtTextures.Floor(), Color.white, 0, 1, 1);
+        internal Material Wall => wall ? wall : wall = Textured("Wall", ArtTextures.Wall(), Color.white, 0, 1, 1, ArtTextures.WallHeight);
+        internal Material Ceiling => ceiling ? ceiling : ceiling = Textured("Ceiling", ArtTextures.Ceiling(), Color.white, 0, 1, 1);
+        internal Material Metal => metal ? metal : metal = Textured("Metal", ArtTextures.Metal(), Color.white, .6f, 1, .6f);
         private Material PaintedMetal => paintedMetal ? paintedMetal : paintedMetal = Textured("PaintedMetal", ArtTextures.Grime(), Rgb(70, 78, 74), .3f, .9f, .8f);
         private Material Fabric => fabric ? fabric : fabric = Textured("Fabric", ArtTextures.Fabric(), Rgb(84, 122, 116), 0, 1, 1);
         private Material Ceramic => ceramic ? ceramic : ceramic = Textured("Ceramic", ArtTextures.Grime(), Rgb(214, 216, 206), 0, 1, .5f);
@@ -32,7 +32,7 @@ namespace PatientZero.Integration.Editor
         private Material Trace => trace ? trace : trace = Textured("Trace", ArtTextures.Grime(), Rgb(96, 20, 14), 0, 1, .6f);
         private Material Damage => damage ? damage : damage = Textured("Damage", ArtTextures.Grime(), Rgb(50, 54, 52), 0, .6f, 1.2f);
         private Material Wood => wood ? wood : wood = Textured("Wood", ArtTextures.Wood(), Color.white, 0, 1, 1);
-        private Material DoorPaint => doorPaint ? doorPaint : doorPaint = Textured("DoorPaint", ArtTextures.Grime(), Rgb(122, 138, 142), .15f, .9f, .8f);
+        internal Material DoorPaint => doorPaint ? doorPaint : doorPaint = Textured("DoorPaint", ArtTextures.Grime(), Rgb(122, 138, 142), .15f, .9f, .8f);
         private Material RedPaint => redPaint ? redPaint : redPaint = Textured("RedPaint", ArtTextures.Grime(), Rgb(150, 30, 24), .2f, .9f, .8f);
         private Material Plastic => plastic ? plastic : plastic = Textured("Plastic", ArtTextures.Grime(), Rgb(150, 152, 146), 0, .8f, .8f);
 
@@ -151,7 +151,13 @@ namespace PatientZero.Integration.Editor
         /// The unit cube with UVs in world metres, projected per face along the face's dominant world axis: floors and
         /// ceilings get (x, z), walls get (along, height). Saved inside the scene with the renderer that uses it.
         /// </summary>
-        public static Mesh WorldUvBox(Transform t)
+        public static Mesh WorldUvBox(Transform t) => UvBox(t, Vector3.zero);
+
+        /// <summary>
+        /// E-21: as <see cref="WorldUvBox"/>, but in metres from <paramref name="origin"/>, so two copies of a piece of building
+        /// (the stairwell lobbies) carry exactly the same texture although they stand in different places.
+        /// </summary>
+        public static Mesh UvBox(Transform t, Vector3 origin)
         {
             var vertices = new Vector3[24];
             var normals = new Vector3[24];
@@ -172,7 +178,7 @@ namespace PatientZero.Integration.Editor
                 {
                     vertices[f * 4 + k] = corners[k];
                     normals[f * 4 + k] = n;
-                    uvs[f * 4 + k] = Project(t.TransformPoint(corners[k]), worldNormal);
+                    uvs[f * 4 + k] = Project(t.TransformPoint(corners[k]) - origin, worldNormal);
                 }
 
                 // Unity's front faces wind clockwise: Cross(p1 - p0, p2 - p0) points out of the face.

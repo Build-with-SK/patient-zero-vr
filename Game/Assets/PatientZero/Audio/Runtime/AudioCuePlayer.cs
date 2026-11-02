@@ -14,6 +14,12 @@ namespace PatientZero.Audio
         public bool BuildPlaceholders = true;
         public bool EnableLicensedSpatializer;
         public LayerMask Occluders = 1;
+        /// <summary>Integration E-21: recordings that replace a cue's placeholder; one is picked at random per play.</summary>
+        public RecordedCue[] Recorded = new RecordedCue[0];
+        /// <summary>E-21: Captions, when set, are the recording's words as speech captions, timed from the clip's own playback
+        /// position (so a pause or a duck cannot put them out of step). Only for cues with a single recording.</summary>
+        [System.Serializable] public struct RecordedCue { public CueId Id; public AudioClip[] Clips; public TimedCaption[] Captions; }
+        [System.Serializable] public struct TimedCaption { public float At, Seconds; public string Text; }
         private sealed class Voice
         {
             public AudioSource Source;
@@ -23,11 +29,15 @@ namespace PatientZero.Audio
             public int Handle;
             public NoiseOrigin Origin;
             public float Intensity, Fade = 1, FadeRate, Occlusion = 1, NextNoise, NextCaption;
+            public TimedCaption[] Timed;
+            public int NextTimed;
         }
         private readonly VoiceBudget budget = new VoiceBudget();
         private readonly NoiseGate noiseGate = new NoiseGate();
         private readonly Voice[] voices = new Voice[24];
         private AudioClip[] clips;
+        private AudioClip[][] recorded;
+        private TimedCaption[][] timed;
         private AnimationCurve[] curves;
         private AudioMixerGroup[] groups;
         private ExperienceSettings settings = ExperienceSettings.Defaults;
@@ -57,6 +67,14 @@ namespace PatientZero.Audio
                     curves[i].postWrapMode = WrapMode.ClampForever;
                 }
             }
+            recorded = new AudioClip[CueTable.Count][]; timed = new TimedCaption[CueTable.Count][];
+            if (Recorded != null)
+                foreach (var r in Recorded)
+                {
+                    int i = Index(r.Id); if (i < 0 || r.Clips == null || r.Clips.Length == 0) continue;
+                    recorded[i] = r.Clips;
+                    if (r.Captions != null && r.Captions.Length > 0 && r.Clips.Length == 1) timed[i] = r.Captions;
+                }
             for (int i = 0; i < voices.Length; i++)
             {
                 var child = new GameObject("Voice_" + i); child.transform.SetParent(transform, false);
@@ -94,7 +112,9 @@ namespace PatientZero.Audio
             if (!initialized || id == CueId.None || !NoiseGate.Finite(position) || !NoiseGate.Finite(intensity) || intensity <= 0 || !CueTable.TryGet(id, out var row))
             { RejectedCues++; return default; }
             int index = Index(id);
-            if (!clips[index]) { MissingAssets++; return default; }
+            var takes = recorded[index];
+            AudioClip clip = takes != null ? takes[Random.Range(0, takes.Length)] : clips[index];
+            if (!clip) { MissingAssets++; return default; }
             intensity = Mathf.Clamp01(intensity);
             if (id == CueId.DistantCrashLure) origin = NoiseOrigin.Scripted;
             var noise = new NoiseEvent(position, row.NoiseRadius * intensity, id, origin, Time.time);
@@ -107,8 +127,10 @@ namespace PatientZero.Audio
                 LastStolenCue = admission.Stolen;
                 var v = voices[admission.Slot]; v.Source.Stop(); v.Handle = admission.Handle; v.Cue = row; v.Follow = follow;
                 v.Intensity = intensity; v.Origin = origin; v.Fade = 1; v.FadeRate = 0; v.Occlusion = 1;
-                v.NextNoise = Time.time + .2f; v.NextCaption = Time.time + 4;
-                v.Source.transform.position = position; v.Source.clip = clips[index]; v.Source.loop = row.Loop;
+                v.NextNoise = Time.time + .2f; v.NextCaption = Time.time + 4; v.Timed = takes != null ? timed[index] : null; v.NextTimed = 0;
+                v.Source.transform.position = position; v.Source.clip = clip; v.Source.loop = row.Loop;
+                // Repeated recordings vary a little in pitch; speech and music never do.
+                v.Source.pitch = takes != null && row.Bus != MixerBus.Voice && row.Bus != MixerBus.Music ? Random.Range(.93f, 1.06f) : 1;
                 v.Source.priority = row.Priority; v.Source.spatialBlend = row.World ? 1 : 0;
                 v.Source.spatialize = admission.Spatialized; v.Source.ignoreListenerPause = row.Bus == MixerBus.UI;
                 v.Source.outputAudioMixerGroup = groups[(int)row.Bus]; v.Source.minDistance = row.Min; v.Source.maxDistance = row.Max;
@@ -163,6 +185,7 @@ namespace PatientZero.Audio
                 { v.NextNoise = Time.time + .2f; EmitLoopNoise(v); }
                 if (v.Cue.Loop && v.Intensity > 0 && Time.time >= v.NextCaption)
                 { v.NextCaption = Time.time + 4; Caption(v); }
+                if (v.Timed != null) SpeakCaptions(v);
             }
         }
         private bool HasSpeech()
@@ -188,10 +211,21 @@ namespace PatientZero.Audio
                 v.Cue.CaptionPolicy == CaptionPolicy.Speech ? CaptionKind.Speech : CaptionKind.Sound,
                 v.Cue.World, v.Source.transform.position, v.Cue.Bus == MixerBus.Voice ? 4 : 2));
         }
+        /// <summary>E-21: the recording's own words, each when the clip reaches it.</summary>
+        private static void SpeakCaptions(Voice v)
+        {
+            float at = v.Source.time;
+            while (v.NextTimed < v.Timed.Length && at >= v.Timed[v.NextTimed].At)
+            {
+                var line = v.Timed[v.NextTimed++];
+                if (v.Intensity <= 0 || string.IsNullOrEmpty(line.Text)) continue;
+                GameEvents.CaptionRequested.Raise(new CaptionRequested(line.Text, CaptionKind.Speech, v.Cue.World, v.Source.transform.position, line.Seconds));
+            }
+        }
         private int Index(CueId cue) { for (int i = 0; i < CueTable.Count; i++) if (CueTable.At(i).Id == cue) return i; return -1; }
         private static int SourceKey(CueId cue, Vector3 p, NoiseOrigin origin) => unchecked((int)cue * 397 ^ (int)origin * 7919 ^
             Mathf.RoundToInt(p.x * 10) * 31 ^ Mathf.RoundToInt(p.y * 10) * 17 ^ Mathf.RoundToInt(p.z * 10));
-        private void Release(int i) { var v = voices[i]; v.Source.Stop(); budget.Release(v.Handle); v.Handle = 0; v.Follow = null; }
+        private void Release(int i) { var v = voices[i]; v.Source.Stop(); budget.Release(v.Handle); v.Handle = 0; v.Follow = null; v.Timed = null; }
         private void StopAll() { if (initialized) for (int i = 0; i < voices.Length; i++) if (voices[i].Handle != 0) Release(i); }
     }
 }

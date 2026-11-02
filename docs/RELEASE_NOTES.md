@@ -23,6 +23,23 @@ Win: the main doors open, and the ending reveals that you were Patient Zero ("YO
 (Play again, Credits, Quit). Loss: a zombie catches you ("YOU WERE CAUGHT"), and the act restarts. Throwing objects
 makes noise where they land, which lures zombies away. The countdown is atmosphere: nothing fails at 00:00.
 
+## Update 2026-11-02: horror pass (branch `claude/art-pass`, not yet in a release build)
+
+* **Opening news broadcast**: a television hanging from the ceiling of B-7 plays an emergency bulletin about the
+  outbreak when a run starts (64 s, with headlines and a ticker on screen). You cannot walk away until it ends: on a flat
+  screen the view turns to the set; in a headset you are turned to face it once and cannot move, but can look around.
+* **The horde**: 28 zombies instead of 7. Eight hunt by sound and sight; the rest follow a hunter in packs and chase when
+  it chases.
+* **Walkable stairs** (Windows, phone, iPad): you walk down a stairwell to the next floor instead of fading. VR keeps the
+  fade.
+* **A scarier hospital**: white tiled walls, blood on walls, floors and ceilings, people sobbing behind doors, screams
+  elsewhere in the building, a panicking crowd outside the main doors.
+* **Exit jump scare**: one last zombie as the main doors open. Off with reduced scares.
+* **New sounds** (OpenGameArt.org): crying voice by JeanMyna_VA (CC-BY 3.0), modified; news broadcast by OrbitStudios and
+  Fernando Ferreira (uploaded by zisongbr); screams by WuxiaScrub, Nocturnal_Vanguard and pauliuw; crowd by StarNinjas;
+  zombie voices by Darsycho, EmoPreben and ArcadeParty; stingers by psychhead_ (all CC0 except the crying).
+* Tested on Windows only: not in a headset, and not on a phone or iPad. The news captions come from a machine transcript that no person has checked.
+
 ## Update 2026-10-31: art pass
 
 * **Animated zombies**: every zombie is now the CC0 "Animated Zombie" by Quaternius, idling, walking and running at the

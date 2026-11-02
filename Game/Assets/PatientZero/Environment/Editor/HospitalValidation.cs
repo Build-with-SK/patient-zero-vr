@@ -82,13 +82,15 @@ namespace PatientZero.Environment.Editor
             var ids = new HashSet<int>();
             foreach (var actor in actors)
             {
-                if (!ids.Add(actor.ZombieId) || actor.ZombieId < 1 || actor.ZombieId > ZombieIds.Count) errors.Add("Duplicate/invalid zombie id.");
+                if (!ids.Add(actor.ZombieId) || !ZombieIds.IsValid(actor.ZombieId)) errors.Add("Duplicate/invalid zombie id.");
+                if (actor.Leader && (!ZombieIds.IsHorde(actor.ZombieId) || actor.Leader == actor)) errors.Add("Only a horde zombie follows a leader (v1.4).");
                 if (!actor.Head || !actor.FootEmitter || !actor.Animation) errors.Add("Zombie visual/audio references missing.");
                 var nav = actor.GetComponent<ZombieNavigation>();
                 if (!nav || nav.Obstacles.value != masks.Movement || actor.HearingOccluders.value != masks.Hearing || actor.SightBlockers.value != masks.Sight)
                     errors.Add("Zombie collision masks differ from the generated door/geometry policy.");
             }
-            if (actors.Count != ZombieIds.Count) errors.Add("Expected " + ZombieIds.Count + " zombie actors (four ward, three lower floors).");
+            if (actors.Count != ZombieIds.Count + ZombieIds.HordeCount)
+                errors.Add("Expected " + (ZombieIds.Count + ZombieIds.HordeCount) + " zombie actors (seven story zombies, then the v1.4 horde).");
             if (audio.Count == 1 && audio[0].Occluders.value != masks.Audio) errors.Add("Audio occlusion mask differs from geometry/door policy.");
             var surfaces = Find<NavMeshSurface>(ward);
             if (surfaces.Count != 1 || !surfaces[0].navMeshData) errors.Add("Saved NavMeshData missing.");
