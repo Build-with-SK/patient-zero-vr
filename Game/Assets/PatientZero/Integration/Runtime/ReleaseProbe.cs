@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using PatientZero.Core;
 using PatientZero.Flow;
 using PatientZero.Flow.Logic;
+using PatientZero.Integration.Logic;
 using PatientZero.Interaction;
 using PatientZero.Player;
 using UnityEngine;
@@ -143,7 +144,7 @@ namespace PatientZero.Integration
                 while (flow.Core.State != GameState.Playing && Time.realtimeSinceStartup < deadline) yield return null;
 
                 ActId previous = ActId.None, retried = ActId.None;
-                bool acted = false, scareShot = false, newsChecked = false;
+                bool acted = false, scareShot = false, newsChecked = false, roomLooked = false, corridorLooked = false;
                 float actedAt = 0;
                 while (flow.Core.State != GameState.Complete && Time.realtimeSinceStartup < deadline)
                 {
@@ -186,6 +187,10 @@ namespace PatientZero.Integration
                             yield return new WaitForSecondsRealtime(.5f);
                         }
                         if (previous == ActId.Awakening) { yield return News(!newsChecked); newsChecked = true; }
+                        // E-23: the hanged body in B-7 came while the news held the probe's eyes on the television; the corridor's
+                        // comes once the probe has looked at the dead end and turned away. Round 1 checks both.
+                        if (round == 1 && previous == ActId.Awakening && !roomLooked) { roomLooked = true; yield return LookBack(RoomScare, false); }
+                        if (round == 1 && previous == ActId.Machinery && !corridorLooked) { corridorLooked = true; yield return LookBack(CorridorScare, true); }
                         yield return Act(previous);
                         actedAt = Time.realtimeSinceStartup;
                         if (round == 1 && previous == ActId.Darkness) yield return Shot("3-darkness-end");
@@ -238,6 +243,46 @@ namespace PatientZero.Integration
             if (news.Holding) Problem("[PZ-PROBE] the news bulletin still held the player after " + (Time.time - began).ToString("0") + " s");
             else Debug.Log("[PZ-PROBE] the news bulletin held the player for another " + (Time.time - began).ToString("0.0") + " s");
             yield return new WaitForSeconds(1f); // the view is handed back
+        }
+
+        private const string RoomScare = "B-7 corner", CorridorScare = "corridor dead end";
+        /// <summary>E-23: where a player leaving B-7 for the stairs stands in the corridor, and where the corridor's dead body lies.</summary>
+        private static readonly Vector3 CorridorWatch = new Vector3(.4f, 0, 3.1f), CorridorBody = new Vector3(3.2f, 0, 4f);
+
+        /// <summary>
+        /// E-23: the look-away scares (LookAwayScare). In B-7 the probe looks at the corner from where it stands, turns its back on
+        /// it, and turns round. In the corridor it stands where a player leaving B-7 stands, looks at the dead end, turns to the
+        /// stairs, and turns back. Either way the body must be there and spotted. Round 1 photographs it, and in the corridor the
+        /// dead body on the floor too, from far enough back that a level view takes it in.
+        /// </summary>
+        private IEnumerator LookBack(string label, bool corridor)
+        {
+            LookAwayScare scare = null;
+            foreach (LookAwayScare s in Ward<LookAwayScare>()) if (s.label == label) scare = s;
+            if (!scare) { Problem("[PZ-PROBE] no look-away scare '" + label + "' in Ward"); yield break; }
+            Vector3 back = Services<IPlayerQuery>.TryGet(out IPlayerQuery player) ? player.FloorPosition : CorridorWatch;
+            if (corridor) MoveTo(CorridorWatch);
+            Vector3 from = corridor ? CorridorWatch : back, away = scare.lookAt - from;
+            away.y = 0;
+            Face(scare.lookAt);
+            yield return GameSeconds(.8f);
+            Face(corridor ? CorridorWatch + Vector3.right * 10 : from - away * 10);
+            yield return GameSeconds(LookAwayRule.AwaySeconds + 1f);
+            Face(scare.lookAt);
+            yield return GameSeconds(.5f);
+            Debug.Log("[PZ-PROBE] look-away scare '" + label + "': " + scare.Phase);
+            if (scare.Phase != LookAwayRule.Phase.Spotted) Problem("[PZ-PROBE] the look-away scare '" + label + "' ended " + scare.Phase + ", not Spotted");
+            if (round == 1) yield return Shot("1-hanging-" + (corridor ? "corridor" : "room"));
+            if (!corridor) yield break;
+            if (round == 1)
+            {
+                MoveTo(new Vector3(-1f, 0, 3f));
+                Face(CorridorBody);
+                yield return GameSeconds(.3f);
+                yield return Shot("2-dead-body");
+            }
+
+            MoveTo(back);
         }
 
         private void Problem(string message)
@@ -373,7 +418,17 @@ namespace PatientZero.Integration
                 {
                     float dead = Time.realtimeSinceStartup;
                     while ((flow.Core.State != GameState.Playing || flow.Core.IsTransitioning) &&
-                           Time.realtimeSinceStartup - dead < GameFlowCore.StruggleSeconds + 15) yield return null;
+                           Time.realtimeSinceStartup - dead < GameFlowCore.StruggleSeconds + 15)
+                    {
+                        // An unfocused window holds the struggle's clock (E-22), so a lost struggle would never end.
+                        if (!Application.isFocused && flow.Core.Struggling)
+                        {
+                            if (!struggleFocusNoted) Debug.Log("[PZ-PROBE] the game window has no focus; telling the struggle it has, so the clock runs");
+                            struggleFocusNoted = true;
+                            flow.Core.Focus(true);
+                        }
+                        yield return null;
+                    }
                     var back = Services<IPlayerQuery>.Instance;
                     bool inBed = back != null && WardLayout.HorizontalDistance(back.FloorPosition, WardLayout.A1_Start.Position) < .5f;
                     if (flow.Core.State != GameState.Playing || flow.Core.CurrentAct != ActId.Awakening || !inBed)
@@ -459,7 +514,7 @@ namespace PatientZero.Integration
             }
         }
 
-        private bool focusNoted;
+        private bool focusNoted, struggleFocusNoted;
 
         /// <summary>
         /// E-22: the game window of a run started from a background process often never gets focus, and the rig then drops every

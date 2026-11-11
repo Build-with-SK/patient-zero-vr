@@ -79,16 +79,16 @@ namespace PatientZero.Environment.Logic
                 // Floor 2
                 new FloorSign("FLOOR 2 - LABORATORIES", new Vector3(31.25f, 2.0f, 4.42f), .045f, 0),
                 new FloorSign("LAB A - SPECIMENS", new Vector3(38f, 2.6f, 4.42f), .035f, 0),
-                new FloorSign("LAB B - DO NOT WAKE", new Vector3(35f, 2.6f, 2.08f), .035f, 180),
-                new FloorSign("FUSE MISSING\nSPARE FUSES: LAB A", new Vector3(41.8f, 1.6f, 2.07f), .025f, 180),
-                new FloorSign("STAIR DOOR OVERRIDE\nNEEDS POWER", new Vector3(44.4f, 1.65f, 2.07f), .025f, 180),
+                // E-23 (owner, 2026-11-11): no instructions on the walls. "LAB B - DO NOT WAKE" is now "LAB B"; FUSE MISSING /
+                // SPARE FUSES: LAB A and STAIR DOOR OVERRIDE / NEEDS POWER are gone.
+                new FloorSign("LAB B", new Vector3(35f, 2.6f, 2.08f), .035f, 180),
                 new FloorSign("STAIRS - GROUND FLOOR", new Vector3(45.92f, 2.6f, 3.25f), .035f, 90),
                 new FloorSign("DOWN TO GROUND FLOOR\nMAIN LOBBY", new Vector3(48.42f, 1.75f, 3.25f), .04f, 90),
                 // Floor 1
                 new FloorSign("GROUND FLOOR - MAIN LOBBY", new Vector3(61.25f, 2.0f, 4.42f), .045f, 0),
                 new FloorSign("RECEPTION", new Vector3(64.6f, .75f, .52f), .04f, 180),
                 new FloorSign("SECURITY", new Vector3(67f, 2.6f, 6.92f), .035f, 0),
-                new FloorSign("GENERATOR\nPRIME BEFORE RELEASE", new Vector3(66.8f, 1.6f, 9.93f), .025f, 0),
+                new FloorSign("GENERATOR", new Vector3(66.8f, 1.6f, 9.93f), .025f, 0), // E-23: was GENERATOR / PRIME BEFORE RELEASE
                 new FloorSign("LOCKDOWN RELEASE", new Vector3(73.92f, 1.65f, 1.7f), .025f, 90),
                 new FloorSign("MAIN ENTRANCE", new Vector3(73.92f, 2.6f, 3.25f), .035f, 90),
             };

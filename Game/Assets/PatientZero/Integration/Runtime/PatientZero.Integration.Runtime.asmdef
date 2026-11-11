@@ -4,6 +4,7 @@
     "PatientZero.Core",
     "PatientZero.Flow",
     "PatientZero.Flow.Logic",
+    "PatientZero.Integration.Logic",
     "PatientZero.Interaction",
     "PatientZero.Player",
     "Unity.XR.CoreUtils",

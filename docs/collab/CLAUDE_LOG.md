@@ -207,3 +207,38 @@ Follow-ups:
 - `IntegrationPlayTests` still holds a lever for a fixed 2.1 s, as the probe did (Seat A test file, left as it was).
 - The unexplained first-run grab.
 - The probe's main-loop waits still freeze during a focus pause, as before E-22.
+
+## 2026-11-11 · Owner's step 1 feedback: no instructions, dead bodies, the look-away body (E-23)
+Kind: INTEGRATION
+What: The owner played and reported: no struggle (death at once and a restart on the same floor), no guns, no zombie that stared or screamed, no jump scare. They asked for no instructions on the walls or the screen, dead bodies on the floor, and a body that hangs where there was nothing once they look away. Their report matches the old 2026-10-31 build in the main folder (checkpoint restart, instant death, no door scene), not step 1, which they may not have opened: the game's own `Player.log` was last written on 2026-11-02, and the step-1 build writes it on every launch outside the probe. Guns are plan step 4 and the leap at the exit is step 6.
+- Instructions: the PUSH THE BAR, MOVE QUIETLY / LISTEN and THEY HEAR YOU signs are gone. On Floor 2, "LAB B - DO NOT WAKE" is now "LAB B" and "GENERATOR / PRIME BEFORE RELEASE" is now "GENERATOR"; FUSE MISSING / SPARE FUSES: LAB A and STAIR DOOR OVERRIDE / NEEDS POWER are gone. On screen there is no title during play and no objective, assist or completion hints; the controls show only in calibration and pause; sound captions need Sound direction visuals (speech still follows Subtitles); the struggle panel no longer shows while the player fights; death reads only "YOU DIED".
+- Struggle without instructions: on a flat screen any key except Esc and any mouse button counts as a press, and each press jolts the view for 0.14 s.
+- Dead bodies: new Integration step `DeadBodiesStep` (Ward 987). Four CC0 zombie models posed as corpses (the Death clip's last frame, a blood pool under each) lie in the corridor, the vestibule, behind the lobby desk and in the lobby. Two hang from the ceiling on a rope, feet 0.35 m over the floor: in the corner of B-7 and at the corridor's dead end.
+- The look-away body (`LookAwayRule`, `LookAwayScare`): the spot must first be seen empty (0.4 s within 40°), then be out of view for 1.5 s (beyond 65°, or behind a wall, within 12 m). Then the body is there, the rope creaks 0.7 s later, and when the player sees it a stinger plays (not with reduced scares). It sways. Every new life (the bed) empties the spot again. Ambient sounds only, so zombies do not hear it.
+- Seat files changed are recorded as integration exception E-23 in `INTEGRATION_ROUND2.md`. No Core contract change.
+Evidence:
+- `run_logic_tests.py`: 248 passed, 0 failed (7 new `LookAwayRuleTests`).
+- `compose`: PASS, 0 errors, 0 warnings. "dead bodies: 4 on the floor, 2 hanged (look-away)"; both hanged bodies "feet 0.35 m over the floor, 1.66 m tall, ceiling 2.78 m, eyes on 1.44 m".
+- `build-windows`: PASS, 0 errors, 0 warnings, 130 MB.
+- Unity tests on the final source: EditMode 252/252, PlayMode 23/23.
+- `run_probe.py --rounds 3 --shots`: PASS 3/3, 0 errors or exceptions, on the final source. Rounds took 139.3 s, 140.1 s and 140.6 s.
+  - Round 1 looked at the B-7 corner, turned its back, turned round: "the body is there now", then "spotted". In the corridor it looked at the dead end, turned to the stairs, turned back: the same.
+  - Round 2 won the struggle; round 3 lost it and woke in the bed 6.6 s later. In round 3 the B-7 body appeared and was spotted with no look-back from the probe, during the door scene.
+- Shots viewed: the hanged bodies in the B-7 corner and at the corridor's dead end (head bowed, arms hanging); a dead body lying in the corridor; the door zombie screaming in the doorway; the struggle with no text on screen; the room and corridor with no instruction signs; no title on screen during play, only the clock.
+- Defects found and fixed on the way:
+  - `check_rules.py` flagged five errors in the new `LookAwayScare`: a scene search for the game state, and log strings built in `Update`. It now arms on the run's first `ActStarted` and builds its log lines once.
+  - The first hanged bodies hung about 0.35 m too high (a fixed 0.78 m rope). The rope is now sized from the posed body, and the eyes' target is the body's chest as it hangs.
+  - "PATIENT ZERO" stayed at the top of the screen during play. It now shows only in pause, calibration and the results.
+  - The probe looked at the B-7 corner without ever looking away, so the body (correctly) never came; it now turns its back first.
+  - One run stopped in round 3 with the player held for 300 s. The game window had lost focus, and an unfocused window holds the struggle's clock (E-22), so the lost struggle never ended. The probe now tells the struggle it has focus, as it already did for a held lever. In the passing run the window had focus, so that path did not run.
+- `check_rules.py`: 1 error, 25 warnings; the error is the probe's `SendMessage` from before this change. `integration_scan.py`: only the existing `partial` duplicate-type error and the `HapticRequested` warning.
+- Privacy scan of the change: no paths, names or keys.
+- The 112 "Failed to create agent because there is no valid NavMesh" lines in the probe log were already in the 2026-11-02 probe log (14) and the 2026-10-31 player log (28).
+Not verified:
+- Any headset: whether the hanging bodies read in VR and whether 65° fits a headset's view; the hands warning still shows there.
+- A person playing: whether the reveal is noticed and scary, and whether struggling without instructions is found.
+- Reduced scares, and the phone and iPad builds.
+Follow-ups:
+- The owner plays this build, at the path given in the chat, before step 2.
+- The countdown can read 00:00 while act 1 is still going (seen in a shot). It predates this change and is left as it was.
+- Kept on purpose, for the owner to decide: EMERGENCY RELEASE, LOCKDOWN RELEASE, RESTRAINED - KEEP CLEAR, UPPER FLOORS SEALED, EMERGENCY EXIT, the room and place names, the B-7 note, the blood writing, speech subtitles, the crosshair, the countdown and the VR hands warning.

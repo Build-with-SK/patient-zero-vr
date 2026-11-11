@@ -136,6 +136,142 @@ namespace PatientZero.Integration.Editor
             return pivot;
         }
 
+        /// <summary>
+        /// E-23 (owner's step 1 feedback): a dead body. The same model, posed once at compose time from <paramref name="clip"/> at
+        /// <paramref name="time"/> seconds (past the end means its last frame) and then frozen: no Animator, no AI, no collider.
+        /// The pivot sits on the floor under the middle of the posed body; <paramref name="size"/> is the posed body's size along
+        /// the pivot's own axes.
+        /// </summary>
+        public static Transform Posed(Kit kit, Transform parent, string name, string clip, float time, Material skin, out Vector3 size)
+        {
+            var pivot = new GameObject(name).transform;
+            pivot.SetParent(parent, false);
+            Quaternion turned = pivot.rotation;
+            pivot.rotation = Quaternion.identity;
+            // A plain copy, not a prefab instance: its Animator is removed, which a prefab instance would keep as an override.
+            GameObject instance = Object.Instantiate(kit.Model, pivot);
+            instance.name = ModelName;
+            Transform t = instance.transform;
+            t.localPosition = Vector3.zero;
+            t.localRotation = Quaternion.identity;
+            t.localScale = Vector3.one * kit.Scale;
+            AnimationClip source = SourceClip(clip);
+            source.SampleAnimation(instance, Mathf.Clamp(time, 0, source.length));
+            foreach (Animator animator in instance.GetComponentsInChildren<Animator>(true)) Object.DestroyImmediate(animator);
+            SkinnedMeshRenderer body = null;
+            foreach (Renderer renderer in instance.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.sharedMaterial = skin;
+                if (!(renderer is SkinnedMeshRenderer skinned)) continue;
+                skinned.updateWhenOffscreen = true; // the bind-pose bounds do not cover a body lying down
+                if (skinned.name == "Zombie") body = skinned;
+            }
+
+            if (!body) throw new InvalidOperationException(ModelPath + " has no skinned mesh named 'Zombie'.");
+            Bounds b = PosedBounds(body);
+            Vector3 p = pivot.position;
+            t.position -= new Vector3(b.center.x - p.x, b.min.y - p.y, b.center.z - p.z);
+            size = b.size;
+            pivot.rotation = turned;
+            return pivot;
+        }
+
+        /// <summary>
+        /// E-23: a body hanging from the ceiling at <paramref name="top"/>: arms and head slack, the feet
+        /// <paramref name="feetAbove"/> metres over the floor at <paramref name="floorY"/> (the rope 0.3 to 1.6 m long). The returned
+        /// transform is the top of the rope, so turning it swings the whole body; <paramref name="bounds"/> is the body as it hangs.
+        /// </summary>
+        public static Transform Hanged(Kit kit, Transform parent, Material skin, Material ropeMaterial, Vector3 top, Vector3 facing,
+                                       float floorY, float feetAbove, out Bounds bounds)
+        {
+            var swing = new GameObject("Hanged body").transform;
+            swing.SetParent(parent, false);
+            facing.y = 0;
+            swing.SetPositionAndRotation(top, Quaternion.LookRotation(facing.sqrMagnitude > 1e-4f ? facing.normalized : Vector3.forward, Vector3.up));
+            Transform pivot = Posed(kit, swing, "Body", "Idle", 0, skin, out _);
+            Transform model = pivot.Find(ModelName);
+            Vector3 right = swing.right, forward = swing.forward;
+            Slack(Bone(model, "UpperArm.L"), Bone(model, "LowerArm.L"), Vector3.down - right * .12f);
+            Slack(Bone(model, "LowerArm.L"), Bone(model, "Middle1.L"), Vector3.down + forward * .08f);
+            Slack(Bone(model, "UpperArm.R"), Bone(model, "LowerArm.R"), Vector3.down + right * .12f);
+            Slack(Bone(model, "LowerArm.R"), Bone(model, "Middle1.R"), Vector3.down + forward * .08f);
+            Transform neck = Bone(model, "Neck"), head = Bone(model, "Head");
+            neck.rotation = Quaternion.AngleAxis(14, right) * neck.rotation;
+            head.rotation = Quaternion.AngleAxis(30, right) * Quaternion.AngleAxis(-22, forward) * head.rotation;
+            SkinnedMeshRenderer mesh = null;
+            foreach (SkinnedMeshRenderer s in model.GetComponentsInChildren<SkinnedMeshRenderer>(true)) if (s.name == "Zombie") mesh = s;
+            Bounds posed = PosedBounds(mesh);
+            float rope = Mathf.Clamp(top.y - floorY - feetAbove - (neck.position.y - posed.min.y), .3f, 1.6f);
+            Vector3 move = top + Vector3.down * rope - neck.position;
+            pivot.position += move;
+            posed.center += move;
+            bounds = posed;
+
+            var cord = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cord.name = "Rope";
+            Object.DestroyImmediate(cord.GetComponent<Collider>());
+            cord.transform.SetParent(swing, false);
+            float length = Mathf.Max(.05f, top.y - neck.position.y + .04f);
+            cord.transform.position = new Vector3(neck.position.x, top.y - length * .5f, neck.position.z);
+            cord.transform.localScale = new Vector3(.028f, length, .028f);
+            var renderer = cord.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = ropeMaterial;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            return swing;
+        }
+
+        /// <summary>Turns <paramref name="bone"/> so the way to <paramref name="child"/> points along <paramref name="direction"/>.</summary>
+        private static void Slack(Transform bone, Transform child, Vector3 direction)
+        {
+            Vector3 now = child.position - bone.position;
+            if (now.sqrMagnitude < 1e-8f) return;
+            bone.rotation = Quaternion.FromToRotation(now, direction) * bone.rotation;
+        }
+
+        private static Transform Bone(Transform root, string name)
+        {
+            foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+            {
+                if (t.name == name) return t;
+            }
+
+            throw new InvalidOperationException(ModelPath + " has no bone '" + name + "'.");
+        }
+
+        /// <summary>World bounds of the posed mesh, skinned on the CPU like <see cref="VerticalExtent"/>.</summary>
+        private static Bounds PosedBounds(SkinnedMeshRenderer renderer)
+        {
+            Mesh mesh = renderer.sharedMesh;
+            Transform[] bones = renderer.bones;
+            Matrix4x4[] bindposes = mesh.bindposes;
+            BoneWeight[] weights = mesh.boneWeights;
+            Vector3[] vertices = mesh.vertices;
+            var skin = new Matrix4x4[bones.Length];
+            for (int i = 0; i < bones.Length; i++)
+            {
+                if (!bones[i]) throw new InvalidOperationException(ModelPath + ": bone " + i + " of '" + renderer.name + "' is missing.");
+                skin[i] = bones[i].localToWorldMatrix * bindposes[i];
+            }
+
+            bool any = false;
+            var bounds = new Bounds();
+            for (int v = 0; v < vertices.Length && v < weights.Length; v++)
+            {
+                BoneWeight w = weights[v];
+                float sum = w.weight0 + w.weight1 + w.weight2 + w.weight3;
+                if (sum <= 0) continue;
+                Vector3 p = vertices[v];
+                Vector3 world = (skin[w.boneIndex0].MultiplyPoint3x4(p) * w.weight0 + skin[w.boneIndex1].MultiplyPoint3x4(p) * w.weight1 +
+                                 skin[w.boneIndex2].MultiplyPoint3x4(p) * w.weight2 + skin[w.boneIndex3].MultiplyPoint3x4(p) * w.weight3) / sum;
+                if (!any) bounds = new Bounds(world, Vector3.zero);
+                else bounds.Encapsulate(world);
+                any = true;
+            }
+
+            if (!any) throw new InvalidOperationException(ModelPath + ": '" + renderer.name + "' has no weighted vertices.");
+            return bounds;
+        }
+
         // ------------------------------------------------------------------ assets
 
         private static GameObject Model()

@@ -75,15 +75,11 @@ namespace PatientZero.Environment.Editor
             Label(root, "EMERGENCY EXIT ->", WardLayout.A3_End.Position + Vector3.up * 2.4f, .045f, 90);
             // Seat A builds the functional door leaves and puzzle objects at the shared LayoutIds.
             // Theatre furniture adds no light, dynamic body, camera effect or encounter. All beats remain in DirectorCore.
-            // Claude integration E-22 (two-minute version): one push bar opens the room door; the warning sits beside the door.
-            // Above the room number (B-7 sits at +.45), never across it.
-            Label(root, "PUSH THE BAR", WardLayout.A1_DoorWindow.Position + Vector3.up * .85f - Vector3.forward * .08f, .04f);
-            Label(root, "MOVE QUIETLY / LISTEN", WardLayout.A2_Monitor.Position - Vector3.up * .4f - Vector3.forward * .04f, .035f);
+            // Claude integration E-23 (owner, 2026-11-11): no instructions on the walls. PUSH THE BAR, MOVE QUIETLY / LISTEN and
+            // THEY HEAR YOU are gone; what a real hospital would have up stays (place names, the room number, labels).
             Label(root, "B-7: NO FEVER\nCONTAINMENT CONTINUES", WardLayout.A1_Tray.Position + Vector3.up * .2f, .022f);
             Label(root, "EMERGENCY RELEASE", WardLayout.A4_ReleaseLever.Position + Vector3.up * .45f - Vector3.right * .07f, .035f, 90);
-            // Left of the door, clear of its swing, read from the bed; beside the door at eye height it filled the view of a player
-            // standing there.
-            Label(root, "THEY HEAR YOU", WardLayout.A1_DoorWindow.Position - Vector3.right * 1.2f + Vector3.up * .3f - Vector3.forward * .08f, .04f);
+
             Label(root, "B-7", WardLayout.A1_DoorWindow.Position + Vector3.up * .45f, .055f);
             foreach (var p in new[] { WardLayout.A1_DoorWindow, WardLayout.A2_Monitor, WardLayout.A3_Drip, WardLayout.A4_ExitDoor })
                 WardPrimitives.Box(root, "PA_" + p.Id, p.Position + Vector3.up * .3f, new Vector3(.18f, .1f, .1f), metal, false);

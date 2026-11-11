@@ -56,7 +56,9 @@ namespace PatientZero.Environment.Tests
             Assert.AreEqual(4, renderers.Count(r => r.name.StartsWith("PrivacyCurtain_")));
             Assert.AreEqual(1, renderers.Count(r => r.name == "OxygenCylinder"));
             var text = root.GetComponentsInChildren<TextMesh>();
-            Assert.IsTrue(text.Any(t => t.text == "PUSH THE BAR")); // E-22: one bar replaced the three planks
+            // E-23 (owner, 2026-11-11): no instructions on the walls.
+            foreach (string instruction in new[] { "PUSH THE BAR", "THEY HEAR YOU", "MOVE QUIETLY / LISTEN" })
+                Assert.IsFalse(text.Any(t => t.text == instruction), instruction);
             Assert.IsTrue(text.Any(t => t.text == "EMERGENCY RELEASE"));
             Assert.IsFalse(text.Any(t => t.text.Contains("â") || t.text.Contains("�")));
             // No extra lights, hidden colliding trolley or global effect was added by environment dressing.
