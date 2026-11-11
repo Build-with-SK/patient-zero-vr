@@ -115,7 +115,7 @@ namespace PatientZero.Integration
             if (nextScream <= 0)
             {
                 nextScream = Random.Range(22f, 50f) * (reduced ? 2.2f : 1f);
-                if (news && news.Holding) return;
+                if (news && news.Playing) return;
                 int point = ScreamPoint(head);
                 if (point >= 0) Cues.Play(CueId.DistantScream, screamPoints[point], NoiseOrigin.Ambient, Random.Range(.6f, 1f) * (reduced ? .55f : 1f));
             }

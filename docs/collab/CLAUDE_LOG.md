@@ -242,3 +242,32 @@ Follow-ups:
 - The owner plays this build, at the path given in the chat, before step 2.
 - The countdown can read 00:00 while act 1 is still going (seen in a shot). It predates this change and is left as it was.
 - Kept on purpose, for the owner to decide: EMERGENCY RELEASE, LOCKDOWN RELEASE, RESTRAINED - KEEP CLEAR, UPPER FLOORS SEALED, EMERGENCY EXIT, the room and place names, the B-7 note, the blood writing, speech subtitles, the crosshair, the countdown and the VR hands warning.
+
+## 2026-11-11 · Owner's second playtest: the unseen room body, the news lock, zombies through walls (E-24)
+Kind: INTEGRATION
+What: The owner played the step 1 + E-23 build and reported: they never saw the body hanging in the room; the news still held the view on the TV for about a minute; zombies standing by a wall pushed their hands and part of the head through it into the next room. They also asked where the gun is (not built: plan step 4), for a scarier zombie model and for much better graphics; those are answered in the chat and wait for the owner's choices.
+- The room body was revealed while the news held the view, then sat at the edge of a dark view, and the player could leave the room before turning back. Now `LookAwayScare` reveals only while the player is in the body's room, the rope creaks again every 4.5 s (up to 5 times) until the body is seen, and both hanged bodies get a faint, untextured cold lift (material emission, not a light: lights belong to Atmosphere and Environment).
+- The news: `NewsBroadcast` no longer turns or holds the view, or holds movement. The recording is cut to 17.4 s (three sentences: the outbreak, the two hospitals, the violence) in a new file `ZombieNews_Zisongbr_Short.ogg` made from the CC0 original; the screen shows three headlines. Its `LICENSE.md` notes the cut.
+- Walls: the NavMesh agent keeps 0.25 m from walls, but the model's arms reach 0.6 m ahead. New `WallClearance` on every zombie model eases the model (never the agent) back from walls in reach of its arms and head, ahead, at the front corners and at the sides, and lets it return when the wall is gone. Players, loose props and other zombies never push it. The NavMesh was not widened, since that would block doorways.
+- The four floor bodies are kept inside their room (their arms are spread, about 2.5 m from hand to hand). The corridor and vestibule bodies now lie across the floor instead of with a hand in the wall.
+- Seat B's `RecordedCueCatalog` change is recorded as integration exception E-24 in `INTEGRATION_ROUND2.md`. No Core contract change.
+Evidence:
+- `run_logic_tests.py`: 248 passed, 0 failed.
+- `build-windows` (it composes first): PASS, 0 errors, 0 warnings, 130 MB. Compose: "news bulletin 17.4 s, 3 headlines"; both hanged bodies "feet 0.35 m over the floor, 1.66 m tall, ceiling 2.78 m, eyes on 1.44 m"; the floor bodies moved 0.76, 0.77, 0.57 and 0.48 m off the walls.
+- Unity tests on the final source: EditMode 252/252, PlayMode 28/28 (5 new `WallClearanceTests`: a wall ahead pushes the model back 0.1 m, a wall beside and ahead push both ways and it returns when they go, a player or a loose prop in front never pushes it, the push turns with the zombie).
+- `run_probe.py --rounds 3 --shots`: PASS 3/3, 0 errors or exceptions, on the final source. Rounds took 91.1 s, 92.5 s and 91.9 s (139 to 141 s before: the news no longer holds the player).
+  - Every round: "the news bulletin played for another 11.3 to 11.9 s; the view was free".
+  - Round 1: "B-7 corner: the body is there now", then "spotted"; the same at the corridor's dead end.
+  - Wall clearance: 5 of 28 zombie models eased off a wall at each act (4 in the lobby), at most 0.15 m.
+- Shots viewed: the news on the TV with the second headline and the subtitle; both hanged bodies (pale grey, visible in the dark corner); the corridor body lying across the floor; the door zombie; the lobby.
+- Defect found and fixed on the way: the first glow lit the skin texture itself, so both hanged bodies glowed bright green (seen in the shots). The emission is now a faint grey with no texture.
+- `check_rules.py`: 1 error, 26 warnings; the error is the probe's `SendMessage` from before; the one new warning is the probe's wall-clearance log line. `integration_scan.py`: only the existing `partial` duplicate-type error and the `HapticRequested` warning.
+- Privacy scan of the change, scenes and new assets: no paths, names or keys.
+- The 112 "Failed to create agent because there is no valid NavMesh" lines are the same count as in the E-23 probe log.
+Not verified:
+- A person playing: whether the room body is now noticed, and whether the shorter news reads well.
+- No person has listened to the cut recording to check the joins (the cut points were chosen from the quiet gaps in its loudness).
+- Any headset, reduced scares, and the phone and iPad builds.
+Follow-ups:
+- The owner plays this build before step 2.
+- The owner's other asks wait for their choices: the gun (plan step 4), a scarier zombie model (their Mixamo download, a free model found for them, or a darker, bloodier version of the current one), and graphics (a PC "Ultra" quality level in URP, or HDRP for PC only).

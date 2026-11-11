@@ -31,7 +31,8 @@ namespace PatientZero.Audio.Editor
                 "Screams/Scream_Pauliuw_Reverb.ogg",
             },
             [CueId.CrowdPanic] = new[] { "Crowd/CrowdPanic_StarNinjas.ogg" },
-            [CueId.NewsBroadcast] = new[] { "News/ZombieNews_Zisongbr.ogg" },
+            // E-24 (owner, 2026-11-11): the bulletin is cut to its three key lines, about 17 s (see the folder's LICENSE.md).
+            [CueId.NewsBroadcast] = new[] { "News/ZombieNews_Zisongbr_Short.ogg" },
             [CueId.JumpScareStinger] = new[] { "Stingers/Stinger_Psychhead_VeryBassy2.ogg", "Stingers/Stinger_Psychhead_VeryBassy4.ogg" },
         };
 
@@ -42,17 +43,12 @@ namespace PatientZero.Audio.Editor
         /// </summary>
         private static readonly Dictionary<CueId, AudioCuePlayer.TimedCaption[]> Transcripts = new Dictionary<CueId, AudioCuePlayer.TimedCaption[]>
         {
+            // E-24: retimed for the short cut (the full recording's 18-29.7 s, then 37-42.6 s).
             [CueId.NewsBroadcast] = new[]
             {
-                Say(.5f, 11, "The following message is transmitted at the request of the Indianapolis State Police Department."),
-                Say(18, 6, "At 2:35 PM, reports from these counties have issued an outbreak of a highly contagious virus."),
-                Say(24, 5, "Some reports claim the outbreak started in two county hospitals."),
-                Say(29, 8, "Symptoms of this virus include loss of coordination, confusion, and eventually, certain death."),
-                Say(37, 5, "Reports have also claimed that those infected have acted out in extremely violent behavior."),
-                Say(42, 4, "Citizens are strongly advised to avoid anyone with these symptoms."),
-                Say(46, 5, "At this time, these counties are under quarantine until further notice."),
-                Say(51, 7, "As a safety precaution, citizens in nearby counties are advised to stay in their homes until the situation is dealt with."),
-                Say(58, 3.5f, "Stay tuned for further details as they follow."),
+                Say(.4f, 5.6f, "At 2:35 PM, reports from these counties have issued an outbreak of a highly contagious virus."),
+                Say(6.1f, 5.5f, "Some reports claim the outbreak started in two county hospitals."),
+                Say(12.1f, 5, "Reports have also claimed that those infected have acted out in extremely violent behavior."),
             },
         };
 

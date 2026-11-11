@@ -18,7 +18,7 @@ namespace PatientZero.Integration.Editor
     /// </summary>
     public static class HorrorPassStep
     {
-        public const string NewsClipPath = "Assets/ThirdParty/OpenGameArt/News/ZombieNews_Zisongbr.ogg";
+        public const string NewsClipPath = "Assets/ThirdParty/OpenGameArt/News/ZombieNews_Zisongbr_Short.ogg"; // E-24: ~17 s cut
 
         // The set: a 43-inch screen in the corner of B-7 beside the door, tilted down at the bed.
         private static readonly Vector3 TvCentre = new Vector3(1.3f, 2.12f, 1.45f);
@@ -116,17 +116,12 @@ namespace PatientZero.Integration.Editor
             return news;
         }
 
+        // E-24 (owner, 2026-11-11): three headlines over the ~17 s cut.
         private static NewsBroadcast.Card[] Cards() => new[]
         {
-            C(0, "EMERGENCY BROADCAST", "A MESSAGE FROM THE STATE POLICE"),
-            C(18, "VIRUS OUTBREAK CONFIRMED", "HIGHLY CONTAGIOUS - SPREADING FAST"),
-            C(24, "IT STARTED IN THE HOSPITALS", "TWO COUNTY HOSPITALS NAMED"),
-            C(29, "SYMPTOMS: CONFUSION, COLLAPSE", "LOSS OF COORDINATION - THEN DEATH"),
-            C(37, "THE INFECTED ARE VIOLENT", "DO NOT APPROACH THE SICK"),
-            C(42, "AVOID ANYONE WITH SYMPTOMS", "DO NOT TRY TO HELP THEM"),
-            C(46, "COUNTIES UNDER QUARANTINE", "UNTIL FURTHER NOTICE"),
-            C(51, "STAY IN YOUR HOMES", "LOCK YOUR DOORS - WAIT FOR NEWS"),
-            C(58, "STAY TUNED", "FURTHER DETAILS TO FOLLOW"),
+            C(0, "VIRUS OUTBREAK CONFIRMED", "HIGHLY CONTAGIOUS - SPREADING FAST"),
+            C(6, "IT STARTED IN THE HOSPITALS", "TWO COUNTY HOSPITALS NAMED"),
+            C(12, "THE INFECTED ARE VIOLENT", "DO NOT APPROACH THE SICK"),
         };
 
         private static NewsBroadcast.Card C(float at, string headline, string detail) => new NewsBroadcast.Card { At = at, Headline = headline, Detail = detail };

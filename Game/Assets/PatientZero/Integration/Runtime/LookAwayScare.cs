@@ -9,6 +9,9 @@ namespace PatientZero.Integration
     /// A dead body that hangs where there was nothing a moment ago (<see cref="LookAwayRule"/>). Once the player has looked away
     /// it is there, the rope creaks to turn them round, and when they see it a stinger plays (not with reduced scares). It sways
     /// a little. Every new life (the bed) makes the spot empty again. No collider, no AI, no noise a zombie can hear.
+    /// E-24 (owner, 2026-11-11: "i didn't see the body hanging in the room"): it appears only while the player is in its room,
+    /// so they cannot have walked out before it comes; the creak repeats until they see it; its skin glows faintly
+    /// (DeadBodiesStep), so a dark corner cannot swallow it.
     /// </summary>
     public sealed class LookAwayScare : MonoBehaviour
     {
@@ -21,6 +24,9 @@ namespace PatientZero.Integration
         [Tooltip("For the log.")]
         public string label = "";
         public float creakAfter = .7f, swingDegrees = 2.5f, swingSeconds = 3.4f;
+        [Tooltip("Seconds between creaks while the body is there and not yet seen, and how many creaks at most.")]
+        public float creakEvery = 4.5f;
+        public int creaks = 5;
 
         private LookAwayRule rule;
         // Armed by the run's first act (the Ward loads after the game is already Playing, so the state event alone is not enough),
@@ -28,6 +34,7 @@ namespace PatientZero.Integration
         private bool armed, playing, reduced;
         private string revealedNote, spottedNote;
         private float creakAt = -1, swing;
+        private int creaked, room = -1;
         private Quaternion rest;
 
         public LookAwayRule.Phase Phase => rule == null ? LookAwayRule.Phase.Empty : rule.State;
@@ -38,6 +45,8 @@ namespace PatientZero.Integration
             revealedNote = "[PZ] look-away scare '" + label + "': the body is there now";
             spottedNote = "[PZ] look-away scare '" + label + "': spotted";
             if (body) rest = body.localRotation;
+            for (int i = 0; i < WardLayout.Rooms.Count; i++)
+                if (WardLayout.Rooms[i].Contains(lookAt, 0)) { room = i; break; }
             Hide();
         }
 
@@ -79,7 +88,8 @@ namespace PatientZero.Integration
             if (!body || rule == null) return;
             if (creakAt >= 0 && Time.time >= creakAt)
             {
-                creakAt = -1;
+                // Until the player has seen it, the rope keeps creaking to turn them round.
+                creakAt = rule.State == LookAwayRule.Phase.Revealed && ++creaked < creaks ? Time.time + creakEvery : -1;
                 Cues.Play(CueId.PlankCreak, lookAt + Vector3.up * .6f, NoiseOrigin.Ambient);
             }
 
@@ -88,12 +98,16 @@ namespace PatientZero.Integration
             float meters = to.magnitude;
             float degrees = meters > 1e-3f ? Vector3.Angle(player.HeadForward, to) : 0;
             bool clear = !Physics.Linecast(eye, lookAt, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            // Looking away counts only inside the body's room: a player who has left must not miss it.
+            if (rule.State == LookAwayRule.Phase.SeenEmpty && room >= 0 && !WardLayout.Rooms[room].Contains(player.FloorPosition, 0))
+                meters = LookAwayRule.MaxMeters + 1;
             switch (rule.Tick(Time.deltaTime, degrees, meters, clear))
             {
                 case LookAwayEvent.Revealed:
                     body.gameObject.SetActive(true);
                     swing = 0;
                     creakAt = Time.time + creakAfter;
+                    creaked = 0;
                     Debug.Log(revealedNote);
                     break;
                 case LookAwayEvent.Spotted:

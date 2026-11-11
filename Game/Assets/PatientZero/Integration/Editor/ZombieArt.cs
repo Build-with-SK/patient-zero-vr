@@ -103,6 +103,10 @@ namespace PatientZero.Integration.Editor
             var mirror = instance.AddComponent<RendererEnabledMirror>();
             mirror.source = body;
             mirror.followers = followers.ToArray();
+            // E-24 (owner, 2026-11-11): hands and head went through walls; the model now eases back from them.
+            var clearance = instance.AddComponent<WallClearance>();
+            clearance.actor = actor;
+            clearance.height = StandingHeight * scale / Mathf.Max(1e-4f, kit.Scale);
 
             if (mannequin) mannequin.enabled = false; // the box mannequin stays in the hierarchy (its bones carry Head and the foot emitter) but never draws
         }
@@ -142,6 +146,17 @@ namespace PatientZero.Integration.Editor
         /// The pivot sits on the floor under the middle of the posed body; <paramref name="size"/> is the posed body's size along
         /// the pivot's own axes.
         /// </summary>
+        /// <summary>The model's height at <see cref="Kit.Scale"/>, metres (measured at compose by DeadBodiesStep: 1.66 m).</summary>
+        public const float StandingHeight = 1.66f;
+
+        /// <summary>E-24: a posed body's world bounds, its pose included (CPU skinning).</summary>
+        public static Bounds WorldBounds(Transform pivot)
+        {
+            foreach (SkinnedMeshRenderer s in pivot.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                if (s.name == "Zombie") return PosedBounds(s);
+            throw new InvalidOperationException(pivot.name + " has no skinned mesh named 'Zombie'.");
+        }
+
         public static Transform Posed(Kit kit, Transform parent, string name, string clip, float time, Material skin, out Vector3 size)
         {
             var pivot = new GameObject(name).transform;

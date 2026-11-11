@@ -177,6 +177,7 @@ namespace PatientZero.Integration
                         // E-21: on a flat screen the new floor is reached on foot, down the stairwell, as a player must.
                         if (stairs && Services<IPlayerQuery>.Instance is PlayerRig walker && walker.walkStairs) yield return WalkDown(previous, round == 1);
                         if (round == 1) yield return Shot((int)previous + "-" + previous);
+                        if (round == 1) ClearanceNote(previous);
                         if (round == 1 && previous == ActId.Awakening && shots != null)
                         {
                             // The pause menu, photographed too: menus are checked by eye, not only by state.
@@ -187,8 +188,8 @@ namespace PatientZero.Integration
                             yield return new WaitForSecondsRealtime(.5f);
                         }
                         if (previous == ActId.Awakening) { yield return News(!newsChecked); newsChecked = true; }
-                        // E-23: the hanged body in B-7 came while the news held the probe's eyes on the television; the corridor's
-                        // comes once the probe has looked at the dead end and turned away. Round 1 checks both.
+                        // E-23: the hanged body in B-7 comes once the probe has looked at the corner and turned away (E-24: inside the
+                        // room); the corridor's once it has looked at the dead end and turned away. Round 1 checks both.
                         if (round == 1 && previous == ActId.Awakening && !roomLooked) { roomLooked = true; yield return LookBack(RoomScare, false); }
                         if (round == 1 && previous == ActId.Machinery && !corridorLooked) { corridorLooked = true; yield return LookBack(CorridorScare, true); }
                         yield return Act(previous);
@@ -216,33 +217,53 @@ namespace PatientZero.Integration
         }
 
         /// <summary>
-        /// E-21: a new run opens on the outbreak bulletin, which holds the player until it ends. The probe sits through it as a
-        /// player must (photographing it in round 1), and fails the run if the set never held the player or never let go.
+        /// E-21: a new run opens on the outbreak bulletin. E-24: it no longer holds the player (owner, 2026-11-11), so the probe
+        /// turns to the set and watches it to the end, as a player would, and fails the run if the bulletin never played, never
+        /// ended, or locked the view.
         /// </summary>
         private IEnumerator News(bool startOfRun)
         {
             NewsBroadcast[] sets = Ward<NewsBroadcast>();
             if (sets.Length != 1) { Problem("[PZ-PROBE] expected one news television in Ward, found " + sets.Length); yield break; }
             NewsBroadcast news = sets[0];
-            if (!news.Holding)
+            if (!news.Playing)
             {
                 // A restored Act 1 does not replay it; a new run must.
-                if (startOfRun) Problem("[PZ-PROBE] the news bulletin did not hold the player at the start of the run");
+                if (startOfRun) Problem("[PZ-PROBE] the news bulletin did not play at the start of the run");
                 yield break;
             }
 
+            Face(news.screen.position);
             float began = Time.time;
-            bool photographed = false;
-            while (news.Holding && Time.time - began < news.duration + 15)
+            bool photographed = false, locked = false;
+            while (news.Playing && Time.time - began < news.duration + 10)
             {
                 if (flow.Core.State == GameState.Paused) flow.Resume();
-                if (round == 1 && !photographed && Time.time - began > 20) { photographed = true; yield return Shot("1-news"); }
+                if (Services<IPlayerQuery>.Instance is PlayerRig rig && rig.GetComponent<DesktopLocomotion>() is DesktopLocomotion desk && desk.viewLocked) locked = true;
+                if (round == 1 && !photographed && Time.time - began > 5) { photographed = true; yield return Shot("1-news"); }
                 yield return null;
             }
 
-            if (news.Holding) Problem("[PZ-PROBE] the news bulletin still held the player after " + (Time.time - began).ToString("0") + " s");
-            else Debug.Log("[PZ-PROBE] the news bulletin held the player for another " + (Time.time - began).ToString("0.0") + " s");
-            yield return new WaitForSeconds(1f); // the view is handed back
+            if (locked) Problem("[PZ-PROBE] the news bulletin locked the view");
+            if (news.Playing) Problem("[PZ-PROBE] the news bulletin still played after " + (Time.time - began).ToString("0") + " s");
+            else Debug.Log("[PZ-PROBE] the news bulletin played for another " + (Time.time - began).ToString("0.0") + " s; the view was free");
+        }
+
+        /// <summary>E-24: how many zombie models are eased off a wall right now, and the largest shift (WallClearance).</summary>
+        private void ClearanceNote(ActId act)
+        {
+            WallClearance[] all = Ward<WallClearance>();
+            int eased = 0;
+            float most = 0;
+            foreach (WallClearance c in all)
+            {
+                float m = c.Offset.magnitude;
+                if (m > .01f) eased++;
+                if (m > most) most = m;
+            }
+
+            if (all.Length == 0) Problem("[PZ-PROBE] no zombie model has WallClearance");
+            else Debug.Log("[PZ-PROBE] wall clearance at " + act + ": " + eased + " of " + all.Length + " zombie models eased off a wall, largest " + most.ToString("0.00") + " m");
         }
 
         private const string RoomScare = "B-7 corner", CorridorScare = "corridor dead end";

@@ -51,13 +51,19 @@ namespace PatientZero.Integration.Editor
                 // Lengthways along the wall (x), head one way or the other, a few degrees off so they do not look laid out.
                 float yaw = (size.x >= size.z ? 0 : 90) + (i % 2) * 180 + (i * 37 % 11 - 5);
                 body.SetPositionAndRotation(floor, Quaternion.Euler(0, yaw, 0));
-                Pool(body, pool, floor, 1.25f + .15f * (i % 2));
+                // E-24 (owner, 2026-11-11: hands and heads through the walls): keep the whole pose inside its room.
+                Vector3 shift = IntoRoom(ZombieArt.WorldBounds(body), floor);
+                body.position += shift;
+                if (shift.sqrMagnitude > 1e-6f) Debug.Log("[PZ] dead body " + (i + 1) + " moved " + shift.magnitude.ToString("0.00") + " m off the wall");
+                Pool(body, pool, body.position, 1.25f + .15f * (i % 2));
             }
 
             Material rope = Rope();
             // Facing the bed, and facing back down the corridor.
-            Hang(root, kit, dead, rope, RoomHanging, WardLayout.A1_Start.Position - RoomHanging, "B-7 corner");
-            Hang(root, kit, kit.Skins[1], rope, CorridorHanging, Vector3.right, "corridor dead end");
+            // E-24 (owner, 2026-11-11: "i didn't see the body hanging in the room"): the hanged bodies' skin glows faintly, so a
+            // dark corner cannot swallow them. Material emission, not a light: lights belong to Atmosphere and Environment.
+            Hang(root, kit, Glow(Skin(kit, "Hanged_Skin", new Color(.80f, .82f, .78f, 1))), rope, RoomHanging, WardLayout.A1_Start.Position - RoomHanging, "B-7 corner");
+            Hang(root, kit, Glow(Copy(kit.Skins[1], "Hanged_Skin_2")), rope, CorridorHanging, Vector3.right, "corridor dead end");
             Debug.Log("[PZ] dead bodies: " + Lying.Length + " on the floor, 2 hanged (look-away)");
         }
 
@@ -110,6 +116,23 @@ namespace PatientZero.Integration.Editor
                 : 2.775f;
         }
 
+        /// <summary>Wall faces stand this far inside a room's rectangle, plus a little air.</summary>
+        private const float WallClear = .15f;
+
+        /// <summary>The horizontal shift that brings <paramref name="b"/> inside the room holding <paramref name="p"/>.</summary>
+        private static Vector3 IntoRoom(Bounds b, Vector3 p)
+        {
+            foreach (RoomRect room in WardLayout.Rooms)
+            {
+                if (!room.Contains(p, 0)) continue;
+                float dx = b.min.x < room.MinX + WallClear ? room.MinX + WallClear - b.min.x : b.max.x > room.MaxX - WallClear ? room.MaxX - WallClear - b.max.x : 0;
+                float dz = b.min.z < room.MinZ + WallClear ? room.MinZ + WallClear - b.min.z : b.max.z > room.MaxZ - WallClear ? room.MaxZ - WallClear - b.max.z : 0;
+                return new Vector3(dx, 0, dz);
+            }
+
+            return Vector3.zero;
+        }
+
         private static void RequireRoom(Vector3 p, string what)
         {
             foreach (RoomRect room in WardLayout.Rooms)
@@ -125,6 +148,26 @@ namespace PatientZero.Integration.Editor
             Material m = ArtSurfaces.LitMaterial(name);
             m.CopyPropertiesFromMaterial(kit.Skin);
             m.SetColor("_BaseColor", tint);
+            EditorUtility.SetDirty(m);
+            return m;
+        }
+
+        private static Material Copy(Material source, string name)
+        {
+            Material m = ArtSurfaces.LitMaterial(name);
+            m.CopyPropertiesFromMaterial(source);
+            EditorUtility.SetDirty(m);
+            return m;
+        }
+
+        /// <summary>E-24: the skin's own texture, faintly self-lit (cold), so the body reads in the dark. Not baked into GI.</summary>
+        private static Material Glow(Material m)
+        {
+            // A faint cold lift with no texture: the first try lit the skin texture itself, and the body glowed bright green.
+            m.EnableKeyword("_EMISSION");
+            m.SetTexture("_EmissionMap", null);
+            m.SetColor("_EmissionColor", new Color(.05f, .055f, .065f, 1));
+            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             EditorUtility.SetDirty(m);
             return m;
         }
