@@ -32,7 +32,7 @@ namespace PatientZero.Interaction
 #endif
 }
         private void Begin(){if(!Physics.Raycast(view.transform.position,view.transform.forward,out var hit,1.5f))return;puzzle=hit.collider.GetComponentInParent<PhysicalPuzzle>();if(puzzle){gripPoint=hit.point;angle=0;puzzle.BeginGrip(gripPoint);return;}prop=hit.collider.GetComponentInParent<PhysicsProp>();if(prop)prop.DesktopGrab();}
-        private void MovePuzzle(Vector2 delta){if(puzzle.mechanic==PhysicalPuzzle.Mechanic.Valve){angle+=delta.x;var radial=Quaternion.AngleAxis(angle,puzzle.transform.TransformDirection(puzzle.axis))*(gripPoint-puzzle.transform.position);puzzle.SampleGrip(puzzle.transform.position+radial,Time.deltaTime);}else{gripPoint+=puzzle.mechanic==PhysicalPuzzle.Mechanic.Plank?puzzle.transform.TransformDirection(puzzle.axis)*delta.magnitude*.002f:Vector3.down*(-delta.y*.002f);puzzle.SampleGrip(gripPoint,Time.deltaTime);}}
+        private void MovePuzzle(Vector2 delta){if(puzzle.mechanic==PhysicalPuzzle.Mechanic.Valve){angle+=delta.x;var radial=Quaternion.AngleAxis(angle,puzzle.transform.TransformDirection(puzzle.axis))*(gripPoint-puzzle.transform.position);puzzle.SampleGrip(puzzle.transform.position+radial,Time.deltaTime);}else{gripPoint+=puzzle.mechanic==PhysicalPuzzle.Mechanic.Plank || puzzle.mechanic==PhysicalPuzzle.Mechanic.Handle?puzzle.transform.TransformDirection(puzzle.axis)*delta.magnitude*.002f:Vector3.down*(-delta.y*.002f);puzzle.SampleGrip(gripPoint,Time.deltaTime);}}
         private void FixedUpdate(){
 #if PZ_DESKTOP_MOUSE || PZ_TOUCH
 if(prop && prop.Held && !prop.Body.isKinematic){Vector3 target=view.transform.position+view.transform.forward*.65f;prop.Body.linearVelocity=Vector3.ClampMagnitude((target-prop.Body.position)*12,5);}

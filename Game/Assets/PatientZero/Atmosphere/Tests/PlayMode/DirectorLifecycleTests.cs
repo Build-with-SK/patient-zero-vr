@@ -35,9 +35,9 @@ namespace PatientZero.Atmosphere.Tests
                 var field = typeof(ExperienceDirector).GetField("core", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
                 var core = (PatientZero.Atmosphere.Logic.DirectorCore)field.GetValue(director);
                 GameEvents.ObjectiveCompleted.Raise(new ObjectiveCompleted(ObjectiveId.Act1_DoorUnbarred));
-                core.ReportZombiePosition(1, WardLayout.A1_DoorWindow.Position);
-                core.Tick(.1f, true, WardLayout.A1_Start.Position); core.Tick(2, true, WardLayout.A1_Start.Position);
-                core.ReportZombiePosition(1, WardLayout.Z1_WalkTo.Position); core.Tick(.01f, true, Vector3.zero);
+                // E-22 (two-minute version): the bar alone opens the door; the door zombie must lose the player and go before the act ends.
+                core.Alert(ZombieIds.Walker, AlertLevel.Unaware, Vector3.zero, Vector3.zero); core.Tick(.1f, true, WardLayout.A1_Door.Position);
+                core.ReportZombiePosition(ZombieIds.Walker, WardLayout.Z1_WalkTo.Position); core.Tick(.01f, true, Vector3.zero);
                 // Any public event drains the director queue; the duplicate completion is harmless.
                 GameEvents.ObjectiveCompleted.Raise(new ObjectiveCompleted(ObjectiveId.Act1_DoorUnbarred));
                 Assert.AreEqual(1, releases); Assert.IsTrue(queriedAtSignal);
@@ -92,8 +92,8 @@ namespace PatientZero.Atmosphere.Tests
                 // Supply deterministic positions/time instead of requiring a NavMesh for this service test.
                 var core = (Logic.DirectorCore)typeof(ExperienceDirector).GetField("core", flags).GetValue(director);
                 GameEvents.ObjectiveCompleted.Raise(new ObjectiveCompleted(ObjectiveId.Act1_DoorUnbarred));
-                core.ReportZombiePosition(ZombieIds.Walker, WardLayout.A1_DoorWindow.Position);
-                core.Tick(.1f, true, Vector3.zero); core.Tick(2, true, Vector3.zero);
+                // E-22: the door zombie loses the player and walks off; then the opened door ends the act.
+                core.Alert(ZombieIds.Walker, AlertLevel.Unaware, Vector3.zero, Vector3.zero); core.Tick(.1f, true, Vector3.zero);
                 core.ReportZombiePosition(ZombieIds.Walker, WardLayout.Z1_WalkTo.Position);
                 core.Tick(.1f, true, Vector3.zero);
                 typeof(ExperienceDirector).GetMethod("Pump", flags).Invoke(director, null);

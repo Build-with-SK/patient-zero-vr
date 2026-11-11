@@ -11,7 +11,8 @@ namespace PatientZero.Interaction
     [RequireComponent(typeof(XRSimpleInteractable))]
     public sealed class PhysicalPuzzle : MonoBehaviour
     {
-        public enum Mechanic {Plank,Valve,Lever}
+        /// <summary>E-22: Handle is the push bar on the room door (Act 1); it moves like a plank along its axis but stays on the door.</summary>
+        public enum Mechanic {Plank,Valve,Lever,Handle}
         public Mechanic mechanic;public ObjectivePublisher objectives;public int plankIndex;public Transform movingPart;public Vector3 axis=Vector3.forward;
         // v1.3 (E-19): the lower floors place these mechanics again. None keeps the ward binding (plank Act 1, valve Act 2,
         // lever Act 4); requires holds a puzzle until another objective of its act is complete (a lever needs its power).
@@ -19,9 +20,10 @@ namespace PatientZero.Interaction
         private ValveMath valve=new ValveMath();private PlankLogic plank=new PlankLogic();private LeverLogic lever=new LeverLogic();
         private PlayerRig rig;private float visualDegrees;private XRSimpleInteractable interactable;private Transform grip;private Vector3 gripStart,home;private Quaternion rotation;private bool held;private float lastProgress;private CueHandle loop;
         public float Progress => mechanic==Mechanic.Valve?valve.Progress:mechanic==Mechanic.Lever?lever.Progress:plank.Intensity;
-        public string Hint => mechanic==Mechanic.Plank?"Grab and pull plank":mechanic==Mechanic.Valve?"Grab rim and turn; re-grip freely":"Pull down and hold release";
-        private ObjectiveId Objective => puzzleObjective!=ObjectiveId.None?puzzleObjective:mechanic==Mechanic.Plank?ObjectiveId.Act1_DoorUnbarred:mechanic==Mechanic.Valve?ObjectiveId.Act2_ValveVented:ObjectiveId.Act4_ReleasePulled;
-        private ActId PuzzleAct => puzzleAct!=ActId.None?puzzleAct:mechanic==Mechanic.Plank?ActId.Awakening:mechanic==Mechanic.Valve?ActId.Machinery:ActId.Exit;
+        public string Hint => mechanic==Mechanic.Plank?"Grab and pull plank":mechanic==Mechanic.Handle?"Grab the bar and push the door open":mechanic==Mechanic.Valve?"Grab rim and turn; re-grip freely":"Pull down and hold release";
+        private bool Pulled => mechanic==Mechanic.Plank || mechanic==Mechanic.Handle;
+        private ObjectiveId Objective => puzzleObjective!=ObjectiveId.None?puzzleObjective:Pulled?ObjectiveId.Act1_DoorUnbarred:mechanic==Mechanic.Valve?ObjectiveId.Act2_ValveVented:ObjectiveId.Act4_ReleasePulled;
+        private ActId PuzzleAct => puzzleAct!=ActId.None?puzzleAct:Pulled?ActId.Awakening:mechanic==Mechanic.Valve?ActId.Machinery:ActId.Exit;
         /// <summary>v1.3: the act this puzzle belongs to and the objective it completes.</summary>
         public ActId BoundAct => PuzzleAct;
         public ObjectiveId CompletesObjective => Objective;
@@ -31,13 +33,14 @@ namespace PatientZero.Interaction
         private bool Available => objectives && objectives.Live && objectives.Act==PuzzleAct && (requires==ObjectiveId.None || objectives.IsComplete(requires));
         private void Selected(SelectEnterEventArgs args){grip=args.interactorObject.GetAttachTransform(interactable);BeginGrip(grip.position);}
         private void Deselected(SelectExitEventArgs args){EndGrip();}
-        public void BeginGrip(Vector3 point){if(!Available)return;held=true;gripStart=point;if(mechanic==Mechanic.Valve)valve.BeginGrip(point-transform.position,transform.TransformDirection(axis));loop=Cues.PlayAttached(mechanic==Mechanic.Valve?CueId.ValveSqueal:mechanic==Mechanic.Plank?CueId.PlankCreak:CueId.ReleaseBarGrind,transform,NoiseOrigin.Player,0);}
+        public void BeginGrip(Vector3 point){if(!Available)return;held=true;gripStart=point;if(mechanic==Mechanic.Valve)valve.BeginGrip(point-transform.position,transform.TransformDirection(axis));if(mechanic!=Mechanic.Handle)loop=Cues.PlayAttached(mechanic==Mechanic.Valve?CueId.ValveSqueal:mechanic==Mechanic.Plank?CueId.PlankCreak:CueId.ReleaseBarGrind,transform,NoiseOrigin.Player,0);}
         public void CancelGrip(){if(interactable && interactable.isSelected && interactable.interactionManager)interactable.interactionManager.CancelInteractableSelection((IXRSelectInteractable)interactable);EndGrip();}
-        public void EndGrip(){held=false;grip=null;valve.EndGrip();plank.Release();Cues.Stop(loop);loop=default;if(mechanic==Mechanic.Plank && !plank.Popped && movingPart)movingPart.localPosition=home;}
+        public void EndGrip(){held=false;grip=null;valve.EndGrip();plank.Release();Cues.Stop(loop);loop=default;if(movingPart && (mechanic==Mechanic.Handle || mechanic==Mechanic.Plank && !plank.Popped))movingPart.localPosition=home;}
         public void SampleGrip(Vector3 point,float seconds)
         {
             if(!held || !Available)return;
             if(mechanic==Mechanic.Plank){float pull=Vector3.Dot(point-gripStart,transform.TransformDirection(axis));bool popped=plank.Pull(pull);movingPart.localPosition=home+axis*Mathf.Min(plank.PullMeters,plank.Threshold);Cues.SetIntensity(loop,plank.Intensity);if(popped){objectives.PlankRemoved(plankIndex);Cues.Play(CueId.PlankPop,transform.position,NoiseOrigin.Player);EndGrip();movingPart.gameObject.SetActive(false);}}
+            else if(mechanic==Mechanic.Handle){float pull=Vector3.Dot(point-gripStart,transform.TransformDirection(axis));bool opened=plank.Pull(pull);movingPart.localPosition=home+axis*Mathf.Min(plank.PullMeters,plank.Threshold)*.4f;if(opened){objectives.Progress(Objective,1);objectives.Complete(Objective);EndGrip();}}
             else if(mechanic==Mechanic.Valve){float delta=valve.Sample(point-transform.position,transform.TransformDirection(axis),seconds);visualDegrees+=delta;movingPart.localRotation=Quaternion.AngleAxis(visualDegrees,axis)*rotation;Cues.SetIntensity(loop,valve.Intensity);PublishProgress();if(valve.Complete){objectives.Complete(Objective);Cues.Play(CueId.ValveVentHiss,transform.position,NoiseOrigin.Player);EndGrip();}}
             else {leverPulled=Vector3.Dot(gripStart-point,Vector3.up)>=.04f;}
         }

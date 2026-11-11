@@ -140,6 +140,7 @@ namespace PatientZero.Atmosphere
                     case ZombieDirection.Snap: z.SnapRestraint(c.Value > 0); break;
                     case ZombieDirection.Passive: z.SetMode(ZombieMode.Passive); break;
                     case ZombieDirection.Kneel: z.Kneel(); break;
+                    case ZombieDirection.Confront: z.Confront(c.Position); break; // E-22: the door zombie
                 }
             }
         }

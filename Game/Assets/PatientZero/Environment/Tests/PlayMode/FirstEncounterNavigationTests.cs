@@ -13,7 +13,7 @@ namespace PatientZero.Environment.Tests
     {
         private sealed class Player : IPlayerQuery
         {
-            public Vector3 FloorPosition => WardLayout.A1_Start.Position;
+            public Vector3 FloorPosition => WardLayout.A1_Door.Position; // E-22: standing still at the opened door
             public Vector3 HeadPosition => FloorPosition + Vector3.up * 1.6f;
             public Vector3 HeadForward => Vector3.forward;
             public InputModality Modality => InputModality.Controllers;
@@ -28,7 +28,11 @@ namespace PatientZero.Environment.Tests
             public void SetIntensity(CueHandle handle, float gain) { }
             public void Stop(CueHandle handle, float seconds) { }
         }
-        [UnityTest] public IEnumerator WalkerReachesWindowAndReleasesGateOnSavedFloorNavigation()
+        /// <summary>
+        /// E-22 (two-minute version): the door opens onto the Walker. A player who stands still is never grabbed; the Walker loses
+        /// them, walks off down the corridor on the saved navigation (not the director's fallback timer), and the act ends.
+        /// </summary>
+        [UnityTest] public IEnumerator DoorZombieLosesAStillPlayerAndWalksOffOnSavedFloorNavigation()
         {
 #if UNITY_EDITOR
             var data = UnityEditor.AssetDatabase.LoadAssetAtPath<NavMeshData>("Assets/PatientZero/Environment/Generated/WardNavMesh.asset");
@@ -40,18 +44,29 @@ namespace PatientZero.Environment.Tests
             actor.AddComponent<NavMeshAgent>().stoppingDistance = .05f;
             actor.AddComponent<ZombieNavigation>(); var shell = actor.AddComponent<ZombieAgentShell>(); shell.ZombieId = ZombieIds.Walker;
             var root = new GameObject("FirstEncounterDirector"); float oldScale = Time.timeScale; Time.timeScale = 1;
+            int grabs = 0; System.Action<PlayerCaught> grabbed = e => grabs++;
+            GameEvents.PlayerCaught.Subscribe(grabbed);
             try
             {
                 actor.SetActive(true); var director = root.AddComponent<ExperienceDirector>(); director.Zombies = new[] { shell };
                 director.StartRun(ActId.Awakening, false);
                 GameEvents.ObjectiveCompleted.Raise(new ObjectiveCompleted(ObjectiveId.Act1_DoorUnbarred));
-                float deadline = Time.realtimeSinceStartup + 25;
-                while (!director.IsGateReleased(GateId.Act1Door) && Time.realtimeSinceStartup < deadline) yield return null;
-                Assert.IsTrue(director.IsGateReleased(GateId.Act1Door), "Walker=" + actor.transform.position +
-                    "; target=" + shell.Brain.Target + "; path failed=" + actor.GetComponent<ZombieNavigation>().PathFailed + "; clock=" + director.ExperienceTime);
+                Assert.IsTrue(director.IsGateReleased(GateId.Act1Door), "the bar alone opens the door");
+                Assert.IsTrue(shell.Shown, "the door opens onto the Walker");
+                Assert.Greater(actor.transform.position.z, WardLayout.A1_DoorWindow.Position.z + .5f, "outside the room, in the corridor");
+                Assert.Less(WardLayout.HorizontalDistance(actor.transform.position, shell.Brain.Target), .3f, "it sniffs about the spot it appeared on");
+                GameEvents.ObjectiveCompleted.Raise(new ObjectiveCompleted(ObjectiveId.Act1_DoorOpened));
+                float deadline = Time.realtimeSinceStartup + 30;
+                while (director.CurrentAct == ActId.Awakening && Time.realtimeSinceStartup < deadline) yield return null;
+                string where = "Walker=" + actor.transform.position + "; target=" + shell.Brain.Target + "; level=" + shell.Brain.Level +
+                    "; path failed=" + actor.GetComponent<ZombieNavigation>().PathFailed + "; clock=" + director.ExperienceTime;
+                Assert.AreEqual(ActId.Machinery, director.CurrentAct, where);
+                Assert.AreEqual(0, grabs, "a player who stands still is never grabbed; " + where);
+                Assert.Less(WardLayout.HorizontalDistance(actor.transform.position, WardLayout.Z1_WalkTo.Position), .6f, "walked off, not timed out; " + where);
             }
             finally
             {
+                GameEvents.PlayerCaught.Unsubscribe(grabbed);
                 Object.DestroyImmediate(root); Object.DestroyImmediate(actor); navData.Remove();
                 Services<IPlayerQuery>.Unregister(player); Services<IAudioCuePlayer>.Unregister(audio); Time.timeScale = oldScale;
             }

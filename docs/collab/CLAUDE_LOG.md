@@ -169,3 +169,41 @@ Evidence:
 - A leftover probe of the previous exe, from a chain started before a context reset, held `D3D12Core.dll` and failed one build; it was stopped and the build re-run.
 Not verified: any headset (VR keeps the fade between floors and never enters a stairwell; the news lock turns the body once and holds movement, never seen on a device); EditMode and PlayMode tests in Unity (`HordeTests` ran only offline); `HospitalValidation` NavMesh routes with the horde (menu item only); the phone and iPad builds; a person playing (catch rates with packs are untuned, and the stairwell is dark unless the torch is on). The news captions come from a machine transcript nobody has checked. The scare has no controller rumble: only AI and Atmosphere may raise haptics.
 Follow-ups: the owner wants to choose a better zombie model from Mixamo before it goes in. They download it with their own Adobe account into the ignored `ThirdParty/Mixamo` folder; the game must fall back to the CC0 Quaternius zombie when it is absent (CI, a fresh clone). `integration_scan.py` still reports the existing `partial` duplicate-type error. The probe window takes focus on the desktop it runs on, so outside input can spoil a run.
+
+## 2026-11-11 · Two-minute version, step 1: blind zombies, freeze or die (E-22)
+Kind: INTEGRATION
+What: The owner approved the 2-minute plan on 2026-11-10 ("Approved, start"; Claude Doc "PATIENT ZERO Game Plan"), to be built in its 7-step order with each step checked on PC before the next. This is step 1, on `claude/two-minute` from `c97177c`. Every zombie now hunts by sound alone: a grab needs a player noise less than 1 s old, so a player who stands still is never grabbed. The three planks are gone. The room door has one push bar and swings open onto the door zombie, which screams in the player's face (on Standard scares the first time in a run also brings the stinger, the silence and the light pulse). It loses a player who keeps still and shuffles off down the corridor, and the act ends once it has gone; if it is held up it is taken away after 12 s, never as a fail. The first grab of a life is a struggle: 3 s to make 5 presses (Space or left click, a tap on a touch screen, a hard shove of either hand in a headset). Losing it, or a second grab, restarts from the bed. New signs: PUSH THE BAR and THEY HEAR YOU. The seat files changed are recorded as integration exception E-22 in `INTEGRATION_ROUND2.md`. There is no Core contract change.
+Evidence:
+- `run_logic_tests.py`: 241 passed, 0 failed.
+- `compose`: PASS, 0 errors, 0 warnings. "59 LayoutTag(s), every required WardLayout id placed once": the old plank points stay, as the door's lock and sign.
+- `build-windows`: PASS, 0 errors, 0 warnings, 130 MB.
+- `run_probe.py --rounds 3 --shots`: PASS 3/3, 0 errors or exceptions, twice on the final source. Rounds took 130.3 s, 140.0 s and 139.5 s; the news held the player 58 s each time.
+  - Round 1 stood still at the open door: no grab, and the act ended 11.6 s after the door opened.
+  - Round 2 kept stepping. It was grabbed 2.3 s after the door opened, won the struggle, and the act ended 22.5 s after the door opened.
+  - Round 3 lost the struggle and woke in the bed 6.5 s later. It then stood still and the act ended.
+  - Stairs: 8.5 s and 9.5 s, as before.
+- Shots viewed: the door swung open with the zombie in the doorway; the struggle panel reading "IT HAS YOU 0 / 5 / Press SPACE or click fast to break free!"; the room from the bed with PUSH THE BAR above B-7.
+- Defects found in the shots and fixed:
+  - The panel showed the last grab's "YOU DIED" for the first frame of every grab.
+  - The push-the-bar hint stayed on screen while the zombie screamed.
+  - PUSH THE BAR overlapped the B-7 room number.
+  - THEY HEAR YOU, at eye height beside the door, filled the view of a player standing there as a giant "THE".
+  - The struggle count wrapped onto a second line that the panel cuts off.
+- Probe failures on the way:
+  - First run: "the door zombie grabbed a player who stood still" in round 1. Four later runs did not reproduce it. The probe logged no noises then, so the cause is unknown; it now logs every player noise and every grab of the door scene.
+  - The probe waited on scaled time, which stops during a grab. It once sat through the whole 3 s struggle and lost it. A grab now ends the wait.
+  - In three runs a lever (Act 4, once the lobby) never moved, so the act retried until the round timed out. The diagnostic showed "Lever at 0.00" after holds of up to 10 s at 144 fps.
+    - The rig drops every held grip each frame while the game window has no focus (`TrackingRecovery`, by design: an alt-tab lets go). The valve, plank and bar finish within one grip sample, so only the lever, which must be held for 2 s, was hit.
+    - The probe now tells the rig it has focus before it holds a lever (logged once per run), and holds until the lever is down.
+    - In both passing runs the window had focus, so that path did not run. Focus is the only cause the code leaves, but it was not seen directly.
+- `check_rules.py`: 0 errors, 19 warnings (the probe's log lines). `integration_scan.py`: only the existing `partial` duplicate-type error and the `HapticRequested` warning.
+- Unity tests, first run for this work: PlayMode 23/23 passed (the rewritten `FirstEncounterNavigationTests` door-zombie test and the autoplay included). EditMode 244/245: `HospitalGenerationTests.OwnedBuildStepsAreRegisteredOnceWithPublicComposerSignatures` failed on the recorded-cue catalogue step (Bootstrap 610). That step came with E-21 (`c97177c`), whose Unity tests were never run, so the test's list was never updated. The list now includes it, and EditMode passes 245/245.
+Not verified:
+- Any headset: the shove, headset footsteps, and standing still in VR. This is the owner's check.
+- A person playing: whether 3 s and 5 presses is fair, and how far footsteps carry.
+- Reduced scares, and the phone and iPad builds.
+Follow-ups:
+- The owner checks step 1 on PC before step 2 (opening: bed wake-up, street of cars, 15 s news, crying).
+- `IntegrationPlayTests` still holds a lever for a fixed 2.1 s, as the probe did (Seat A test file, left as it was).
+- The unexplained first-run grab.
+- The probe's main-loop waits still freeze during a focus pause, as before E-22.

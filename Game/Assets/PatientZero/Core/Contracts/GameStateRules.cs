@@ -8,7 +8,7 @@ namespace PatientZero.Core
     ///   Calibration -> Playing
     ///   Playing     -> Paused | Caught | Ending
     ///   Paused      -> Playing | Ending          (resume to whichever state was paused)
-    ///   Caught      -> Playing                   (act checkpoint restore)
+    ///   Caught      -> Playing                   (act checkpoint restore; E-22: also a won struggle)
     ///   Ending      -> Paused | Complete
     ///   Complete    -> Playing                   (full restart)
     /// </summary>

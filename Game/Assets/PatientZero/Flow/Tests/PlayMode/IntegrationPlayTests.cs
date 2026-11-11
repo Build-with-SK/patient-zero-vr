@@ -100,7 +100,7 @@ namespace PatientZero.Flow.Tests
                     // The stairs fade drops whatever the player holds 0.35 s in; nothing can be gripped until it has cleared.
                     if(previous!=ActId.Awakening && WardLayout.StartsFloor(previous))yield return new WaitForSeconds(PatientZero.Player.PlayerRig.StairFadeOutSeconds+PatientZero.Player.PlayerRig.StairFadeInSeconds+.5f);
                     var puzzles=Components<PhysicalPuzzle>();
-                    if(previous==ActId.Awakening){foreach(var p in puzzles)if(p.mechanic==PhysicalPuzzle.Mechanic.Plank&&p.BoundAct==previous){var point=p.transform.position;p.BeginGrip(point);p.SampleGrip(point+p.transform.TransformDirection(p.axis)*.081f,.1f);p.EndGrip();}}
+                    if(previous==ActId.Awakening){foreach(var p in puzzles)if(p.mechanic==PhysicalPuzzle.Mechanic.Handle&&p.BoundAct==previous){var point=p.transform.position;p.BeginGrip(point);p.SampleGrip(point+p.transform.TransformDirection(p.axis)*.081f,.1f);p.EndGrip();}}
                     if(previous==ActId.Machinery){Valves(puzzles,previous);Plug(previous);}
                     if(previous==ActId.Darkness)MoveTo(WardLayout.A3_End.Position);
                     if(previous==ActId.Exit){yield return Levers(puzzles,previous);Stairs(previous);}

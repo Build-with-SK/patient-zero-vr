@@ -21,17 +21,26 @@ namespace PatientZero.AI.Logic
         { Zombie = zombie; Forward = forward; Player = player; HeadSpeed = headSpeed; HandSpeed = handSpeed; LineClear = lineClear; PathFailed = pathFailed; Lighting = lighting; }
     }
 
-    /// <summary>Approved alert-state FSM. Monotonic time/path/distraction guards port ZombieBrain@72be6d8.</summary>
+    /// <summary>
+    /// Approved alert-state FSM. Monotonic time/path/distraction guards port ZombieBrain@72be6d8.
+    /// Two-minute version (owner-approved plan 2026-11-10; Claude integration E-22): every zombie is blind and hunts by sound
+    /// alone (sight stays behind <see cref="Sighted"/> for the later lab strain), and a grab needs a player noise in the last
+    /// <see cref="FreshNoiseSeconds"/>, so a player who freezes is safe even face to face ("freeze or die").
+    /// </summary>
     public sealed class ZombieBrain
     {
         private readonly System.Random random;
         private readonly int id;
         private readonly Vector3 spawn, patrolNorth, patrolSouth;
-        // v1.4 horde: followers are deaf and nearly blind and go where their hunter goes; the Walker's are blind and cannot catch.
-        private readonly bool horde, follower, blind;
+        /// <summary>E-22: how recent a player noise must be for a zombie in reach to grab. Footsteps come every 0.6 s while moving.</summary>
+        public const float FreshNoiseSeconds = 1f;
+        /// <summary>E-22: how long the door zombie ignores every sound while it screams in the player's face.</summary>
+        public const float ConfrontDeafSeconds = .8f;
+        // v1.4 horde: followers are deaf and go where their hunter goes; the Walker's never chase or grab.
+        private readonly bool horde, follower, harmless;
         private Vector3 followSlot;
-        private float clock, stateAge, searchAge, lastRetarget = -100, lastPlayerStimulus = -100;
-        private float salience = -1, catchAge, stunRemaining, patrolPause, nextSearchPoint;
+        private float clock, stateAge, searchAge, lastRetarget = -100, lastPlayerStimulus = -100, chaseHeld = -100;
+        private float salience = -1, catchAge, stunRemaining, patrolPause, nextSearchPoint, deafUntil = -100;
         private Vector3 searchCentre;
         private bool returning, southbound = true, released, caught, nearWarning;
         private ZombieSignals pending;
@@ -41,6 +50,10 @@ namespace PatientZero.AI.Logic
         public bool HasMoveTarget { get; private set; }
         public bool Reduced { get; set; }
         public bool AssistedSpeed { get; set; }
+        /// <summary>E-22: false for every zombie in the two-minute version. True brings back the sight rules (the lab strain).</summary>
+        public bool Sighted { get; set; }
+        /// <summary>When this zombie last heard (or, if sighted, saw) the player: what its pack's grabs are measured against.</summary>
+        public float LastPlayerStimulus => lastPlayerStimulus;
         public float HearingMultiplier => id == ZombieIds.Patroller ? 1.2f : 1;
         public float WalkSpeed => horde ? .85f : id == ZombieIds.Patroller ? .8f : .9f;
         /// <summary>The horde is slower than the story hunters, so a pack strings out behind the one leading it.</summary>
@@ -55,7 +68,7 @@ namespace PatientZero.AI.Logic
             horde = HordeLayout.TryGet(id, out HordeLayout.Member member);
             if (ZombieIds.IsHorde(id) && !horde) throw new ArgumentException("Horde zombie " + id + " is not in HordeLayout");
             follower = horde && !member.Hunter;
-            blind = follower && member.Leader == ZombieIds.Walker;
+            harmless = follower && member.Leader == ZombieIds.Walker;
             followSlot = spawn;
             this.patrolNorth = patrolNorth; this.patrolSouth = patrolSouth;
             Reset(id == ZombieIds.FinalPatient ? ZombieMode.Restrained : ZombieMode.Dormant);
@@ -65,7 +78,7 @@ namespace PatientZero.AI.Logic
         {
             Mode = mode; Level = AlertLevel.Unaware; Target = spawn; HasMoveTarget = false;
             clock = stateAge = searchAge = catchAge = stunRemaining = patrolPause = 0;
-            salience = -1; lastRetarget = lastPlayerStimulus = -100; returning = released = caught = nearWarning = false;
+            salience = -1; lastRetarget = lastPlayerStimulus = deafUntil = chaseHeld = -100; returning = released = caught = nearWarning = false;
             pending = ZombieSignals.None; southbound = true;
         }
         public void SetMode(ZombieMode mode)
@@ -80,30 +93,64 @@ namespace PatientZero.AI.Logic
         public void ReleaseRestraint() { released = true; }
 
         /// <summary>
+        /// E-22, the door zombie: it is suddenly right outside the player's door and sniffs about the spot it stands on. For
+        /// <see cref="ConfrontDeafSeconds"/> it hears nothing (it is screaming); after that any sound the player makes is heard as
+        /// usual, so moving means it attacks, while a player who stays still and quiet is lost when the search runs out.
+        /// </summary>
+        public void Confront(Vector3 at, float now)
+        {
+            if (!Hearing.Finite(at) || !Hearing.Finite(now) || now < clock || Mode == ZombieMode.Passive) return;
+            Mode = ZombieMode.Idle; caught = returning = false; catchAge = 0;
+            lastPlayerStimulus = lastRetarget = chaseHeld = -100; salience = -1;
+            deafUntil = now + ConfrontDeafSeconds; Target = at;
+            StartSearch();
+        }
+
+        /// <summary>
+        /// E-22, the one struggle: the player fought this zombie off. It lets go, staggers back stunned, and has to find the
+        /// player again by sound, from where the player was.
+        /// </summary>
+        public void BreakFree(float stunSeconds)
+        {
+            if (!caught) return;
+            caught = false; catchAge = 0; lastPlayerStimulus = chaseHeld = -100;
+            if (Mode == ZombieMode.Follow) { Change(AlertLevel.Unaware); HasMoveTarget = false; }
+            else StartSearch();
+            Stun(stunSeconds);
+        }
+
+        /// <summary>
         /// A follower's link to its pack (v1.4), given before each tick: where its place in the pack is now, and whether its
         /// hunter is chasing. A chasing hunter takes the pack with it, straight for what it is chasing.
         /// </summary>
-        public void Follow(bool leaderChasing, Vector3 leaderTarget, Vector3 slot, float now)
+        /// <remarks>E-22: <paramref name="leaderStimulus"/> is when the hunter last heard the player. A follower's grab needs that to
+        /// be fresh, as the hunter's own does, so a pack that has run up to a frozen player cannot take them.</remarks>
+        public void Follow(bool leaderChasing, Vector3 leaderTarget, Vector3 slot, float now, float leaderStimulus)
         {
             if (!follower || Mode != ZombieMode.Follow || caught || !Hearing.Finite(slot) || !Hearing.Finite(leaderTarget) ||
                 !Hearing.Finite(now) || now < clock) return;
             followSlot = slot;
-            if (!leaderChasing || blind) return;
-            Target = leaderTarget; searchCentre = Target; lastPlayerStimulus = now;
+            if (!leaderChasing || harmless) return;
+            Target = leaderTarget; searchCentre = Target; chaseHeld = now;
+            if (Hearing.Finite(leaderStimulus) && leaderStimulus <= now) lastPlayerStimulus = Math.Max(lastPlayerStimulus, leaderStimulus);
             BeginChase();
         }
         public void Stun(float seconds) { if (Hearing.Finite(seconds)) stunRemaining = Math.Max(stunRemaining, seconds); }
 
         public bool Hear(in NoiseEvent noise, Vector3 position, float occlusion, float now, bool live)
         {
-            if (follower || !live || IsStunned || caught || Mode == ZombieMode.Passive || Mode == ZombieMode.Scripted ||
+            if (follower || !live || IsStunned || caught || now < deafUntil || Mode == ZombieMode.Passive || Mode == ZombieMode.Scripted ||
                 Mode == ZombieMode.Restrained || !Hearing.Finite(now) || now < clock ||
                 !Hearing.CanHear(in noise, position, HearingMultiplier, occlusion, now)) return false;
             float strength = Hearing.Salience(in noise, position, HearingMultiplier, occlusion);
-            if (Level >= AlertLevel.Investigating && strength <= salience && now - lastRetarget < 1.5f) return false;
             bool thrownImpact = noise.Origin == NoiseOrigin.Player &&
                 (noise.Source == CueId.ImpactHeavy || noise.Source == CueId.ImpactLight);
             bool remoteImpact = thrownImpact && WardLayout.HorizontalDistance(position, noise.Position) > 2;
+            // E-22: blind, a chasing zombie follows the footsteps of the player it is after, however faint, so a player who keeps
+            // moving stays heard (and can be grabbed); jitter hysteresis still guards every other retarget.
+            bool sameQuarry = Level == AlertLevel.Chasing && noise.Origin == NoiseOrigin.Player && !remoteImpact &&
+                WardLayout.HorizontalDistance(noise.Position, Target) <= 3;
+            if (!sameQuarry && Level >= AlertLevel.Investigating && strength <= salience && now - lastRetarget < 1.5f) return false;
             Target = noise.Position; searchCentre = Target; salience = strength; lastRetarget = now;
             // A thrown bottle identifies its landing, not the thrower's live position.
             if (remoteImpact) lastPlayerStimulus = -100;
@@ -136,7 +183,7 @@ namespace PatientZero.AI.Logic
                 Catch(delta, released && distance <= WardLayout.FinalPatientReach && frame.LineClear && Math.Abs(spawn.y - frame.Player.y) <= 1.2f);
                 return Flush();
             }
-            bool sees = !blind && CanSee(in frame);
+            bool sees = Sighted && !harmless && CanSee(in frame);
             if (sees && (Level == AlertLevel.Investigating || Level == AlertLevel.Searching || Level == AlertLevel.Chasing))
             { Target = frame.Player; lastPlayerStimulus = now; BeginChase(); }
             else if (sees && Level == AlertLevel.Unaware)
@@ -169,8 +216,10 @@ namespace PatientZero.AI.Logic
                     break;
                 case AlertLevel.Chasing:
                     HasMoveTarget = true;
-                    if (frame.PathFailed || now - lastPlayerStimulus >= 3) { StartSearch(); catchAge = 0; }
-                    else Catch(delta, !blind && frame.LineClear && Math.Abs(frame.Zombie.y - frame.Player.y) <= 1.2f &&
+                    // A follower runs with its hunter (Follow keeps chaseHeld current), so a pack chase lasts as long as the hunter's.
+                    if (frame.PathFailed || now - Math.Max(lastPlayerStimulus, chaseHeld) >= 3) { StartSearch(); catchAge = 0; }
+                    else Catch(delta, !harmless && now - lastPlayerStimulus <= FreshNoiseSeconds && frame.LineClear &&
+                        Math.Abs(frame.Zombie.y - frame.Player.y) <= 1.2f &&
                         WardLayout.HorizontalDistance(frame.Zombie, frame.Player) <= (Reduced ? .6f : .8f));
                     break;
             }

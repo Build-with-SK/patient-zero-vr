@@ -27,6 +27,8 @@ namespace PatientZero.Player
         /// <summary>Screen pixels this frame while grabbing; moves a held puzzle part.</summary>
         public static Vector2 Drag;
         public static bool GrabPressed, GrabHeld, GrabReleased, Throw, Teleport, Flashlight, Pause, Confirm;
+        /// <summary>E-22: one press of the struggle out of a zombie's grab (Space or the left button; a tap on a touch screen).</summary>
+        public static bool Struggle;
         private static int polledFrame = -1;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -50,6 +52,7 @@ namespace PatientZero.Player
                 Flashlight = keys.fKey.wasPressedThisFrame;
                 Pause = keys.escapeKey.wasPressedThisFrame;
                 Confirm = keys.enterKey.wasPressedThisFrame || keys.numpadEnterKey.wasPressedThisFrame;
+                Struggle = keys.spaceKey.wasPressedThisFrame;
             }
 
             if (mouse != null)
@@ -67,12 +70,13 @@ namespace PatientZero.Player
 #elif PZ_TOUCH
             if (TouchControls.Active != null) TouchControls.Active.Fill();
 #endif
+            Struggle |= GrabPressed;
         }
 
         public static void Clear()
         {
             Move = Look = Drag = Vector2.zero;
-            GrabPressed = GrabHeld = GrabReleased = Throw = Teleport = Flashlight = Pause = Confirm = false;
+            GrabPressed = GrabHeld = GrabReleased = Throw = Teleport = Flashlight = Pause = Confirm = Struggle = false;
         }
     }
 }

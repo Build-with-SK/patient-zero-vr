@@ -38,7 +38,7 @@ namespace PatientZero.Core
     public enum ObjectiveId
     {
         None = 0,
-        Act1_DoorUnbarred = 100,   // all three planks removed (progress = planks / 3)
+        Act1_DoorUnbarred = 100,   // E-22: the room door's push bar pushed (was: all three planks removed)
         Act1_DoorOpened = 101,
         Act2_ValveVented = 200,    // progress = accumulated rotation / required rotation
         Act2_CablePlugged = 201,
@@ -117,7 +117,7 @@ namespace PatientZero.Core
     public enum GateId
     {
         None = 0,
-        Act1Door = 1,  // all planks off and Z1 at least 4 m from the door window (GAME_DESIGN.md, Act 1 "Unlatch")
+        Act1Door = 1,  // E-22: the push bar is pushed; the door opens onto the door zombie (was: planks off and Z1 4 m away)
     }
 
     public enum FailReason

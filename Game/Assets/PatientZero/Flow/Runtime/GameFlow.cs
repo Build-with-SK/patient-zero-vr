@@ -28,6 +28,8 @@ namespace PatientZero.Flow
         public void Resume(){core.Resume();Drain();}
         public void RestartAct(){core.Restart(true);Drain();}
         public void RestartRun(){core.Restart(false);Drain();}
+        /// <summary>E-22: one press of the struggle input, from PlayerBody. True when it broke the player free.</summary>
+        public bool Struggle(){bool free=core.Struggle();Drain();return free;}
         private void OnRequest(GameStateRequest request){core.Request(request.Requested,request.Reason);Drain();}
         private void OnCaught(PlayerCaught caught){if(core.Catch())Cues.Play(CueId.CaughtHeartbeat,caught.ZombiePosition,NoiseOrigin.Ambient);Drain();}
         private void OnAct(ActStarted act){core.SetAct(act.Act);}

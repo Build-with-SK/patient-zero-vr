@@ -10,6 +10,9 @@ namespace PatientZero.AI
     /// Ward zombie shell: 10 Hz phased AI, contract-only player queries, cue-before-chase ordering.
     /// v1.4 (E-21): a horde member takes its spawn, facing and beat from HordeLayout. A horde hunter is in play in its own act;
     /// a follower is in play exactly while its Leader is in play and in view, and keeps its place in the Leader's pack.
+    /// Two-minute version (owner-approved plan 2026-11-10; Claude integration E-22): the Walker is the door zombie the director
+    /// confronts the player with, and its followers stay out of play. A zombie that grabbed the player lets go, stunned and
+    /// pushed back, when the player wins the struggle.
     /// </summary>
     [RequireComponent(typeof(ZombieNavigation))]
     public sealed class ZombieAgentShell : MonoBehaviour
@@ -31,8 +34,10 @@ namespace PatientZero.AI
         private LightingState lighting = LightingState.Awakening;
         private ExperienceSettings settings = ExperienceSettings.Defaults;
         private float nextTick, lastTick;
-        private bool active;
+        private bool active, holdingPlayer;
         private CueHandle breathing, shuffling;
+        /// <summary>E-22: how long a zombie the player fought off stays stunned, and how far it staggers back.</summary>
+        public const float BreakFreeStunSeconds = 3, BreakFreePushMeters = 1.2f;
         private static readonly ProfilerMarker TickMarker = new ProfilerMarker("PatientZero.AI.Tick");
         public ZombieBrain Brain => brain;
         /// <summary>In play this act (its simulation runs).</summary>
@@ -83,7 +88,7 @@ namespace PatientZero.AI
             state = GameState.Playing; // Ward can load after Bootstrap's Playing notification.
             // v1.4: a follower is never in play at the start of an act; it joins when its leader shows (Update).
             active = horde ? member.Hunter && member.Act == e.Act : ZombieIds.ActOf(ZombieId) == e.Act;
-            StopLoops(); // v1.3: two zombies share the lobby lastTick = Time.time; nextTick = Time.time + ZombieId * .017f;
+            StopLoops(); holdingPlayer = false; // v1.3: two zombies share the lobby lastTick = Time.time; nextTick = Time.time + ZombieId * .017f;
             brain.Reset(ZombieId == 4 ? ZombieMode.Restrained : ZombieMode.Dormant);
             formed = false;
             if (navigation) { navigation.SetSimulationActive(active); if (active) navigation.Warp(Spawn()); }
@@ -97,7 +102,8 @@ namespace PatientZero.AI
         /// <summary>A follower comes into play with its leader and leaves with it: a pack is never split across acts.</summary>
         private void TrackLeader()
         {
-            bool join = Leader.active && Leader.Shown;
+            // E-22: the Walker is now the lone door zombie; its old window-pass pack stays out of play.
+            bool join = Leader.active && Leader.Shown && Leader.ZombieId != ZombieIds.Walker;
             if (join == active) return;
             active = join; formed = false;
             StopLoops(); brain.Reset(ZombieMode.Dormant);
@@ -120,6 +126,9 @@ namespace PatientZero.AI
         private void StateChanged(GameStateChanged e)
         {
             state = e.To; lastTick = Time.time; if (!GameStateRules.IsSimulationLive(state)) navigation.Stop();
+            // E-22: the player won the struggle (Caught straight back to Playing): every zombie holding them lets go.
+            if (holdingPlayer && e.From == GameState.Caught && e.To == GameState.Playing) LetGo();
+            else if (e.To != GameState.Caught) holdingPlayer = false;
             // The director stands the story zombies down for the ending; the horde (which it does not command) kneels with them.
             if (horde && active && e.To == GameState.Ending) { SetMode(ZombieMode.Passive); Kneel(); }
         }
@@ -150,7 +159,7 @@ namespace PatientZero.AI
                 player.HeadSpeed, player.FastestHandSpeed, clear, navigation.PathFailed, lighting);
             brain.Reduced = settings.Scares == ScareIntensity.Reduced;
             if (Leader && brain.Mode == ZombieMode.Follow)
-                brain.Follow(Leader.brain.Level == AlertLevel.Chasing, Leader.brain.Target, Slot(), now);
+                brain.Follow(Leader.brain.Level == AlertLevel.Chasing, Leader.brain.Target, Slot(), now, Leader.brain.LastPlayerStimulus);
             var signals = brain.Tick(now, delta, true, in frame);
             // The audible/captioned warning is applied before alert publication or navigation.
             if ((signals & ZombieSignals.Snarl) != 0) Cues.Play(CueId.ZombieSnarl, eye, NoiseOrigin.Zombie);
@@ -160,6 +169,7 @@ namespace PatientZero.AI
             if ((signals & ZombieSignals.Caught) != 0)
             {
                 navigation.Stop(); Cues.Play(CueId.ZombieLunge, eye, NoiseOrigin.Zombie);
+                holdingPlayer = true; // before the event: the flow may answer it at once
                 GameEvents.PlayerCaught.Raise(new PlayerCaught(ZombieId, transform.position)); return;
             }
             navigation.Drive(brain.HasMoveTarget && !brain.IsStunned, brain.Target,
@@ -179,6 +189,37 @@ namespace PatientZero.AI
             if (!value) { navigation.Stop(); StopLoops(); } else StartBreathing();
         }
         public void SetMode(ZombieMode mode) { brain.SetMode(mode); if (mode == ZombieMode.Passive) { navigation.Stop(); StopLoops(2); } }
+        /// <summary>
+        /// E-22, director-only: the door zombie is suddenly at <paramref name="at"/>, facing the player, screaming (the director
+        /// plays the scream). It hears nothing for a moment, then hunts by sound around that spot.
+        /// </summary>
+        public void Confront(Vector3 at)
+        {
+            holdingPlayer = false;
+            SetActiveInAct(true);
+            navigation.Warp(at);
+            Vector3 face = Services<IPlayerQuery>.TryGet(out var player) ? player.FloorPosition - at : -transform.forward;
+            face.y = 0;
+            if (face.sqrMagnitude > 1e-4f) transform.rotation = Quaternion.LookRotation(face);
+            brain.Confront(at, Time.time);
+            lastTick = Time.time; nextTick = Time.time + .1f;
+            if (Animation) Animation.Lunge();
+        }
+        /// <summary>E-22: the player shoved this zombie off. It staggers back, groans, and must find them again by sound.</summary>
+        private void LetGo()
+        {
+            holdingPlayer = false;
+            brain.BreakFree(BreakFreeStunSeconds);
+            Vector3 eye = Head ? Head.position : transform.position + Vector3.up;
+            if (Services<IPlayerQuery>.TryGet(out var player))
+            {
+                Vector3 away = transform.position - player.FloorPosition; away.y = 0;
+                if (away.sqrMagnitude < 1e-4f) away = -transform.forward;
+                navigation.Warp(transform.position + away.normalized * BreakFreePushMeters);
+            }
+            navigation.Stop(); lastTick = Time.time;
+            Cues.Play(CueId.ZombieGroan, eye, NoiseOrigin.Zombie);
+        }
         public void MoveScripted(Vector3 target) => brain.ScriptedMove(target);
         public void Stun(float seconds) { brain.Stun(seconds); navigation.Stop(); }
         public void AssistSpeed(bool value) => brain.AssistedSpeed = value;

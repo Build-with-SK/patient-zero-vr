@@ -11,6 +11,8 @@ namespace PatientZero.AI.Tests
         private static NoiseEvent Noise(float x, float radius = 6, float time = 0, NoiseOrigin origin = NoiseOrigin.Player) =>
             new NoiseEvent(Vector3.right * x, radius, CueId.ImpactHeavy, origin, time);
         private static ZombieBrain Brain(int id = 2) => new ZombieBrain(id, Vector3.zero, new System.Random(42), Vector3.forward * 3, Vector3.back * 3);
+        /// <summary>The sight rules, kept for the later lab strain (E-22); every zombie in the two-minute version is blind.</summary>
+        private static ZombieBrain Sighted(int id = 2) { var b = Brain(id); b.Sighted = true; return b; }
         private static PerceptionFrame Frame(float playerX = 5, bool failed = false, bool clear = true, float speed = 0, LightingState lighting = LightingState.WardDim) =>
             new PerceptionFrame(Vector3.zero, Vector3.right, Vector3.right * playerX, speed, 0, clear, failed, lighting);
         [Test] public void HearingBoundaryMultiplierAndDoorOcclusion()
@@ -67,26 +69,90 @@ namespace PatientZero.AI.Tests
             var b = Brain(); b.Hear(Noise(1), Vector3.zero, 1, 0, true); b.Tick(.6f, .6f, true, Frame(.5f));
             var output = b.Tick(.7f, .1f, true, Frame(.5f));
             Assert.AreEqual(AlertLevel.Chasing, b.Level); Assert.IsTrue((output & ZombieSignals.Snarl) != 0);
+            b.Hear(Noise(.5f, time: .75f), Vector3.zero, 1, .75f, true); // a footstep: the player is still moving
             Assert.IsFalse((b.Tick(.8f, .1f, true, Frame(.5f)) & ZombieSignals.Caught) != 0);
             Assert.IsTrue((b.Tick(1, .2f, true, Frame(.5f)) & ZombieSignals.Caught) != 0);
             Assert.AreEqual(ZombieSignals.None, b.Tick(1.1f, .1f, true, Frame(.5f)));
         }
+        /// <summary>E-22 freeze or die: in reach and chasing, but the player has made no sound for over a second.</summary>
+        [Test] public void AFrozenPlayerInReachIsNeverGrabbedAndIsLost()
+        {
+            // It hears one step at 1 m, then closes in; the player has stood still since that step.
+            var b = Brain(); b.Hear(Noise(1), Vector3.zero, 1, 0, true); b.Tick(.6f, .6f, true, Frame(1.5f));
+            b.Tick(.7f, .1f, true, Frame(1.5f)); Assert.AreEqual(AlertLevel.Chasing, b.Level);
+            for (int i = 8; i <= 30; i++)
+            {
+                float t = i * .1f;
+                var signals = b.Tick(t, .1f, true, Frame(t < 1.2f ? 1.5f : .5f));
+                Assert.IsFalse((signals & ZombieSignals.Caught) != 0, "grabbed at " + t);
+            }
+            Assert.AreEqual(AlertLevel.Searching, b.Level, "three silent seconds and the chase is over");
+        }
+        [Test] public void MovingAgainInReachIsGrabbed()
+        {
+            var b = Brain(); b.Hear(Noise(1), Vector3.zero, 1, 0, true); b.Tick(.6f, .6f, true, Frame(.5f));
+            b.Tick(.7f, .1f, true, Frame(.5f)); b.Tick(1.8f, 1.1f, true, Frame(.5f));
+            Assert.AreEqual(AlertLevel.Chasing, b.Level);
+            Assert.IsTrue(b.Hear(Noise(.5f, 2.5f, 1.85f), Vector3.zero, 1, 1.85f, true));
+            b.Tick(1.9f, .1f, true, Frame(.5f));
+            Assert.IsTrue((b.Tick(2.2f, .3f, true, Frame(.5f)) & ZombieSignals.Caught) != 0);
+        }
+        /// <summary>E-22: sight is off for every zombie, so a moving player in plain view is not noticed until heard.</summary>
+        [Test] public void BlindZombiesNeverNoticeAMovingPlayerInView()
+        {
+            var b = Brain();
+            for (int i = 1; i <= 30; i++) b.Tick(i * .1f, .1f, true, Frame(2, speed: 5));
+            Assert.AreEqual(AlertLevel.Unaware, b.Level);
+        }
+        /// <summary>E-22 door zombie: deaf while it screams, then searches; quiet means it groans and gives up.</summary>
+        [Test] public void ConfrontIgnoresTheScreamThenLosesAQuietPlayer()
+        {
+            var b = Brain(1); var door = Vector3.forward * 1.5f;
+            b.Confront(door, 0); Assert.AreEqual(AlertLevel.Searching, b.Level); Assert.AreEqual(door, b.Target);
+            Assert.IsFalse(b.Hear(Noise(.2f, 3, .5f), Vector3.zero, 1, .5f, true), "deaf while screaming");
+            var groan = ZombieSignals.None;
+            for (int i = 1; i <= 60; i++) groan |= b.Tick(i * .1f, .1f, true, Frame(.2f));
+            Assert.AreEqual(AlertLevel.Unaware, b.Level); Assert.IsTrue((groan & ZombieSignals.Groan) != 0);
+            Assert.IsFalse((groan & ZombieSignals.Caught) != 0);
+        }
+        [Test] public void ConfrontAttacksAPlayerWhoMoves()
+        {
+            var b = Brain(1); b.Confront(Vector3.forward * 1.2f, 0); b.Tick(.9f, .9f, true, Frame(.5f));
+            Assert.IsTrue(b.Hear(Noise(.5f, 2.5f, 1), Vector3.zero, 1, 1, true));
+            Assert.AreEqual(AlertLevel.Chasing, b.Level, "a step right in front of it is an attack, not a sniff");
+            var caught = ZombieSignals.None;
+            for (int i = 1; i <= 5; i++) { b.Hear(Noise(.5f, 2.5f, 1 + i * .1f), Vector3.zero, 1, 1 + i * .1f, true); caught |= b.Tick(1 + i * .1f, .1f, true, Frame(.5f)); }
+            Assert.IsTrue((caught & ZombieSignals.Caught) != 0);
+        }
+        /// <summary>E-22 struggle: the zombie lets go, is stunned, and must hear the player again before it can grab again.</summary>
+        [Test] public void BreakFreeReleasesStunsAndNeedsAFreshNoise()
+        {
+            var b = Brain(); b.Hear(Noise(1), Vector3.zero, 1, 0, true); b.Tick(.6f, .6f, true, Frame(.5f)); b.Tick(.7f, .1f, true, Frame(.5f));
+            b.Hear(Noise(.5f, time: .8f), Vector3.zero, 1, .8f, true); b.Tick(.8f, .1f, true, Frame(.5f));
+            Assert.IsTrue((b.Tick(1.1f, .3f, true, Frame(.5f)) & ZombieSignals.Caught) != 0);
+            b.BreakFree(3); Assert.IsTrue(b.IsStunned); Assert.AreEqual(AlertLevel.Searching, b.Level);
+            Assert.IsFalse(b.Hear(Noise(.5f, time: 1.5f), Vector3.zero, 1, 1.5f, true), "stunned");
+            for (float t = 1.2f; t < 4.6f; t += .1f) Assert.IsFalse((b.Tick(t, .1f, true, Frame(.5f)) & ZombieSignals.Caught) != 0);
+            Assert.IsFalse(b.IsStunned);
+            b.BreakFree(3); Assert.IsFalse(b.IsStunned, "only a zombie that is holding the player can be fought off");
+        }
         [Test] public void WallOrRetreatBreaksContinuousCatchTimer()
         {
             var b = Brain(); b.Hear(Noise(1), Vector3.zero, 1, 0, true); b.Tick(.6f, .6f, true, Frame()); b.Tick(.7f, .1f, true, Frame());
+            b.Hear(Noise(.5f, time: .75f), Vector3.zero, 1, .75f, true); // still moving: only the wall and the retreat stop the grab
             b.Tick(.8f, .1f, true, Frame(.5f)); b.Tick(.9f, .1f, true, Frame(.5f, clear: false));
             Assert.IsFalse((b.Tick(1, .1f, true, Frame(.5f)) & ZombieSignals.Caught) != 0);
             Assert.IsFalse((b.Tick(1.1f, .1f, true, Frame(3)) & ZombieSignals.Caught) != 0);
         }
         [Test] public void FrozenPlayerAndBlackoutAreNeverSeen()
         {
-            var b = Brain(); b.Tick(.1f, .1f, true, Frame()); Assert.AreEqual(AlertLevel.Unaware, b.Level);
+            var b = Sighted(); b.Tick(.1f, .1f, true, Frame()); Assert.AreEqual(AlertLevel.Unaware, b.Level);
             b.Tick(.2f, .1f, true, Frame(speed: 5, lighting: LightingState.Blackout)); Assert.AreEqual(AlertLevel.Unaware, b.Level);
             b.Tick(.3f, .1f, true, Frame(speed: 5)); Assert.AreEqual(AlertLevel.Suspicious, b.Level);
         }
         [Test] public void MovingPlayerOutsideViewConeIsNotSeen()
         {
-            var b = Brain(); var frame = new PerceptionFrame(Vector3.zero, Vector3.forward, Vector3.right * 3, 2);
+            var b = Sighted(); var frame = new PerceptionFrame(Vector3.zero, Vector3.forward, Vector3.right * 3, 2);
             b.Tick(.1f, .1f, true, frame); Assert.AreEqual(AlertLevel.Unaware, b.Level);
         }
         [Test] public void ChaseExpiresWhenSilentPlayerTeleportsAway()
@@ -144,7 +210,7 @@ namespace PatientZero.AI.Tests
         }
         [Test] public void MovingSightEscalationIncludesSnarl()
         {
-            var b = Brain(); b.Hear(Noise(4), Vector3.zero, 1, 0, true); b.Tick(.6f, .6f, true, Frame());
+            var b = Sighted(); b.Hear(Noise(4), Vector3.zero, 1, 0, true); b.Tick(.6f, .6f, true, Frame());
             var signals = b.Tick(.7f, .1f, true, Frame(speed: 1));
             Assert.AreEqual(AlertLevel.Chasing, b.Level); Assert.IsTrue((signals & ZombieSignals.Snarl) != 0);
         }
@@ -196,7 +262,7 @@ namespace PatientZero.AI.Tests
         }
         [Test] public void DistractionDoesNotOverrideHysteresisOrFreshVisibleMovement()
         {
-            var b = Brain(); b.Hear(Noise(1), Vector3.zero, 1, 0, true);
+            var b = Sighted(); b.Hear(Noise(1), Vector3.zero, 1, 0, true);
             b.Tick(.6f, .6f, true, Frame()); b.Tick(.7f, .1f, true, Frame());
             Assert.IsFalse(b.Hear(Noise(-5, 6, .8f), Vector3.zero, 1, .8f, true));
             Assert.IsTrue(b.Hear(Noise(-4, 6, 2.3f), Vector3.zero, 1, 2.3f, true));
@@ -205,7 +271,7 @@ namespace PatientZero.AI.Tests
         }
         [Test] public void InterruptedCatchMustBuildACompleteNewCatchTimer()
         {
-            var b = Brain(); b.Hear(Noise(1), Vector3.zero, 1, 0, true);
+            var b = Sighted(); b.Hear(Noise(1), Vector3.zero, 1, 0, true);
             b.Tick(.6f, .6f, true, Frame()); b.Tick(.7f, .1f, true, Frame());
             b.Tick(.9f, .2f, true, Frame(.2f));
             b.Hear(Noise(-4, 12, 1), Vector3.zero, 1, 1, true);

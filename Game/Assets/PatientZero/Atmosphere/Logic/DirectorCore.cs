@@ -6,7 +6,8 @@ namespace PatientZero.Atmosphere.Logic
 {
     // Commands are local to B's director/shell, not a second cross-seat contract or event bus.
     public enum DirectorCommandKind { Cue, Lighting, Act, Assist, Zombie, Reveal, State, Silence, Tension, StopZombieLoops, LocalLightPulse, Gate }
-    public enum ZombieDirection { Hide, WindowApproach, LeaveWindow, Dormant, Investigate, Patrol, Hold, Stun, Restraint, Snap, Passive, Kneel }
+    // E-22: Confront is appended last (the door zombie appears outside the room door, screaming, and sniffs for the player).
+    public enum ZombieDirection { Hide, WindowApproach, LeaveWindow, Dormant, Investigate, Patrol, Hold, Stun, Restraint, Snap, Passive, Kneel, Confront }
     public readonly struct DirectorCommand
     {
         public readonly DirectorCommandKind Kind;
@@ -22,14 +23,18 @@ namespace PatientZero.Atmosphere.Logic
     public sealed class DirectorMemory
     {
         public readonly int[] Catches = new int[(int)ActId.Lobby + 1];
-        public bool WindowScareUsed, StrapScareUsed;
+        /// <summary>E-22: the door zombie's full scare (stinger, silence, light pulse) is spent once per run, not once per life.</summary>
+        public bool DoorScareUsed, StrapScareUsed;
         public int Attempt;
         public float ExperienceTime;
-        public void Reset() { Array.Clear(Catches, 0, Catches.Length); WindowScareUsed = StrapScareUsed = false; Attempt = 0; ExperienceTime = 0; }
+        public void Reset() { Array.Clear(Catches, 0, Catches.Length); DoorScareUsed = StrapScareUsed = false; Attempt = 0; ExperienceTime = 0; }
     }
     /// <summary>
     /// Objective-driven approved timeline: the ward's four acts, then one act per lower floor (contract v1.3,
     /// GAME_DESIGN.md section 11; Claude integration E-19). No clock may fail the player.
+    /// Act 1 in the two-minute version (owner-approved plan 2026-11-10; Claude integration E-22): the player pushes the bar on
+    /// the room door; the door opens onto the zombie, which screams in the player's face. A player who freezes is lost and the
+    /// zombie shuffles off; one who moves is attacked. The act ends once the zombie has gone.
     /// </summary>
     public sealed class DirectorCore
     {
@@ -40,18 +45,24 @@ namespace PatientZero.Atmosphere.Logic
         private readonly bool[] complete = new bool[ObjectiveIds.Count];
         private readonly ObjectiveId[] objectives = CopyObjectives();
         private int read, write;
-        private float actTime, endingTime, lureAt, surgeAt = -1, lastHard = -100, lastAlert = -100, lastAmbient = -100, nextBeacon;
-        private bool pass, windowArrived, windowScare, lure, z1Clear, investigate, crossing, snapped, ending, pa, drone, kneel, done;
+        private float actTime, endingTime, lureAt = -1, surgeAt = -1, lastHard = -100, lastAlert = -100, lastAmbient = -100, nextBeacon;
+        private bool confronted, walkerLost, lure, investigate, crossing, snapped, ending, pa, drone, kneel, done;
         private Vector3 z1Position;
         private bool walkerRemoved, actOneGateReleased;
         public ActId Act { get; private set; }
         public float ExperienceTime => memory.ExperienceTime;
         public float ActTime => actTime;
         public float Tension { get; private set; }
-        public bool CanOpenAct1Door => windowScare && lure && z1Clear && complete[0];
+        /// <summary>E-22: the door bar is all the door needs; the zombie waits behind it.</summary>
+        public bool CanOpenAct1Door => complete[0];
+        /// <summary>E-22: where the door zombie stands, just outside the room door, clear of the door's swing.</summary>
+        public static Vector3 DoorFront => new Vector3(WardLayout.A1_DoorWindow.Position.x, WardLayout.Z1_WalkFrom.Position.y,
+            Mathf.Lerp(WardLayout.A1_DoorWindow.Position.z, WardLayout.Z1_WalkFrom.Position.z, .75f));
+        /// <summary>E-22: if the shuffling zombie is held up on its way, it is taken away after this long; never a fail.</summary>
+        public const float WalkerLeaveSeconds = 12;
         public bool InvestigationStarted => investigate;
         public bool AdaptiveAssist => memory.Catches[(int)Act] >= 2;
-        public int HardScares => (memory.WindowScareUsed ? 1 : 0) + (memory.StrapScareUsed ? 1 : 0);
+        public int HardScares => (memory.DoorScareUsed ? 1 : 0) + (memory.StrapScareUsed ? 1 : 0);
         private ExperienceSettings settings = ExperienceSettings.Defaults;
         public ExperienceSettings Settings
         {
@@ -83,6 +94,7 @@ namespace PatientZero.Atmosphere.Logic
             if (Act != ActId.Awakening || actOneGateReleased || !CanOpenAct1Door) return;
             actOneGateReleased = true;
             Emit(new DirectorCommand(DirectorCommandKind.Gate, (int)GateId.Act1Door));
+            DoorConfront();
         }
         public bool TrackingAvailable { get; private set; } = true;
         public DirectorCore(DirectorMemory memory) { this.memory = memory ?? throw new ArgumentNullException(nameof(memory)); }
@@ -95,8 +107,8 @@ namespace PatientZero.Atmosphere.Logic
         }
         private void EnterAct(ActId act, bool restore)
         {
-            Act = act; actTime = 0; surgeAt = -1; nextBeacon = 3;
-            pass = windowArrived = windowScare = lure = z1Clear = investigate = crossing = snapped = ending = pa = drone = kneel = done = false;
+            Act = act; actTime = 0; surgeAt = -1; lureAt = -1; nextBeacon = 3;
+            confronted = walkerLost = lure = investigate = crossing = snapped = ending = pa = drone = kneel = done = false;
             walkerRemoved = actOneGateReleased = false;
             Array.Clear(progress, 0, progress.Length); Array.Clear(lastProgress, 0, lastProgress.Length);
             Array.Clear(hint, 0, hint.Length); Array.Clear(complete, 0, complete.Length);
@@ -123,7 +135,6 @@ namespace PatientZero.Atmosphere.Logic
             if (i < 0 || !InAct(objective) || complete[i] || float.IsNaN(amount) || float.IsInfinity(amount) || amount <= progress[i]) return;
             progress[i] = Math.Min(1, amount); lastProgress[i] = actTime;
             Assist(i, AssistFloor);
-            if (objective == ObjectiveId.Act1_DoorUnbarred && amount > 0) StartPass();
             if (objective == ObjectiveId.Act4_ReleasePulled && amount >= .6f) Snap();
         }
         public void Complete(ObjectiveId objective)
@@ -146,15 +157,14 @@ namespace PatientZero.Atmosphere.Logic
         {
             if (id != ZombieIds.Walker || Act != ActId.Awakening) return;
             z1Position = position;
-            if (pass && !windowArrived && !lure && WardLayout.HorizontalDistance(position, WardLayout.A1_DoorWindow.Position) <= .5f)
-            { windowArrived = true; Cue(CueId.ZombieGlassTap, WardLayout.A1_DoorWindow.Position); }
-            if (lure && WardLayout.HorizontalDistance(position, WardLayout.A1_DoorWindow.Position) >= 4) z1Clear = true;
         }
         public void Alert(int id, AlertLevel level, Vector3 position, Vector3 player)
         {
             lastAlert = ExperienceTime;
             if (level >= AlertLevel.Investigating && WardLayout.HorizontalDistance(position, player) <= 6) Tension = Math.Min(1, Tension + .3f);
             if (Act == ActId.Machinery && id == ZombieIds.Orderly && level >= AlertLevel.Suspicious) investigate = true;
+            // E-22: the door zombie has lost the player (its search ran out), so it shuffles off.
+            if (Act == ActId.Awakening && id == ZombieIds.Walker && confronted && level == AlertLevel.Unaware) walkerLost = true;
         }
         public void Noise(in NoiseEvent noise)
         { if (noise.Origin == NoiseOrigin.Player && noise.RadiusMeters >= 4) Tension = Math.Min(1, Tension + .1f); }
@@ -171,11 +181,10 @@ namespace PatientZero.Atmosphere.Logic
             {
                 case ActId.Awakening:
                     if (!pa && actTime >= 3) { pa = true; Cue(CueId.PaGarbledBreach, WardLayout.A1_DoorWindow.Position); }
-                    if (!pass && actTime >= 16) StartPass();
-                    if (complete[0] && windowArrived && !windowScare) WindowScare();
-                    if (windowScare && !lure && actTime >= lureAt)
-                    { lure = true; Cue(CueId.DistantCrashLure, WardLayout.Z1_WalkTo.Position); Zombie(1, ZombieDirection.LeaveWindow, WardLayout.Z1_WalkTo.Position); }
-                    if (lure && !walkerRemoved && WardLayout.HorizontalDistance(z1Position, WardLayout.Z1_WalkTo.Position) <= .35f)
+                    if (walkerLost && !lure)
+                    { lure = true; lureAt = actTime; Zombie(1, ZombieDirection.LeaveWindow, WardLayout.Z1_WalkTo.Position); }
+                    if (lure && !walkerRemoved && (WardLayout.HorizontalDistance(z1Position, WardLayout.Z1_WalkTo.Position) <= .35f ||
+                        actTime >= lureAt + WalkerLeaveSeconds))
                     { walkerRemoved = true; Zombie(1, ZombieDirection.Hide); }
                     break;
                 case ActId.Machinery:
@@ -209,21 +218,23 @@ namespace PatientZero.Atmosphere.Logic
                 ExperienceTime - lastHard < 6 || ExperienceTime - lastAlert < 6 || Tension >= .4f) return false;
             lastAmbient = ExperienceTime; Cue(CueId.DistantInfected, position); return true;
         }
-        private void StartPass()
-        { if (pass || Act != ActId.Awakening) return; pass = true; Zombie(1, ZombieDirection.WindowApproach, WardLayout.A1_DoorWindow.Position); }
-        private void WindowScare()
+        /// <summary>
+        /// E-22: the door opens onto the zombie. It screams in the player's face (quieter on Reduced scares); the first time in
+        /// a run on Standard it also hits with the stinger, the silence and the light pulse. What it does next is the zombie's.
+        /// </summary>
+        private void DoorConfront()
         {
-            windowScare = true;
-            // Store the rounded float deadline. Mono can keep the comparison expression
-            // actTime >= start + 2 in higher precision than the stored actTime value.
-            lureAt = actTime + 2f;
-            bool hard = Settings.Scares == ScareIntensity.Standard && !memory.WindowScareUsed;
+            if (confronted || Act != ActId.Awakening) return;
+            confronted = true;
+            bool standard = Settings.Scares == ScareIntensity.Standard, hard = standard && !memory.DoorScareUsed;
             if (hard)
             {
-                memory.WindowScareUsed = true; Peak();
+                memory.DoorScareUsed = true; Peak();
                 if (!Settings.ReduceFlicker) Emit(new DirectorCommand(DirectorCommandKind.LocalLightPulse));
+                Cue(CueId.JumpScareStinger, DoorFront + Vector3.up * 1.6f);
             }
-            Cue(hard ? CueId.WindowSlam : CueId.WindowBreath, WardLayout.A1_DoorWindow.Position);
+            Zombie(ZombieIds.Walker, ZombieDirection.Confront, DoorFront);
+            Cue(CueId.JumpScareScream, DoorFront + Vector3.up * 1.6f, standard ? 1 : .355f);
         }
         private void Snap()
         {
@@ -239,7 +250,7 @@ namespace PatientZero.Atmosphere.Logic
         private void EvaluateGates()
         {
             ReleaseActOneGate();
-            if (Act == ActId.Awakening && complete[1] && CanOpenAct1Door) EnterAct(ActId.Machinery, false);
+            if (Act == ActId.Awakening && complete[1] && walkerRemoved) EnterAct(ActId.Machinery, false);
             else if (Act == ActId.Machinery && complete[4] && complete[2] && complete[3] && investigate && surgeAt < 0)
             {
                 surgeAt = actTime; Cue(CueId.PowerThrum, WardLayout.A2_Socket.Position); Light(LightingState.Surge);

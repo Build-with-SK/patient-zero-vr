@@ -35,7 +35,8 @@ namespace PatientZero.Environment.Tests
         }
         [Test] public void OwnedBuildStepsAreRegisteredOnceWithPublicComposerSignatures()
         {
-            var expected = new System.Collections.Generic.HashSet<string> { "Ward:100", "Ward:150", "Ward:200", "Ward:500", "Bootstrap:600", "Ward:650" };
+            // Bootstrap:610 is the recorded-cue catalogue (E-21); the list was not updated then and the test failed unseen until E-22.
+            var expected = new System.Collections.Generic.HashSet<string> { "Ward:100", "Ward:150", "Ward:200", "Ward:500", "Bootstrap:600", "Bootstrap:610", "Ward:650" };
             int count = 0;
             foreach (var method in TypeCache.GetMethodsWithAttribute<SceneBuildStepAttribute>())
             {
@@ -47,7 +48,7 @@ namespace PatientZero.Environment.Tests
                 var parameters = method.GetParameters(); Assert.AreEqual(1, parameters.Length); Assert.AreEqual(typeof(Transform), parameters[0].ParameterType);
                 count++;
             }
-            Assert.AreEqual(6, count); Assert.AreEqual(0, expected.Count);
+            Assert.AreEqual(7, count); Assert.AreEqual(0, expected.Count);
         }
         [Test] public void NewDetailsAreBuiltAndObjectiveSignsHaveReadableText()
         {
@@ -55,7 +56,7 @@ namespace PatientZero.Environment.Tests
             Assert.AreEqual(4, renderers.Count(r => r.name.StartsWith("PrivacyCurtain_")));
             Assert.AreEqual(1, renderers.Count(r => r.name == "OxygenCylinder"));
             var text = root.GetComponentsInChildren<TextMesh>();
-            Assert.IsTrue(text.Any(t => t.text == "REMOVE THE 3 PLANKS"));
+            Assert.IsTrue(text.Any(t => t.text == "PUSH THE BAR")); // E-22: one bar replaced the three planks
             Assert.IsTrue(text.Any(t => t.text == "EMERGENCY RELEASE"));
             Assert.IsFalse(text.Any(t => t.text.Contains("â") || t.text.Contains("�")));
             // No extra lights, hidden colliding trolley or global effect was added by environment dressing.
