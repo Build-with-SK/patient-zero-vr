@@ -93,6 +93,33 @@ namespace PatientZero.AI.Tests
         }
 
         [Test]
+        public void FollowerRunsToAGunshot()
+        {
+            // E-28 (owner: "none of the zombie is following the gun sound"): deaf to everything else, a follower hears the revolver.
+            var brain = Follower(103, new Vector3(5.6f, 0, 0));
+            Vector3 shot = new Vector3(15, 0, 0), slot = new Vector3(8, 0, 0), player = new Vector3(20, 0, 20);
+            var noise = new NoiseEvent(shot, 20, CueId.RevolverShot, NoiseOrigin.Player, 0);
+            Assert.IsTrue(brain.Hear(in noise, new Vector3(5.6f, 0, 0), 1, 0, true));
+            Assert.AreEqual(AlertLevel.Suspicious, brain.Level);
+            brain.Follow(false, Vector3.zero, slot, .1f, -100);
+            ZombieSignals signals = brain.Tick(.1f, .1f, true, Frame(new Vector3(5.6f, 0, 0), player));
+            Assert.AreNotEqual(ZombieSignals.None, signals & ZombieSignals.Snarl, "a gunshot is answered with a snarl");
+            brain.Follow(false, Vector3.zero, slot, .7f, -100);
+            brain.Tick(.7f, .6f, true, Frame(new Vector3(5.6f, 0, 0), player));
+            Assert.AreEqual(AlertLevel.Investigating, brain.Level);
+            Assert.IsTrue(brain.Rushing, "it runs, not walks");
+            Assert.IsTrue(brain.HasMoveTarget);
+            Assert.AreEqual(shot, brain.Target, "to the shot, not to its place in the pack");
+            brain.Follow(false, Vector3.zero, slot, 13, -100);
+            brain.Tick(13, 12.3f, true, Frame(new Vector3(9, 0, 0), player));
+            Assert.AreEqual(AlertLevel.Investigating, brain.Level, "still going after the ten seconds an ordinary sound gets");
+            brain.Follow(false, Vector3.zero, slot, 26, -100);
+            brain.Tick(26, 13, true, Frame(new Vector3(12, 0, 0), player));
+            Assert.AreEqual(AlertLevel.Searching, brain.Level, "it gives up after GunshotRushSeconds");
+            Assert.IsFalse(brain.Rushing);
+        }
+
+        [Test]
         public void FollowerChasesWithItsHunterAndCatches()
         {
             var brain = Follower(103, Vector3.zero);

@@ -12,6 +12,10 @@ namespace PatientZero.Integration
     /// made with MakeHuman; Assets/ThirdParty/OpenGameArt/FpsArms). The IK of its .blend rig does not survive in FBX, so this
     /// poses them itself every frame, after the revolver has placed the gun: each hand is put on its grip (the torch's handle,
     /// the gun's grip) and a two-bone IK bends the arm to it, the elbow out and down, the forearm turned toward the hand.
+    /// E-28 (owner: "the left hand is twisted"): the torch is held in a fist with the thumb on its tail cap and the lens out of
+    /// the little finger's side, which keeps the forearm within about 16 degrees of its rest (the E-27 hold turned it 153, and
+    /// the model's single forearm bone wrung the skin); the gun's grip leans back like a real one, so the forefinger reaches
+    /// into the trigger guard instead of lying over the frame. How the hands hold both is <see cref="Hold"/>.
     /// The fingers were curled round the grips at compose time (FirstPersonArmsStep) and never move. Near a wall the torch
     /// and the gun draw back toward the player (<see cref="DrawBack"/>) instead of going through it. A headset never shows
     /// them: the controllers are the hands there, and the Quest build has no torch.
@@ -55,20 +59,38 @@ namespace PatientZero.Integration
         [Tooltip("Everything shown: the arms and the torch.")]
         public Renderer[] renderers;
 
-        /// <summary>From the eyes: the torch's handle, low on the left, and where it goes while the revolver is aimed.</summary>
-        public static readonly Vector3 TorchPose = new Vector3(-.16f, -.14f, .34f), TorchAimPose = new Vector3(-.12f, -.14f, .34f);
+        /// <summary>
+        /// How the hands hold the torch and the gun. The rake turns a handle across the palm (a power grip runs from the base of
+        /// the index finger to the heel of the hand); the reach is from the wrist along the fingers to the handle's centre, the
+        /// depth from the wrist's middle to it across the palm. The finger and thumb angles are bent once, at compose time
+        /// (FirstPersonArmsStep); the rest is used every frame.
+        /// </summary>
+        [System.Serializable]
+        public sealed class Hold
+        {
+            [Tooltip("From the eyes: where the left palm faces, into the torch's handle.")]
+            public Vector3 torchPalm = new Vector3(.75f, -.65f, 0);
+            [Tooltip("The torch's lens comes out of the little finger's side of the fist (the thumb on the tail cap), not the index finger's.")]
+            public bool torchReverse = true;
+            public float torchRake = 25, torchReach = .1f, torchDepth = .03f;
+            public float gunRake = 15, gunReach = .1f, gunDepth = .03f;
+            [Tooltip("Metres up the gun's grip from its middle to the middle of the hand (negative: lower).")]
+            public float gunSlide;
+            [Tooltip("From the eyes: where the left elbow points.")]
+            public Vector3 leftElbow = new Vector3(-.55f, -.8f, 0);
+            [Tooltip("From the eyes: the torch's handle, low on the left, and where it goes while the revolver is aimed.")]
+            public Vector3 torchAt = new Vector3(-.16f, -.14f, .34f), torchAimAt = new Vector3(-.12f, -.14f, .34f);
+            [Tooltip("Degrees at the knuckle, the middle and the end joint of each finger; the thumb's first value turns it across the palm.")]
+            public Vector3 torchFingers = new Vector3(70, 80, 45), torchThumb = new Vector3(30, 30, 25);
+            public Vector3 gunIndex = new Vector3(30, 50, 25), gunFingers = new Vector3(75, 85, 50), gunThumb = new Vector3(25, 25, 20);
+        }
+
+        public Hold hold = new Hold();
+
         /// <summary>From the eyes: the right hand, down at the side and out of sight, until the revolver is taken.</summary>
         public static readonly Vector3 RightDown = new Vector3(.24f, -.62f, .02f);
-        /// <summary>From the eyes: where each elbow points (out and down).</summary>
-        public static readonly Vector3 LeftElbow = new Vector3(-.55f, -.8f, 0), RightElbow = new Vector3(.55f, -.8f, 0);
-        /// <summary>
-        /// How a hand holds each grip (degrees and metres): the rake turns the handle across the palm (a power grip runs from the
-        /// base of the index finger to the heel of the hand), the reach is from the wrist along the fingers to the handle's
-        /// centre, the depth from the wrist's middle to it across the palm.
-        /// </summary>
-        public const float TorchRake = 25, TorchReach = .1f, TorchDepth = .03f, GunRake = 15, GunReach = .1f, GunDepth = .03f;
-        /// <summary>From the eyes: the left palm faces up and to the left, into the torch's handle (a fist, knuckles up, thumb forward).</summary>
-        public static readonly Vector3 TorchPalm = new Vector3(-.8f, .6f, 0);
+        /// <summary>From the eyes: where the right elbow points (out and down).</summary>
+        public static readonly Vector3 RightElbow = new Vector3(.55f, -.8f, 0);
         public const float RaiseSeconds = .2f, TwistShare = .85f, BreathMetres = .004f, BreathHz = .23f;
         /// <summary>How far ahead a held thing may reach before it meets a wall, and how much of that it can give back.</summary>
         public const float ClearMetres = .55f, MostBack = .3f;
@@ -151,12 +173,13 @@ namespace PatientZero.Integration
             eyes.SetPositionAndRotation(eye, look);
 
             Vector3 breath = Vector3.up * (BreathMetres * Mathf.Sin(time * BreathHz * Mathf.PI * 2));
-            Vector3 handle = Vector3.Lerp(TorchPose, TorchAimPose, aim) + breath + DrawBack(eye, look * Vector3.forward);
+            Vector3 handle = Vector3.Lerp(hold.torchAt, hold.torchAimAt, aim) + breath + DrawBack(eye, look * Vector3.forward);
             if (torch)
             {
                 torch.SetPositionAndRotation(eye + look * handle, look);
-                Grip(left, torch.position, torch.forward, look * TorchPalm, TorchRake, TorchReach, TorchDepth, out Vector3 at, out Quaternion turn);
-                Solve(left, at, turn, eye + look * LeftElbow);
+                Grip(left, torch.position, hold.torchReverse ? -torch.forward : torch.forward, look * hold.torchPalm, hold.torchRake, hold.torchReach,
+                     hold.torchDepth, out Vector3 at, out Quaternion turn);
+                Solve(left, at, turn, eye + look * hold.leftElbow);
             }
 
             // Down at the side: the fingers down, the palm to the thigh.
@@ -165,7 +188,8 @@ namespace PatientZero.Integration
             if (gunGrip && gunShare > 0)
             {
                 Transform gun = gunGrip.parent ? gunGrip.parent : gunGrip;
-                Grip(right, gunGrip.position, gunGrip.up, -gun.right, GunRake, GunReach, GunDepth, out Vector3 at, out Quaternion turn);
+                Grip(right, gunGrip.position + gunGrip.up * hold.gunSlide, gunGrip.up, -gun.right, hold.gunRake, hold.gunReach, hold.gunDepth,
+                     out Vector3 at, out Quaternion turn);
                 float k = Mathf.SmoothStep(0, 1, gunShare);
                 handAt = Vector3.Lerp(handAt, at, k);
                 handTurn = Quaternion.Slerp(handTurn, turn, k);

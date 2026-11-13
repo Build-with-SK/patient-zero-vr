@@ -312,10 +312,12 @@ namespace PatientZero.Integration
         /// <summary>
         /// E-25, the revolver (owner, 2026-11-12: "Build the gun next"). At the start of Act 3 the probe stands by the dead police
         /// officer, looks at the gun and takes it; waits for a zombie that can hear (the patroller starts its beat 10 s into the act);
-        /// picks a zombie in play on this floor (a deaf pack follower first), stands 3 to 8 m from it with nothing in the way,
+        /// picks the nearest zombie in play on this floor, stands 3 to 8 m from it with nothing in the way,
         /// and shoots it low in the body, below the jaw that hangs over its chest (it must stagger) and then in the head (it must die). The first shot must draw every other
-        /// zombie in hearing within 20 m to where it was fired; those it can see it shoots in the head too. The rest of the six go
-        /// into the floor, and a seventh pull must only click. Round 1 photographs the officer, the gun in hand and the kill.
+        /// zombie in hearing within 20 m to where it was fired, the packs' followers too (E-28), and those still on their way must
+        /// be running, not walking; those it can see it shoots in the head too. The rest of the six go into the floor from the
+        /// corridor's spot furthest from them (they come at a run), and a seventh pull must only click. Round 1 photographs the
+        /// officer, the gun in hand and the kill.
         /// The bot aims each bullet itself (Revolver.Pull with its own direction); the mouse path (FlatInput.Aim and Fire) is not
         /// driven here.
         /// </summary>
@@ -357,8 +359,8 @@ namespace PatientZero.Integration
             }
 
             Debug.Log("[PZ-PROBE] revolver: " + Hearers(Eye(), null).Count + " zombie(s) that can hear within " + RevolverRules.ShotNoiseMeters + " m after " + waited.ToString("0.0") + " s");
-            // Shoot a deaf one (a pack follower) when there is one, so the hearing ones are left to answer the shot; with nothing
-            // but other zombies' bodies in the way. Zombies move, so the line is checked again on the frame of the shot.
+            // Shoot the nearest one, with nothing but other zombies' bodies in the way. Zombies move, so the line is checked again on
+            // the frame of the shot.
             ZombieHitbox target = null;
             Vector3 eye = Eye();
             waited = 0;
@@ -416,6 +418,16 @@ namespace PatientZero.Integration
             yield return GameSeconds(1.6f);
             if (round == 1) { LookAt(target.Belly); yield return Shot("3-revolver-dead"); }
 
+            // E-28 (owner: "none of the zombie is following the gun sound"): those still on their way run to the shot.
+            foreach (ZombieHitbox z in coming)
+            {
+                if (z.zombie.Dead) continue;
+                ZombieBrain brain = z.zombie.Brain;
+                Debug.Log("[PZ-PROBE] revolver: drawn zombie " + z.zombie.ZombieId + (brain.IsFollower ? " (a pack follower)" : "") + " " +
+                          Vector3.Distance(z.transform.position, fired).ToString("0.0") + " m from the shot: " + brain.Level + (brain.Rushing ? ", running to it" : ""));
+                if (brain.Level == AlertLevel.Investigating && !brain.Rushing) Problem("[PZ-PROBE] zombie " + z.zombie.ZombieId + " walks to the shot instead of running");
+            }
+
             // The zombies the shot drew are coming: those in view get a headshot too, while rounds are left.
             foreach (ZombieHitbox z in coming)
             {
@@ -429,15 +441,23 @@ namespace PatientZero.Integration
                 Debug.Log("[PZ-PROBE] revolver: headshot on drawn zombie " + z.zombie.ZombieId + ": " + r + ", hit " + gun.LastPart + (z.zombie.Dead ? ", dead" : ", NOT dead"));
             }
 
+            // Every shot draws them all again, at a run (E-28), so the rest go into the floor where the nearest is furthest away.
+            Vector3 quiet = Quietest(Floor3Y(), out float clearance);
+            MoveTo(quiet);
             LevelView();
+            yield return null;
+            Debug.Log("[PZ-PROBE] revolver: emptying it at " + Round(quiet) + ", " + (clearance < float.MaxValue
+                ? clearance.ToString("0.0") + " m from the nearest zombie that can hear" : "with no zombie that can hear left on the floor"));
             int spent = 0;
-            while (gun.RoundsLeft > 0 && spent < 8)
+            while (gun.RoundsLeft > 0 && spent < 8 && flow.Core.State != GameState.Caught)
             {
                 yield return GameSeconds(RevolverRules.CycleSeconds + .05f);
                 eye = Eye();
                 gun.Pull(eye, Vector3.down + Facing() * .5f);
                 spent++;
             }
+
+            if (flow.Core.State == GameState.Caught) { Problem("[PZ-PROBE] grabbed while emptying the revolver; the seventh pull was not tried"); yield break; }
 
             yield return GameSeconds(RevolverRules.CycleSeconds + .05f);
             eye = Eye();
@@ -475,12 +495,34 @@ namespace PatientZero.Integration
             if (dead > 0) Problem("[PZ-PROBE] " + dead + " zombie(s) shot in an earlier run are still dead in a new run");
         }
 
-        /// <summary>A zombie in play that would hear a noise now: not a (deaf) pack follower, not staggered, not held by the director.</summary>
+        /// <summary>
+        /// A zombie in play that would hear a gunshot now: not staggered, not held by the director. E-28: the packs' followers,
+        /// deaf to every other sound, hear gunshots too.
+        /// </summary>
         private static bool CanHear(ZombieHitbox z)
         {
             if (!z.zombie.Active || z.zombie.Dead) return false;
             ZombieBrain brain = z.zombie.Brain;
-            return !brain.IsFollower && !brain.IsStunned && brain.Mode != ZombieMode.Passive && brain.Mode != ZombieMode.Scripted && brain.Mode != ZombieMode.Restrained;
+            return !brain.IsStunned && brain.Mode != ZombieMode.Passive && brain.Mode != ZombieMode.Scripted && brain.Mode != ZombieMode.Restrained;
+        }
+
+        /// <summary>E-28: the spot on floor 3's corridor (its middle line) furthest from every zombie in play that can hear.</summary>
+        private static Vector3 Quietest(float y, out float clearance)
+        {
+            Vector3 best = new Vector3(0, y, 3.25f);
+            clearance = -1;
+            for (float x = -1.5f; x <= 12.5f; x += .5f)
+            {
+                var spot = new Vector3(x, y, 3.25f);
+                float nearest = float.MaxValue;
+                foreach (ZombieHitbox z in Boxes())
+                    if (CanHear(z)) nearest = Mathf.Min(nearest, WardLayout.HorizontalDistance(z.transform.position, spot));
+                if (nearest <= clearance) continue;
+                clearance = nearest;
+                best = spot;
+            }
+
+            return best;
         }
 
         /// <summary>Every zombie but <paramref name="not"/> that can hear and is within the shot's noise reach (less a metre) of <paramref name="at"/>.</summary>
@@ -494,32 +536,24 @@ namespace PatientZero.Integration
 
         /// <summary>
         /// The nearest zombie that can be shot within <paramref name="meters"/> of <paramref name="from"/> and a spot to shoot it
-        /// from; a deaf one first, any one if there is no deaf one to be had.
+        /// from. (Before E-28 a deaf pack follower came first; every zombie hears a gunshot now.)
         /// </summary>
         private static ZombieHitbox Pick(Vector3 from, float meters, out Vector3 spot)
         {
             spot = default;
-            for (int pass = 0; pass < 2; pass++)
+            ZombieHitbox best = null;
+            float nearest = meters;
+            foreach (ZombieHitbox z in Boxes())
             {
-                ZombieHitbox best = null;
-                Vector3 bestSpot = default;
-                float nearest = meters;
-                foreach (ZombieHitbox z in Boxes())
-                {
-                    if (!z.Shootable || (pass == 0 && CanHear(z))) continue;
-                    float d = WardLayout.HorizontalDistance(z.transform.position, from);
-                    if (d >= nearest || !Standing(z, out Vector3 at)) continue;
-                    nearest = d;
-                    best = z;
-                    bestSpot = at;
-                }
-
-                if (!best) continue;
-                spot = bestSpot;
-                return best;
+                if (!z.Shootable) continue;
+                float d = WardLayout.HorizontalDistance(z.transform.position, from);
+                if (d >= nearest || !Standing(z, out Vector3 at)) continue;
+                nearest = d;
+                best = z;
+                spot = at;
             }
 
-            return null;
+            return best;
         }
 
         /// <summary>No wall and no other zombie's head or body between <paramref name="eye"/> and <paramref name="point"/>.</summary>

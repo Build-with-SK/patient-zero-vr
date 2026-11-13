@@ -36,13 +36,19 @@ namespace PatientZero.AI.Logic
         public const float FreshNoiseSeconds = 1f;
         /// <summary>E-22: how long the door zombie ignores every sound while it screams in the player's face.</summary>
         public const float ConfrontDeafSeconds = .8f;
+        /// <summary>
+        /// E-28 (owner playtest 2026-11-13: "none of the zombie is following the gun sound"): a gunshot is heard by every zombie
+        /// in reach, a pack's followers too, and each runs (chase speed) to where it was fired, for up to this long, then
+        /// searches there. Other sounds are still walked to.
+        /// </summary>
+        public const float GunshotRushSeconds = 25;
         // v1.4 horde: followers are deaf and go where their hunter goes; the Walker's never chase or grab.
         private readonly bool horde, follower, harmless;
         private Vector3 followSlot;
         private float clock, stateAge, searchAge, lastRetarget = -100, lastPlayerStimulus = -100, chaseHeld = -100;
         private float salience = -1, catchAge, stunRemaining, patrolPause, nextSearchPoint, deafUntil = -100;
         private Vector3 searchCentre;
-        private bool returning, southbound = true, released, caught, nearWarning;
+        private bool returning, southbound = true, released, caught, nearWarning, rushing;
         private ZombieSignals pending;
         public AlertLevel Level { get; private set; }
         public ZombieMode Mode { get; private set; }
@@ -60,6 +66,8 @@ namespace PatientZero.AI.Logic
         public float ChaseSpeed => (follower ? 1.3f : horde ? 1.45f : id == ZombieIds.Patroller ? 1.5f : 1.6f) * (Reduced || AssistedSpeed ? .8f : 1);
         public bool IsFollower => follower;
         public bool IsStunned => stunRemaining > 0;
+        /// <summary>E-28: running to a gunshot (moves at <see cref="ChaseSpeed"/> although it is only investigating).</summary>
+        public bool Rushing => rushing && Level == AlertLevel.Investigating;
 
         public ZombieBrain(int id, Vector3 spawn, System.Random random, Vector3 patrolNorth = default, Vector3 patrolSouth = default)
         {
@@ -78,7 +86,7 @@ namespace PatientZero.AI.Logic
         {
             Mode = mode; Level = AlertLevel.Unaware; Target = spawn; HasMoveTarget = false;
             clock = stateAge = searchAge = catchAge = stunRemaining = patrolPause = 0;
-            salience = -1; lastRetarget = lastPlayerStimulus = deafUntil = chaseHeld = -100; returning = released = caught = nearWarning = false;
+            salience = -1; lastRetarget = lastPlayerStimulus = deafUntil = chaseHeld = -100; returning = released = caught = nearWarning = rushing = false;
             pending = ZombieSignals.None; southbound = true;
         }
         public void SetMode(ZombieMode mode)
@@ -139,7 +147,8 @@ namespace PatientZero.AI.Logic
 
         public bool Hear(in NoiseEvent noise, Vector3 position, float occlusion, float now, bool live)
         {
-            if (follower || !live || IsStunned || caught || now < deafUntil || Mode == ZombieMode.Passive || Mode == ZombieMode.Scripted ||
+            bool gunshot = noise.Origin == NoiseOrigin.Player && noise.Source == CueId.RevolverShot;
+            if ((follower && !gunshot) || !live || IsStunned || caught || now < deafUntil || Mode == ZombieMode.Passive || Mode == ZombieMode.Scripted ||
                 Mode == ZombieMode.Restrained || !Hearing.Finite(now) || now < clock ||
                 !Hearing.CanHear(in noise, position, HearingMultiplier, occlusion, now)) return false;
             float strength = Hearing.Salience(in noise, position, HearingMultiplier, occlusion);
@@ -155,7 +164,15 @@ namespace PatientZero.AI.Logic
             // A thrown bottle identifies its landing, not the thrower's live position.
             if (remoteImpact) lastPlayerStimulus = -100;
             else if (noise.Origin == NoiseOrigin.Player) lastPlayerStimulus = now;
-            if (Level == AlertLevel.Unaware)
+            // E-28: a gunshot. A snarl, then a run to where it was fired (a chasing zombie keeps chasing).
+            if (gunshot && Level != AlertLevel.Chasing)
+            {
+                if (Level == AlertLevel.Unaware) { Change(AlertLevel.Suspicious); pending |= ZombieSignals.Snarl; }
+                else if (Level == AlertLevel.Searching) Change(AlertLevel.Investigating);
+                rushing = true;
+                if (Level == AlertLevel.Investigating) { stateAge = 0; HasMoveTarget = true; }
+            }
+            else if (Level == AlertLevel.Unaware)
             { Change(AlertLevel.Suspicious); pending |= ZombieSignals.Sniff; }
             else if (Level == AlertLevel.Chasing && (noise.Origin == NoiseOrigin.Scripted || remoteImpact))
             { lastPlayerStimulus = -100; Change(AlertLevel.Investigating); }
@@ -198,7 +215,7 @@ namespace PatientZero.AI.Logic
                     break;
                 case AlertLevel.Investigating:
                     HasMoveTarget = true;
-                    if (frame.PathFailed || stateAge >= 10) StartSearch();
+                    if (frame.PathFailed || stateAge >= (rushing ? GunshotRushSeconds : 10)) StartSearch();
                     else if (WardLayout.HorizontalDistance(frame.Zombie, Target) <= .35f) StartSearch();
                     else if (now - lastPlayerStimulus <= 1 && WardLayout.HorizontalDistance(frame.Zombie, Target) <= 2) BeginChase();
                     break;
@@ -277,7 +294,11 @@ namespace PatientZero.AI.Logic
             Change(AlertLevel.Searching); pending |= ZombieSignals.Sniff; HasMoveTarget = false;
         }
         private void Change(AlertLevel level)
-        { if (Level == level) return; Level = level; stateAge = catchAge = 0; pending |= ZombieSignals.AlertChanged; }
+        {
+            if (Level == level) return;
+            Level = level; stateAge = catchAge = 0; pending |= ZombieSignals.AlertChanged;
+            if (level != AlertLevel.Suspicious && level != AlertLevel.Investigating) rushing = false;
+        }
         private ZombieSignals Flush() { ZombieSignals result = pending; pending = ZombieSignals.None; return result; }
     }
 }

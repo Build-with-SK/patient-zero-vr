@@ -25,9 +25,6 @@ namespace PatientZero.Integration.Editor
         /// <summary>A human upper arm is about 0.29 m; a model far off that (a unit mistake) is scaled to it.</summary>
         public const float UpperArmMetres = .29f;
 
-        /// <summary>Degrees at the knuckle, the middle and the end joint of each finger; the thumb's first value turns it across the palm.</summary>
-        private static readonly Vector3 TorchFingers = new Vector3(70, 80, 45), GunIndex = new Vector3(22, 32, 18), GunFingers = new Vector3(75, 85, 50);
-        private static readonly Vector3 TorchThumb = new Vector3(30, 30, 25), GunThumb = new Vector3(25, 25, 20);
         private static readonly string[] Fingers = { "f_index", "f_middle", "f_ring", "f_pinky" };
 
         [SceneBuildStep(BuildScene.Ward, 989)]
@@ -43,7 +40,10 @@ namespace PatientZero.Integration.Editor
         }
 
         /// <summary>Builds the arms and the torch under <paramref name="parent"/>; the right hand holds <paramref name="gun"/>'s grip.</summary>
-        public static FirstPersonArms Create(Transform parent, Transform gun, out string report)
+        public static FirstPersonArms Create(Transform parent, Transform gun, out string report) => Create(parent, gun, new FirstPersonArms.Hold(), out report);
+
+        /// <summary>As above, with the hands holding the torch and the gun as <paramref name="hold"/> says (ArmsPreview tries several).</summary>
+        public static FirstPersonArms Create(Transform parent, Transform gun, FirstPersonArms.Hold hold, out string report)
         {
             GameObject asset = Model();
             var holder = new GameObject("First-person arms");
@@ -78,14 +78,15 @@ namespace PatientZero.Integration.Editor
             HandFrame(model, "R", true, out Vector3 fR, out Vector3 nR);
             for (int i = 0; i < Fingers.Length; i++)
             {
-                Curl(model, Fingers[i], "L", false, fL, nL, FirstPersonArms.TorchRake, TorchFingers);
-                Curl(model, Fingers[i], "R", true, fR, nR, FirstPersonArms.GunRake, i == 0 ? GunIndex : GunFingers);
+                Curl(model, Fingers[i], "L", false, fL, nL, hold.torchRake, hold.torchFingers);
+                Curl(model, Fingers[i], "R", true, fR, nR, hold.gunRake, i == 0 ? hold.gunIndex : hold.gunFingers);
             }
 
-            Thumb(model, "L", false, nL, TorchThumb);
-            Thumb(model, "R", true, nR, GunThumb);
+            Thumb(model, "L", false, nL, hold.torchThumb);
+            Thumb(model, "R", true, nR, hold.gunThumb);
 
             var arms = holder.AddComponent<FirstPersonArms>();
+            arms.hold = hold;
             arms.eyes = eyes;
             arms.left = Arm(model, "L", false, fL, nL);
             arms.right = Arm(model, "R", true, fR, nR);

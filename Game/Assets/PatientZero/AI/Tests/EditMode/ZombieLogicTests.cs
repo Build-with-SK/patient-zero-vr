@@ -39,6 +39,29 @@ namespace PatientZero.AI.Tests
             b.Tick(.59f, .49f, true, Frame()); Assert.AreEqual(AlertLevel.Suspicious, b.Level);
             b.Tick(.61f, .02f, true, Frame()); Assert.AreEqual(AlertLevel.Investigating, b.Level);
         }
+        [Test] public void GunshotIsRunToAndFollowedLonger()
+        {
+            // E-28: an ordinary sound is walked to and given up after 10 s; a gunshot is answered with a snarl and run to, for up
+            // to GunshotRushSeconds, and a second shot sends it on to the new spot with the time started again.
+            var walk = Brain(); walk.Hear(Noise(5), Vector3.zero, 1, 0, true);
+            walk.Tick(.7f, .7f, true, Frame(30));
+            Assert.AreEqual(AlertLevel.Investigating, walk.Level); Assert.IsFalse(walk.Rushing);
+            walk.Tick(11, 10.3f, true, Frame(30)); Assert.AreEqual(AlertLevel.Searching, walk.Level);
+
+            var run = Brain(); var shot = new NoiseEvent(Vector3.right * 15, 20, CueId.RevolverShot, NoiseOrigin.Player, 0);
+            Assert.IsTrue(run.Hear(in shot, Vector3.zero, 1, 0, true));
+            Assert.AreEqual(AlertLevel.Suspicious, run.Level); Assert.IsFalse(run.Rushing, "the snarl comes first");
+            var output = run.Tick(.1f, .1f, true, Frame(30)); Assert.IsTrue((output & ZombieSignals.Snarl) != 0);
+            run.Tick(.7f, .6f, true, Frame(30));
+            Assert.AreEqual(AlertLevel.Investigating, run.Level); Assert.IsTrue(run.Rushing);
+            run.Tick(12, 11.3f, true, Frame(30)); Assert.AreEqual(AlertLevel.Investigating, run.Level);
+
+            var second = new NoiseEvent(Vector3.right * -10, 20, CueId.RevolverShot, NoiseOrigin.Player, 12);
+            Assert.IsTrue(run.Hear(in second, Vector3.zero, 1, 12, true));
+            Assert.AreEqual(Vector3.right * -10, run.Target);
+            run.Tick(30, 18, true, Frame(30)); Assert.AreEqual(AlertLevel.Investigating, run.Level); Assert.IsTrue(run.Rushing);
+            run.Tick(38, 8, true, Frame(30)); Assert.AreEqual(AlertLevel.Searching, run.Level); Assert.IsFalse(run.Rushing);
+        }
         [Test] public void ReducedTelegraphIsLongerAndSightIsOff()
         {
             var b = Brain(); b.Reduced = true; b.Hear(Noise(4), Vector3.zero, 1, 0, true);

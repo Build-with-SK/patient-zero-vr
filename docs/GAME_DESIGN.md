@@ -449,6 +449,10 @@ grabs when not aiming); in a headset it is drawn from a hip holster.
   fly from a hit, dust from a wall.
 * **Noise.** Every shot is the `RevolverShot` cue, and its noise (20 m) draws every zombie in hearing to where it was
   fired. The sound goes out before the bullet lands, so the zombie that is hit hears it too unless it is staggered.
+  E-28 (owner, after playing: "none of the zombie is following the gun sound"): a zombie that hears a shot snarls,
+  then runs to where it was fired at its chase speed and searches there; it keeps going for up to 25 s, and a second
+  shot sends it on to the new spot. Any other sound is still walked to and given up after 10 s. The horde's followers,
+  deaf to everything else, hear a shot too and leave their pack for it. A zombie already chasing the player keeps on.
 * **Six rounds.** Nothing on screen counts them (owner rule: no instructions or counters on screen); the rounds can be
   seen in the cylinder, one fewer per shot. The seventh pull only clicks (`RevolverDryFire`, which no zombie hears).
 * **A new life.** Every death sends the player back to bed (Act 1), and the gun is back by the officer, full; every
@@ -479,11 +483,14 @@ default all the time, and turning it off it's the players wish", and "make the d
 The owner asked whether visible hands would look good, then "Yes, find a model". On a flat screen (PC, phone, iPad)
 the player now sees their own arms: CC0 arms by para (OpenGameArt, made with MakeHuman), bare forearms and hands.
 
-* **Left hand: the torch.** A black metal torch held low on the left in a fist, knuckles up, the lens forward. Its beam
+* **Left hand: the torch.** A black metal torch held low on the left in a fist, the thumb on its tail cap and the lens
+  coming out of the little finger's side of the fist, pointing forward (E-28: the first hold, knuckles up and the lens out
+  of the index finger's side, turned the forearm 153 degrees and the owner saw the wrist twisted). Its beam
   starts at the lens (it started at a fixed point low on the right before). The lens glows while the torch is on and is
   dark glass when F (or LIGHT) turns it off. The torch rises and falls slightly with the player's breathing.
 * **Right hand: the revolver.** Until the revolver is taken the right arm hangs out of sight. Taking it raises the
-  arm onto the grip in 0.2 s, the hand wrapped round it and the thumb on the far side; aiming brings
+  arm onto the grip in 0.2 s, the hand wrapped round it, the forefinger in the trigger guard and the thumb on the far
+  side (E-28: the grip now slopes back like a real revolver's; upright, it put the forefinger over the frame); aiming brings
   the gun to the middle of the view, and the torch moves a little toward the middle with it.
 * **Walls.** Near a wall the torch and the gun draw back toward the player instead of going through it.
 * **Not in a headset.** The controllers are the hands there (and the Quest build has no torch). The hands do not move

@@ -132,7 +132,9 @@ namespace PatientZero.Integration.Editor
             var gun = new GameObject("Revolver model").transform;
             gun.SetParent(parent, false);
 
-            Part(gun, "Grip", PrimitiveType.Cube, wood, new Vector3(0, -.05f, -.025f), new Vector3(-18, 0, 0), new Vector3(.03f, .1f, .042f));
+            // E-28: the grip's bottom sweeps back, as a revolver's does (it leaned forward, which pointed the hand's fingers up
+            // and laid the forefinger over the frame).
+            Part(gun, "Grip", PrimitiveType.Cube, wood, new Vector3(0, -.05f, -.035f), new Vector3(18, 0, 0), new Vector3(.03f, .1f, .042f));
             Part(gun, "Frame", PrimitiveType.Cube, steel, new Vector3(0, .008f, .035f), Vector3.zero, new Vector3(.028f, .042f, .085f));
             Part(gun, "Cylinder", PrimitiveType.Cylinder, steel, new Vector3(0, .014f, .047f), new Vector3(90, 0, 0), new Vector3(.044f, .021f, .044f));
             Part(gun, "Barrel", PrimitiveType.Cylinder, steel, new Vector3(0, .024f, .13f), new Vector3(90, 0, 0), new Vector3(.017f, .06f, .017f));

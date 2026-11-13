@@ -184,8 +184,9 @@ namespace PatientZero.AI
                 holdingPlayer = true; // before the event: the flow may answer it at once
                 GameEvents.PlayerCaught.Raise(new PlayerCaught(ZombieId, transform.position)); return;
             }
+            // E-28: a zombie running to a gunshot moves at its chase speed although it is only investigating.
             navigation.Drive(brain.HasMoveTarget && !brain.IsStunned, brain.Target,
-                brain.Level == AlertLevel.Chasing ? brain.ChaseSpeed : brain.WalkSpeed, now);
+                brain.Level == AlertLevel.Chasing || brain.Rushing ? brain.ChaseSpeed : brain.WalkSpeed, now);
             if (navigation.Speed > .05f && !shuffling.IsValid && FootEmitter) shuffling = Cues.PlayAttached(CueId.ZombieShuffle, FootEmitter, NoiseOrigin.Zombie);
             else if (navigation.Speed <= .05f && shuffling.IsValid) { Cues.Stop(shuffling); shuffling = default; }
             if (Animation) Animation.Apply(brain.Level, brain.Mode, navigation.Speed, player.HeadPosition);

@@ -356,3 +356,28 @@ Not verified:
 Follow-ups:
 - The owner plays this build.
 - The hands do not move on levers, planks or valves; the gun has no reload; the zombie model, the chained lab door, the woman and the doctor, and the empty click are still open from before.
+
+## 2026-11-13 · Hands and gunshots (owner playtest of E-27; E-28)
+Kind: INTEGRATION
+What: The owner played E-27: "the left hand is twisted", "while holding the gun the forefinger in on top of the gun", "none of the zombie is following the gun sound". (Their other points, scarier zombies, their zombie models, a bigger hospital and realistic graphics, are not in this change.)
+- Left hand: the E-27 hold (knuckles up, the lens out of the index finger's side) turned the forearm 153 degrees from the model's rest, and its single forearm bone wrung the skin. The torch is now held in a fist with the thumb on its tail cap and the lens out of the little finger's side: 16 degrees at the hip, 11 aiming. I compared five holds in `ArmsPreview` first; the ones with the torch along the fingers left the hand flat on it.
+- Right hand: the revolver's grip stood upright, so the hand round it pointed the fingers up and the forefinger lay over the frame. `RevolverStep` now slopes the grip back 18 degrees, as a real revolver's does; the forefinger reaches into the trigger guard (curled a little more: 30, 50, 25 degrees).
+- `FirstPersonArms.Hold`: every number of both holds in one place (palm direction, rake, reach, depth, finger and thumb curls, where the torch sits), used by the compose step and the preview. `ArmsPreview` renders any list of holds and logs each forearm's turn; it draws with its own preview shader (`ArmsPreviewShade`, Editor only) so it needs no lights.
+- Gunshots (seat B, `ZombieBrain`, `ZombieAgentShell`): a zombie that hears a shot snarls, then runs (its chase speed) to where it was fired, for up to 25 s (`GunshotRushSeconds`; any other sound is still walked to and given up after 10 s, about 9 m at a walk, which is why nothing seemed to follow). A second shot sends it on and starts the time again. The horde's followers, deaf to every other sound, hear gunshots and leave their pack. A chasing zombie keeps chasing. Two new tests: `FollowerRunsToAGunshot`, `GunshotIsRunToAndFollowedLonger`.
+- `ReleaseProbe`: its first run on this build FAILED, correctly for the old rules: a pack follower (106) heard the shots, ran in and grabbed the bot while it emptied the gun into the floor, so the seventh pull returned None. The probe now counts followers as hearing a shot, checks that drawn zombies still on their way are running, and fires the last rounds from the corridor's spot furthest from any zombie that can hear.
+- Docs: `GAME_DESIGN.md` sections 13 (noise) and 15 (both hands); `INTEGRATION_ROUND2.md` E-28 (seat B: `ZombieBrain.cs`, `ZombieAgentShell.cs`, `HordeTests.cs`, `ZombieLogicTests.cs`).
+Evidence:
+- Windows build (`unity_batch.py build-windows`, recomposes first): PASS, 0 errors, 0 warnings, 131 MB; compose "wrist to hand handle at rest 0.000 m (R), 0.000 m (L)". Built twice, the second time with the probe change.
+- Release probe, 3 rounds with screenshots, first build: RESULT FAIL, 3/3 complete, 1 problem: "the seventh pull did not just click (None, 2 left)" after "grab by zombie 106 in Darkness: struggle" (above).
+- Release probe, second build: RESULT PASS, 3/3 complete, 0 errors or exceptions. Round 1: "arms: shown, right arm raised 1.00; wrist gaps 0.000 m (gun) and 0.000 m (torch)"; body shot and headshot on follower 105; "drawn zombie 106 (a pack follower) 5.6 m from the shot: Chasing", shot dead at 0.3 m; three more into the floor, then "Empty; 0 left". Rounds took 81.6, 77.2 and 76.8 s (E-27: 89.2, 77.4, 76.8). 112 "no valid NavMesh" lines, the same count as before.
+- After that probe run I changed one probe log message only (it printed float.MaxValue as a distance when no zombie that can hear was left); compiled by the Unity test runs below, the probe was not run again.
+- Shots viewed: in the game, the left fist round the torch at B-7 and in the corridor, the right hand with the revolver at the kill; in the preview, every hold from the eyes, both sides of each hand and the aim pose (wrist gaps 0.000 m; forearm turns 16/11 degrees left, 23-27 right).
+- Unity tests: EditMode 265/265 passed (two new); PlayMode 28/28 passed. Engine-free logic tests 261/261 (two new).
+- `check_rules.py`: 1 error, 45 warnings, all `debug-log` (two new: the probe's drawn-zombie and emptying lines); the error is the probe's scene search from before. `integration_scan.py`: only the existing `partial` duplicate-type error and the `HapticRequested` warning.
+Not verified:
+- A person playing: the hands in motion, and whether the gunshot rush now feels right.
+- The probe never saw a zombie mid-run: the one drawn zombie was already chasing when it was checked. Running to a shot is covered by the two EditMode tests, not by a game run.
+- The probe never aims with the mouse; phone, iPad and headsets as in E-27.
+Follow-ups:
+- The owner plays this build.
+- Scarier zombies with the owner's models (licence and size to check before any download), the bigger two-floor hospital (a layout for the owner to approve first) and realistic graphics are waiting on the owner.
