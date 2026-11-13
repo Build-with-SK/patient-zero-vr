@@ -72,9 +72,9 @@ namespace PatientZero.Environment.Logic
         {
             return new[]
             {
-                // Floor 3
-                new FloorSign("STAIRS - FLOOR 2", new Vector3(16.92f, 2.6f, 3.25f), .035f, 90),
-                new FloorSign("DOWN TO FLOOR 2\nLABORATORIES", new Vector3(19.42f, 1.75f, 3.25f), .04f, 90),
+                // Floor 3. E-26 (owner, 2026-11-13): the two-minute version skips floor 2, so the ward's stairs lead to the lobby.
+                new FloorSign("STAIRS - GROUND FLOOR", new Vector3(16.92f, 2.6f, 3.25f), .035f, 90),
+                new FloorSign("DOWN TO GROUND FLOOR\nMAIN LOBBY", new Vector3(19.42f, 1.75f, 3.25f), .04f, 90),
                 new FloorSign("UPPER FLOORS SEALED", new Vector3(18.25f, 1.6f, 4.42f), .03f, 0),
                 // Floor 2
                 new FloorSign("FLOOR 2 - LABORATORIES", new Vector3(31.25f, 2.0f, 4.42f), .045f, 0),

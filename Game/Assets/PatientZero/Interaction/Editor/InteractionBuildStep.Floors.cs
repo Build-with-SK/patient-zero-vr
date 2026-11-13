@@ -48,15 +48,40 @@ namespace PatientZero.Interaction.Editor
             arrival.objectives = publisher; arrival.act = act; arrival.objective = objective; arrival.requires = requires; arrival.landing = landing.Position;
         }
 
-        /// <summary>A swing door in an X-facing wall, like the ward's emergency door, that opens on its own lever.</summary>
+        /// <summary>A swing door in an X-facing wall, like the ward's emergency door, that opens on its own lever (E-26: a double door).</summary>
         private static void FloorDoor(Transform root, ObjectivePublisher publisher, LayoutPoint point, string name, ActId act, ObjectiveId opensOn, ObjectiveId completes)
         {
             var o = new GameObject(name); o.transform.SetParent(root, false); o.transform.position = point.Position; o.transform.rotation = Quaternion.Euler(0, 90, 0);
             o.AddComponent<LayoutTag>().LayoutId = point.Id;
-            var leaf = Shape(o.transform, "Door leaf", PrimitiveType.Cube, new Vector3(1.5f, 2.2f, .08f)); leaf.transform.localPosition = Vector3.up * 1.1f;
             var door = o.AddComponent<ObjectiveDoor>();
-            door.objectives = publisher; door.leaf = leaf.transform; door.isolationDoor = false;
+            door.objectives = publisher; door.isolationDoor = false;
             door.doorAct = act; door.opensOn = opensOn; door.completes = completes;
+            DoubleDoor(o.transform, door);
+        }
+
+        /// <summary>The doorway the ward's walls leave for a door in an X-facing wall (Environment's RoomGeometry and its header).</summary>
+        private const float DoorwayWidth = 1.6f, DoorwayHeight = 2.4f;
+
+        /// <summary>
+        /// E-26 (owner, 2026-11-13: "make the doors open like an actual door"): two leaves filling the doorway, each on a hinge at
+        /// its own jamb, with a push bar on the side the player comes from (local -z). Both swing away from the player, into the
+        /// room beyond (local +z): <see cref="ObjectiveDoor"/> turns the right leaf (seen from the approach) one way and its pair the other.
+        /// </summary>
+        private static void DoubleDoor(Transform frame, ObjectiveDoor door)
+        {
+            float half = DoorwayWidth * .5f, width = half - .015f, height = DoorwayHeight - .02f;
+            foreach (int side in new[] { 1, -1 })
+            {
+                var hinge = new GameObject(side > 0 ? "Door hinge right" : "Door hinge left").transform;
+                hinge.SetParent(frame, false);
+                hinge.localPosition = new Vector3(side * half, 0, 0);
+                var leaf = Shape(hinge, "Door leaf", PrimitiveType.Cube, new Vector3(width, height, .06f));
+                leaf.transform.localPosition = new Vector3(-side * (width * .5f + .005f), .01f + height * .5f, 0);
+                var bar = Shape(hinge, "Push bar", PrimitiveType.Cube, new Vector3(width * .7f, .045f, .045f));
+                bar.transform.localPosition = new Vector3(-side * (width * .55f), 1.02f, -.06f);
+                Object.DestroyImmediate(bar.GetComponent<Collider>());
+                if (side > 0) door.leaf = hinge; else door.pair = hinge;
+            }
         }
     }
 }

@@ -11,7 +11,9 @@ namespace PatientZero.Integration
     /// A stairwell the player walks down, from a floor's stair room to the stair room of the floor below. The ward's floors
     /// stand side by side at the same height, so the stairwell is built twice: the top half (stairs down from the upper floor
     /// to a fire-door lobby) and the bottom half (the same lobby, then stairs down to the lower floor), the second exactly
-    /// <see cref="Rise"/> metres above the first. Each lobby has two automatic doors, and only one of them works in each copy.
+    /// <see cref="Shift"/> from the first: higher by the drop of both halves, and along the way by as far as the lower floor
+    /// stands beyond one stairwell's length (E-26: floor 3's stairs lead to the lobby, past the laboratories). Each lobby has
+    /// two automatic doors, and only one of them works in each copy.
     /// While the player crosses a lobby with both doors shut, the two copies look the same to the metre (same pieces, same
     /// texture, no room light reaches either), and the player is moved from one copy to the other, which they cannot see.
     /// The doors then open on the rest of the way down (or up). The top door opens once the act has moved to the lower floor.
@@ -46,8 +48,8 @@ namespace PatientZero.Integration
         public Lobby upper, lower;
         [Tooltip("Floor number below the stairwell (WardLayout.FloorOf); the top door opens once the act is on it.")]
         public int lowerFloor;
-        [Tooltip("How far below the lower copy the upper copy stands (the drop of each half, twice).")]
-        public float Rise = 3.6f;
+        [Tooltip("Where the lower copy stands from the upper copy: up by the drop of each half, twice, and along the way to the lower floor.")]
+        public Vector3 Shift = new Vector3(0, 3.6f, 0);
         public float openRadius = .95f, slideSeconds = .3f, panelTravel = .6f;
 
         private float[] open = new float[0];
@@ -132,7 +134,7 @@ namespace PatientZero.Integration
             if (open[here.Live] > 0 || open[here.Dead] > 0) return;
             // Only on the way through: closer to the door that leads on in the other copy than to the one they came in by.
             if (WardLayout.HorizontalDistance(feet, doors[here.Dead].Centre) >= WardLayout.HorizontalDistance(feet, doors[here.Live].Centre)) return;
-            rig.origin.transform.position += (inUpper ? 1 : -1) * Rise * Vector3.up;
+            rig.origin.transform.position += (inUpper ? 1 : -1) * Shift;
             Physics.SyncTransforms();
             crossed = true;
         }

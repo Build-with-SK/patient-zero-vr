@@ -380,6 +380,9 @@ walls, doors and floors from `WardLayout.Rooms` like the ward's. The floors neve
 | 2 · Laboratories | 5 `Laboratory` | Stair2, LabCorridor, LabA (north), LabB (south), Stair2Down (30-48.5) | `Act5_FuseInserted` (500), `Act5_OverridePulled` (501), `Act5_StairDoorOpened` (502), `Act5_StairsReached` (503) | Z5 Researcher: dormant in Lab B, hears like Z2 | `WardDim` |
 | 1 · Main Lobby | 6 `Lobby` | Stair1, Lobby, Security (north), Entrance (60-77) | `Act6_GeneratorPrimed` (600), `Act6_LockdownReleased` (601), `Act6_MainDoorsOpened` (602) | Z6 Guard: patrols across the lobby (x 70.2); Z7: dormant behind the reception desk | `EmergencyRed`, then `ExitDaylight` |
 
+**Two-minute version (E-26, owner 2026-11-13).** The run skips floor 2: the ward's stairs lead straight down to the
+lobby (section 14). Floor 2 below stays built and sealed for the bigger game.
+
 **Floor change.** When the stair door of a floor is open and the player reaches the landing anchor (`A4.Stairs`,
 `A5.Stairs`), the stairs objective completes and the director enters the next act. The player rig fades to black, moves
 to the next floor's start anchor, and fades in while the floor's name is shown. A restore after a catch starts the
@@ -440,8 +443,8 @@ grabs when not aiming); in a headset it is drawn from a hip holster.
 * **Firing.** Flat screen: hold the right button (the gun comes up to the eye in 0.12 s), click the left. The bullet
   goes where the view points. Headset: the trigger; the bullet leaves the muzzle. One shot per 0.45 s at most. A
   shot is not possible while paused or in a zombie's grip (the game is not running then).
-* **What a bullet does.** It stops at the first wall or object, reaches 40 m at most, and meets a zombie's head (a
-  sphere) or body (hips to neck); arms and legs do not stop it. A headshot kills: the zombie falls and lies where it
+* **What a bullet does.** It stops at the first wall or object, reaches 40 m at most, and meets a zombie's head (an
+  ellipsoid round the model's big head, jaw and tongue) or body (hips to neck); arms and legs do not stop it. A headshot kills: the zombie falls and lies where it
   fell until the player's next life. A body shot staggers it for 1.2 s and it snarls; it then comes on. Blood specks
   fly from a hit, dust from a wall.
 * **Noise.** Every shot is the `RevolverShot` cue, and its noise (20 m) draws every zombie in hearing to where it was
@@ -452,3 +455,21 @@ grabs when not aiming); in a headset it is drawn from a hip holster.
   zombie shot in that life is back too.
 * **Not decided (owner):** whether the empty click should be heard by zombies, and whether shooting should be possible
   while held. Touch builds (phone, iPad) have no fire button yet. A pack whose hunter is shot stays where it stands.
+
+## 14. Floor 2 out, torch on, real doors (owner request, 2026-11-13; integration exception E-26)
+
+The owner: "for now concentrate the 2 min gameplay. can you just takeout the floor 2 from it", "keep the flashlilght on
+default all the time, and turning it off it's the players wish", and "make the doors open like an actual door".
+
+* **Floor 2 out.** After the ward (acts 1-4) the run goes straight to the lobby (act 6). One stairwell leads from floor 3's
+  stair room down to the lobby's: a landing, nine steps, a fire-door lobby, nine steps, a landing, as before. The
+  laboratories (act 5, rooms, puzzles, Z5) stay in the scene, sealed, for the bigger game; their stair rooms are no
+  longer opened. Floor 3's two stair signs now read STAIRS - GROUND FLOOR and DOWN TO GROUND FLOOR / MAIN LOBBY.
+* **Torch.** On from the start of play on flat screens; F (or LIGHT on touch) turns it off and on again. The power
+  cut no longer kills it. Headsets still have no torch (none was ever
+  built for them).
+* **Doors.** The floor-3 emergency door and the lobby's main entrance are double doors: two leaves filling the 1.6 m by
+  2.4 m doorway, each on a hinge at its own jamb, with a push bar on the side the player comes from. When their lever
+  is pulled they swing away from the player into the room beyond (90 degrees in 1.5 s). They were one leaf turning
+  about its middle, which left the doorway half blocked. The room door (B-7) was already hinged and is unchanged; the
+  stairwell's fire doors slide.

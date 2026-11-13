@@ -9,11 +9,11 @@ namespace PatientZero.Interaction
     /// <summary>Mouse adapter for the same puzzle and rigidbody APIs used by XRI; opt-in desktop only.</summary>
     /// <remarks>Integration E-15: reads FlatInput (keyboard and mouse on Windows, touch on phone and iPad). E-17 (contract v1.2,
     /// D-1b): the torch switch (F or LIGHT) and its pose, raised as HandheldLightChanged every frame while it is on; Atmosphere
-    /// owns the light itself. E-18: a gripped plank follows the length of the drag in any direction
+    /// owns the light itself. E-26 (owner, 2026-11-13): the torch is on from the start; F (or LIGHT) turns it off and on again. E-18: a gripped plank follows the length of the drag in any direction
     /// (owner report 2026-10-31: dragging down, towards yourself, pushed the plank and the door never opened).</remarks>
     public sealed class DesktopInteraction : MonoBehaviour
     {
-        public Camera view;public bool desktopSimulation=true;private PhysicalPuzzle puzzle;private PhysicsProp prop;private Vector3 gripPoint;private float angle;private bool live;private bool torch;
+        public Camera view;public bool desktopSimulation=true;private PhysicalPuzzle puzzle;private PhysicsProp prop;private Vector3 gripPoint;private float angle;private bool live;private bool torch=true;
         private void OnEnable(){GameEvents.StateChanged.Subscribe(State);}
         private void OnDisable(){GameEvents.StateChanged.Unsubscribe(State);Release(false);}
         private void State(GameStateChanged state){live=GameStateRules.IsSimulationLive(state.To);if(!live)Release(false);}

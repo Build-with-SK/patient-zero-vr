@@ -11,11 +11,14 @@ using Object = UnityEngine.Object;
 namespace PatientZero.Integration.Editor
 {
     /// <summary>
-    /// Builds the two walkable stairwells (Floor 3 to 2, Floor 2 to 1) that <see cref="Stairwell"/> runs. Each opens through a
-    /// new doorway in the east wall of a floor's stair room and arrives through a new doorway in the west wall of the stair
-    /// room below. Unrolled, one stairwell is: a landing, nine steps and a half landing down (1.8 m), a fire-door lobby, a half
-    /// landing and nine steps down (1.8 m), a landing. The top half and the lobby are built where the upper floor is; the lobby
-    /// again and the bottom half 3.6 m higher, so that the bottom half ends level with the lower floor (see Stairwell).
+    /// Builds the walkable stairwell that <see cref="Stairwell"/> runs. E-26 (owner, 2026-11-13: "takeout the floor 2"): the
+    /// two-minute version has one, from floor 3 straight down to the lobby (it had two, Floor 3 to 2 and Floor 2 to 1); the
+    /// laboratories stay built for the bigger game, sealed. It opens through a new doorway in the east wall of floor 3's stair
+    /// room and arrives through a new doorway in the west wall of the lobby's stair room. Unrolled, it is: a landing, nine
+    /// steps and a half landing down (1.8 m), a fire-door lobby, a half landing and nine steps down (1.8 m), a landing,
+    /// <see cref="Length"/> metres from wall to wall. The top half and the lobby are built at floor 3's stair room; the lobby
+    /// again and the bottom half 3.6 m higher and as far along as the lobby's stair room stands beyond that length, so that
+    /// the bottom half ends level with the ground floor at its wall (see Stairwell).
     /// Runs after the art pass (980) and gives every piece the art pass's materials itself; the two lobbies take their texture
     /// coordinates from their own copy's origin, so they match exactly. The steps are for the eye; the feet walk an invisible
     /// ramp along the nosings. No light is added (Atmosphere owns lights): glow-in-the-dark strips mark every step, and the
@@ -28,6 +31,7 @@ namespace PatientZero.Integration.Editor
         public const float HalfLanding = .6f, LobbyDepth = 2.4f, Headroom = 2.6f, RoomCeiling = 2.775f;
         public const float Drop = (Steps + 1) * Rise;      // 1.8 m each half
         public const float Copy = 2 * Drop;                // the lower copy stands this much higher
+        public const float Length = 10.5f;                 // wall to wall: the run Floor 3 to 2 had (E-26)
 
         private sealed class StairKit
         {
@@ -45,10 +49,9 @@ namespace PatientZero.Integration.Editor
             var art = new ArtSurfaces();
             var kit = new StairKit { Floor = art.Floor, Wall = art.Wall, Ceiling = art.Ceiling, Metal = art.Metal, Door = art.DoorPaint, Glow = Glow() };
             int pieces = 0;
-            pieces += BuildStairwell(root, sceneRoots, kit, "Stair3", "Stair2", 2);
-            pieces += BuildStairwell(root, sceneRoots, kit, "Stair2Down", "Stair1", 1);
+            pieces += BuildStairwell(root, sceneRoots, kit, "Stair3", "Stair1", 1);
             AssetDatabase.SaveAssets();
-            Debug.Log("[PZ] stairwells: 2 walkable (Floor 3 to 2, Floor 2 to 1), " + pieces + " pieces, " + (Steps + 1) * 2 + " risers each");
+            Debug.Log("[PZ] stairwell: 1 walkable (Floor 3 to the ground floor; floor 2 sealed), " + pieces + " pieces, " + (Steps + 1) * 2 + " risers");
         }
 
         private static int BuildStairwell(Transform root, GameObject[] sceneRoots, StairKit kit, string upperRoom, string lowerRoom, int lowerFloor)
@@ -57,16 +60,18 @@ namespace PatientZero.Integration.Editor
             float zc = (upper.MinZ + upper.MaxZ) * .5f;
             if (Mathf.Abs(zc - (lower.MinZ + lower.MaxZ) * .5f) > .01f) throw new InvalidOperationException(upperRoom + " and " + lowerRoom + " are not in line.");
             float span = lower.MinX - upper.MaxX;
+            if (span < Length) throw new InvalidOperationException("No room for a stairwell between " + upperRoom + " and " + lowerRoom + ": " + span + " m.");
             float flight = Steps * Run + HalfLanding;
-            float landing = (span - 2 * flight - LobbyDepth) * .5f;
-            if (landing < .45f) throw new InvalidOperationException("No room for a stairwell between " + upperRoom + " and " + lowerRoom + ": " + span + " m.");
+            float landing = (Length - 2 * flight - LobbyDepth) * .5f;
+            // The bottom half stands this far from the top half: up by both drops, and along to the lower room's wall.
+            var shift = new Vector3(span - Length, Copy, 0);
 
             // Local x along the stairwell, from the upper room's wall.
             float s1 = landing;                     // first step
             float xb = s1 + flight;                 // lobby: first door
             float xe = xb + LobbyDepth;             // lobby: second door
             float s2 = xe + HalfLanding;            // first step of the bottom half
-            float xl = span;                        // the lower room's wall
+            float xl = Length;                      // the lower room's wall, in the bottom half's copy
 
             var well = new GameObject("Stairwell " + upperRoom + " to " + lowerRoom).transform;
             well.SetParent(root, false);
@@ -78,7 +83,6 @@ namespace PatientZero.Integration.Editor
             Doorway(sceneRoots, kit.Frame + Vector3.right * span, false);
 
             var doors = new List<Stairwell.Door>();
-            Vector3 up = Vector3.up * Copy;
 
             // ---- the top half, where the upper floor is
             kit.Origin = kit.Frame;
@@ -97,8 +101,8 @@ namespace PatientZero.Integration.Editor
             int upperDead = doors.Count; doors.Add(Default);
             Lobby(kit, xb, xe, doors, upperLive, upperDead, true);
 
-            // ---- the bottom half, Copy metres higher, ending level with the lower floor
-            kit.Origin = kit.Frame + up;
+            // ---- the bottom half, Copy metres higher and shifted along, ending level with the lower floor at its wall
+            kit.Origin = kit.Frame + shift;
             int lowerDead = doors.Count; doors.Add(Default);
             int lowerLive = doors.Count; doors.Add(Default);
             Lobby(kit, xb, xe, doors, lowerDead, lowerLive, false);
@@ -117,9 +121,9 @@ namespace PatientZero.Integration.Editor
             var runner = well.gameObject.AddComponent<Stairwell>();
             runner.doors = doors.ToArray();
             runner.lowerFloor = lowerFloor;
-            runner.Rise = Copy;
+            runner.Shift = shift;
             runner.upper = LobbyArea(kit.Frame, xb, xe, upperLive, upperDead);
-            runner.lower = LobbyArea(kit.Frame + up, xb, xe, lowerLive, lowerDead);
+            runner.lower = LobbyArea(kit.Frame + shift, xb, xe, lowerLive, lowerDead);
             return kit.Pieces;
         }
 

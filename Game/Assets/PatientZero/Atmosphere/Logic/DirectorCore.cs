@@ -258,8 +258,10 @@ namespace PatientZero.Atmosphere.Logic
             }
             else if (Act == ActId.Darkness && complete[5]) EnterAct(ActId.Exit, false);
             // v1.3: the ward ends on the stair landing, the laboratories on theirs; the lobby's main doors end the run.
+            // E-26 (owner, 2026-11-13: "takeout the floor 2"): the two-minute version skips the laboratories, and the ward's
+            // stairs lead down to the lobby. Floor 2 stays built for the bigger game; its act still runs if a run starts in it.
             else if (Act == ActId.Exit && Done(ObjectiveId.Act4_ReleasePulled) && Done(ObjectiveId.Act4_ExitOpened) && Done(ObjectiveId.Act4_StairsReached))
-                EnterAct(ActId.Laboratory, false);
+                EnterAct(ActId.Lobby, false);
             else if (Act == ActId.Laboratory && Done(ObjectiveId.Act5_StairsReached)) EnterAct(ActId.Lobby, false);
             else if (Act == ActId.Lobby && Done(ObjectiveId.Act6_MainDoorsOpened) && !ending)
             {

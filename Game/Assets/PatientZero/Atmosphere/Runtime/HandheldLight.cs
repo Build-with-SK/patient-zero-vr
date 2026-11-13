@@ -8,66 +8,31 @@ namespace PatientZero.Atmosphere
 {
     /// <summary>
     /// The player's torch (D-1b, contract v1.2). Interaction raises HandheldLightChanged with the switch and the beam pose;
-    /// this owns the light. The surge kills it (LightingChanged Surge, Blackout or EmergencyRed), so Act 3 stays the
-    /// sound-navigation act; it works again once the lights are back (Awakening, WardDim, ExitDaylight), including after
-    /// an act restart. One shadowless spot light, created on first use only, so the composed ward keeps its light budget
-    /// and the Quest build (which never raises the event) never has it. Dies with a 0.6 s fade, not a flicker (comfort
-    /// rule: no luminance change above 3 Hz). Added to Ward by the Integration build step HandheldLightStep.
+    /// this owns the light. E-26 (owner, 2026-11-13: "keep the flashlight on default all the time, and turning it off it's the
+    /// players wish"): the torch is on from the start and only the player turns it off. The power cut no longer kills it (it
+    /// used to, from the surge until the lights came back, so that Act 3 was played by sound alone); the blind zombies hunt
+    /// by sound, so the torch shows the way without giving the player away. One shadowless spot light, created on first use
+    /// only, so the composed ward keeps its light budget and the Quest build (which never raises the event) never has it.
+    /// Added to Ward by the Integration build step HandheldLightStep.
     /// </summary>
     public sealed class HandheldLight : MonoBehaviour
     {
-        public const float Intensity = 3f, FadeSeconds = .6f, Range = 11f;
+        public const float Intensity = 3f, Range = 11f;
         private Light beam;
-        private bool wanted, dead;
-        private float fade;
 
         public bool Shining => beam && beam.enabled;
-        public bool Dead => dead;
 
-        private void OnEnable()
-        {
-            GameEvents.HandheldLightChanged.Subscribe(Changed);
-            GameEvents.LightingChanged.Subscribe(Lighting);
-        }
+        private void OnEnable() => GameEvents.HandheldLightChanged.Subscribe(Changed);
 
-        private void OnDisable()
-        {
-            GameEvents.HandheldLightChanged.Unsubscribe(Changed);
-            GameEvents.LightingChanged.Unsubscribe(Lighting);
-        }
+        private void OnDisable() => GameEvents.HandheldLightChanged.Unsubscribe(Changed);
 
         private void Changed(HandheldLightChanged change)
         {
-            wanted = change.Enabled;
-            if (wanted && !beam) beam = CreateBeam(transform);
+            if (change.Enabled && !beam) beam = CreateBeam(transform);
             if (!beam) return;
             beam.transform.SetPositionAndRotation(change.Position,
                 change.Forward.sqrMagnitude > 1e-6f ? Quaternion.LookRotation(change.Forward) : beam.transform.rotation);
-            if (!dead) { beam.intensity = Intensity; beam.enabled = wanted; }
-        }
-
-        private void Lighting(LightingChanged change)
-        {
-            bool powerCut = change.State == LightingState.Surge || change.State == LightingState.Blackout || change.State == LightingState.EmergencyRed;
-            if (powerCut && !dead)
-            {
-                dead = true;
-                fade = Shining ? FadeSeconds : 0;
-            }
-            else if (!powerCut && change.State != LightingState.None && dead)
-            {
-                dead = false;
-                fade = 0;
-                if (beam) { beam.intensity = Intensity; beam.enabled = wanted; }
-            }
-        }
-
-        private void Update()
-        {
-            if (!dead || !Shining) return;
-            fade -= Time.deltaTime;
-            if (fade <= 0) { beam.enabled = false; beam.intensity = Intensity; }
-            else beam.intensity = Intensity * (fade / FadeSeconds);
+            beam.enabled = change.Enabled;
         }
 
         private static Light CreateBeam(Transform parent)

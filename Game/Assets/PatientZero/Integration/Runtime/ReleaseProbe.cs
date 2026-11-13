@@ -611,6 +611,7 @@ namespace PatientZero.Integration
                     break;
                 case ActId.Exit:
                     yield return Levers(puzzles, act);
+                    if (round == 1) yield return EmergencyDoorOpen();
                     Stairs(act);
                     break;
                 case ActId.Laboratory:
@@ -623,6 +624,30 @@ namespace PatientZero.Integration
                     yield return Levers(puzzles, act);
                     break;
             }
+        }
+
+        /// <summary>
+        /// E-26 (owner, 2026-11-13: "make it open like an actual door"): waits for the emergency door to open on its lever and
+        /// photographs it from the vestibule: two leaves on hinges at the jambs, swung into the stair room.
+        /// </summary>
+        private IEnumerator EmergencyDoorOpen()
+        {
+            ObjectiveDoor door = null;
+            foreach (ObjectiveDoor candidate in Ward<ObjectiveDoor>())
+                if (!candidate.isolationDoor && candidate.doorAct == ActId.Exit) door = candidate;
+            if (!door || !door.pair) { Problem("[PZ-PROBE] no double emergency door in Ward"); yield break; }
+            float waited = 0;
+            while (!door.IsOpen && waited < 5 && flow.Core.State != GameState.Caught) { yield return GameSeconds(.1f); waited += .1f; }
+            float leaf = Quaternion.Angle(Quaternion.identity, door.leaf.localRotation), pair = Quaternion.Angle(Quaternion.identity, door.pair.localRotation);
+            Debug.Log("[PZ-PROBE] emergency door " + (door.IsOpen ? "open" : "NOT open") + " after " + waited.ToString("0.0") + " s; leaves turned " +
+                      leaf.ToString("0") + " and " + pair.ToString("0") + " degrees on their hinges");
+            if (!door.IsOpen) Problem("[PZ-PROBE] the emergency door did not open within 5 s of its lever");
+            Vector3 at = WardLayout.A4_ExitDoor.Position;
+            MoveTo(new Vector3(at.x - 1.8f, Floor3Y(), 2.4f));
+            LookAt(at + Vector3.up * 1.1f);
+            yield return GameSeconds(.3f);
+            yield return Shot("4-exit-door-open");
+            LevelView();
         }
 
         /// <summary>

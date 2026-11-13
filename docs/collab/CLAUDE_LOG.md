@@ -305,3 +305,28 @@ Follow-ups:
 - A zombie standing on the player takes any shot as a headshot (the shot starts inside its head shape); fair at point blank, but the owner may want it otherwise.
 - The woman's lunge and the dead doctor (later plan steps) are not built, so the officer lies alone.
 - The scarier zombie model and the graphics level still wait for the owner's choices.
+
+## 2026-11-13 · Floor 2 out, torch on, real doors (owner playtest feedback; E-26)
+Kind: INTEGRATION
+What: The owner: "for now concentrate the 2 min gameplay. can you just takeout the floor 2 from it", "keep the flashlilght on default all the time, and turning it off it's the players wish", and the doors should "open like an actual door instead when i open the door the middle stuck to the ceiling and spins in the middle". They also asked whether visible hands would look good (answered in chat; nothing built).
+- Floor 2 out: `DirectorCore` follows the ward's stairs with the lobby (act 6), not the laboratories (act 5). `StairwellStep` builds one stairwell, floor 3 to the ground floor: the top half and the fire-door lobby at floor 3's stair room as before; the lobby again and the bottom half 3.6 m higher and 30 m along, ending at the lobby's stair room (`Stairwell.Shift` replaces `Rise`). Floor 2's rooms, puzzles and Z5 stay in the scene, sealed, for the bigger game (its stair rooms are no longer opened). Floor 3's two stair signs name the ground floor. No Core contract change.
+- Torch: `DesktopInteraction` starts with it on; F (LIGHT on touch) turns it off and on. `HandheldLight` no longer dies in the power cut. Headsets still have no torch.
+- Doors: the floor-3 emergency door and the lobby's main entrance (and floor 2's sealed stair door) are double doors, two leaves filling the 1.6 x 2.4 m doorway, each on a hinge at its own jamb, with a push bar on the approach side; they swing 90 degrees away from the player. `ObjectiveDoor.pair` turns the second leaf the other way. They were one leaf turning about its middle, which also left the doorway half blocked once open. The B-7 room door was already hinged.
+- Tests: `AtmosphereLogicTests` now expect the lobby after the ward's stairs, and the golden run's beats without floor 2's three cues. The probe photographs the emergency door open (round 1).
+- Docs: `GAME_DESIGN.md` section 14 (and a note in section 11; section 13's head is an ellipsoid, not a sphere); `INTEGRATION_ROUND2.md` E-26 (and E-25's test count, 11).
+Evidence:
+- Windows build (`unity_batch.py build-windows`, which recomposes first): PASS, 0 errors, 0 warnings; compose logged "stairwell: 1 walkable (Floor 3 to the ground floor; floor 2 sealed), 92 pieces, 20 risers". Built twice: the second time with the probe's door photo.
+- Release probe, 3 rounds with screenshots: RESULT PASS, 3/3 complete, 0 errors or exceptions logged. No act ran on floor 2: each round walked from floor 3 down the one stairwell to floor 1 (8.6, 8.5 and 8.5 s). Rounds took 88.9, 77.2 and 76.7 s (they were 92-104 s with floor 2). Round 1: "emergency door open after 1.5 s; leaves turned 90 and 90 degrees on their hinges"; the revolver checks as in E-25 (body shot staggered 105, the shot drew 1 of 1, headshot killed it, the click).
+- Shots viewed: the torch shining from the first moment in B-7, in the Act 3 blackout and in Act 4's red light; the emergency door open from the vestibule (a leaf swung back against the stair room's side, the doorway clear, the stair sign reading DOWN TO GROUND FLOOR / MAIN LOBBY); the stairwell top with the GROUND FLOOR title; the stairwell bottom opening on the lobby and the shut main entrance.
+- Unity tests: EditMode 263/263 passed; PlayMode 28/28 passed. Engine-free logic tests 259/259 (the golden run and two floor tests changed for the skipped floor).
+- `check_rules.py`: 1 error, 42 warnings, all `debug-log` (one new: the probe's door line); the error is the probe's scene search from before. `integration_scan.py`: only the existing `partial` duplicate-type error and the `HapticRequested` warning.
+- Privacy scan of the change: no paths, names or keys.
+- The 112 "Failed to create agent because there is no valid NavMesh" lines are the same count as before.
+Not verified:
+- A person playing: the feel of the doors, the torch from the start, the walk down one stairwell.
+- Any headset: a headset still fades from the ward to the lobby (no stairwell), and has no torch.
+- Phone and iPad builds.
+Follow-ups:
+- The owner plays this build.
+- Visible hands on PC (asked by the owner): waits for their choice of a model; nothing built.
+- The plan's chained lab door with banging on the way down (a hint at floor 2) is not built.
