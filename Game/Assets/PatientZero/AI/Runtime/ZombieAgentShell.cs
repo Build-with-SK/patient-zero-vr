@@ -61,6 +61,7 @@ namespace PatientZero.AI
                 horde ? member.PatrolA : guard ? WardLayout.Z6_PatrolNorth.Position : WardLayout.Z3_PatrolNorth.Position,
                 horde ? member.PatrolB : guard ? WardLayout.Z6_PatrolSouth.Position : WardLayout.Z3_PatrolSouth.Position);
             lastTick = Time.time; nextTick = Time.time + ZombieId * .017f;
+            if (Animation) Animation.InitializeMotion(ZombieId);
         }
         private void OnEnable()
         {
@@ -180,6 +181,7 @@ namespace PatientZero.AI
             if ((signals & ZombieSignals.AlertChanged) != 0) GameEvents.ZombieAlert.Raise(new ZombieAlertChanged(ZombieId, brain.Level, transform.position));
             if ((signals & ZombieSignals.Caught) != 0)
             {
+                if (Animation && Animation.IsHumanoid) ApplyAnimation(player);
                 navigation.Stop(); Cues.Play(CueId.ZombieLunge, eye, NoiseOrigin.Zombie);
                 holdingPlayer = true; // before the event: the flow may answer it at once
                 GameEvents.PlayerCaught.Raise(new PlayerCaught(ZombieId, transform.position)); return;
@@ -189,7 +191,16 @@ namespace PatientZero.AI
                 brain.Level == AlertLevel.Chasing || brain.Rushing ? brain.ChaseSpeed : brain.WalkSpeed, now);
             if (navigation.Speed > .05f && !shuffling.IsValid && FootEmitter) shuffling = Cues.PlayAttached(CueId.ZombieShuffle, FootEmitter, NoiseOrigin.Zombie);
             else if (navigation.Speed <= .05f && shuffling.IsValid) { Cues.Stop(shuffling); shuffling = default; }
-            if (Animation) Animation.Apply(brain.Level, brain.Mode, navigation.Speed, player.HeadPosition);
+            if (Animation && Animation.IsHumanoid && shuffling.IsValid)
+                Cues.SetIntensity(shuffling, ZombieMotion.ShuffleIntensity(navigation.Speed, brain.WalkSpeed));
+            ApplyAnimation(player);
+        }
+        private void ApplyAnimation(IPlayerQuery player)
+        {
+            if (Animation) Animation.Apply(brain.Level, brain.Mode, navigation.Speed,
+                ZombieMotion.LooksAtPlayer(brain.Level) ? player.HeadPosition : brain.Target,
+                brain.WalkSpeed, brain.IsStunned);
+            if (Animation && brain.Mode == ZombieMode.Restrained) Animation.SetRestraintLungeTarget(player.HeadPosition);
         }
         /// <summary>Director-only same-seat command; never used by player gameplay.</summary>
         public void SetActiveInAct(bool value)
@@ -225,6 +236,7 @@ namespace PatientZero.AI
         {
             holdingPlayer = false;
             brain.BreakFree(BreakFreeStunSeconds);
+            if (Animation) Animation.SetStunned(brain.IsStunned);
             Vector3 eye = Head ? Head.position : transform.position + Vector3.up;
             if (Services<IPlayerQuery>.TryGet(out var player))
             {
@@ -236,7 +248,7 @@ namespace PatientZero.AI
             Cues.Play(CueId.ZombieGroan, eye, NoiseOrigin.Zombie);
         }
         public void MoveScripted(Vector3 target) { if (!dead) brain.ScriptedMove(target); }
-        public void Stun(float seconds) { if (dead) return; brain.Stun(seconds); navigation.Stop(); }
+        public void Stun(float seconds) { if (dead) return; brain.Stun(seconds); navigation.Stop(); if (Animation) Animation.SetStunned(brain.IsStunned); }
         public void AssistSpeed(bool value) => brain.AssistedSpeed = value;
         public void SnapRestraint(bool lunge) { if (dead) return; brain.ReleaseRestraint(); if (Animation && lunge) Animation.Lunge(); }
         public void Kneel() { if (Animation && !dead) Animation.Kneel(); }

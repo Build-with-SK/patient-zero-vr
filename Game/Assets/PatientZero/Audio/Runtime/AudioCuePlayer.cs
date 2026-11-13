@@ -28,7 +28,7 @@ namespace PatientZero.Audio
             public CueDefinition Cue;
             public int Handle;
             public NoiseOrigin Origin;
-            public float Intensity, Fade = 1, FadeRate, Occlusion = 1, NextNoise, NextCaption;
+            public float Intensity, BasePitch, Fade = 1, FadeRate, Occlusion = 1, NextNoise, NextCaption;
             public TimedCaption[] Timed;
             public int NextTimed;
         }
@@ -130,7 +130,8 @@ namespace PatientZero.Audio
                 v.NextNoise = Time.time + .2f; v.NextCaption = Time.time + 4; v.Timed = takes != null ? timed[index] : null; v.NextTimed = 0;
                 v.Source.transform.position = position; v.Source.clip = clip; v.Source.loop = row.Loop;
                 // Repeated recordings vary a little in pitch; speech and music never do.
-                v.Source.pitch = takes != null && row.Bus != MixerBus.Voice && row.Bus != MixerBus.Music ? Random.Range(.93f, 1.06f) : 1;
+                v.BasePitch = takes != null && row.Bus != MixerBus.Voice && row.Bus != MixerBus.Music ? Random.Range(.93f, 1.06f) : 1;
+                v.Source.pitch = v.BasePitch;
                 v.Source.priority = row.Priority; v.Source.spatialBlend = row.World ? 1 : 0;
                 v.Source.spatialize = admission.Spatialized; v.Source.ignoreListenerPause = row.Bus == MixerBus.UI;
                 v.Source.outputAudioMixerGroup = groups[(int)row.Bus]; v.Source.minDistance = row.Min; v.Source.maxDistance = row.Max;
@@ -145,6 +146,10 @@ namespace PatientZero.Audio
         {
             int i = budget.Find(handle.Id); if (i < 0 || !NoiseGate.Finite(intensity01)) return;
             voices[i].Intensity = Mathf.Clamp01(intensity01);
+            // The Humanoid shell opts in through the existing intensity API. Generic shells never update
+            // this loop, so keep their original pitch. BasePitch is reset whenever a pooled voice is reused.
+            if (voices[i].Cue.Id == CueId.ZombieShuffle && voices[i].Origin == NoiseOrigin.Zombie)
+                voices[i].Source.pitch = voices[i].BasePitch * ShuffleCadence.PitchMultiplier(voices[i].Intensity);
             if (voices[i].Intensity == 0) voices[i].Source.volume = 0;
         }
         public void Stop(CueHandle handle, float fadeSeconds)
