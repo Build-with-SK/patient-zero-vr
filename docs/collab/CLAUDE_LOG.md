@@ -271,3 +271,37 @@ Not verified:
 Follow-ups:
 - The owner plays this build before step 2.
 - The owner's other asks wait for their choices: the gun (plan step 4), a scarier zombie model (their Mixamo download, a free model found for them, or a darker, bloodier version of the current one), and graphics (a PC "Ultra" quality level in URP, or HDRP for PC only).
+
+## 2026-11-13 · The revolver (owner: "Build the gun next"; plan step 4; E-25)
+Kind: INTEGRATION
+What: The revolver of the owner's two-minute plan, as agreed in the plan doc: found on a dead police officer halfway through floor 3; six rounds, never reloaded, none to find; a headshot kills, a body shot staggers; every shot draws every zombie within about 20 m; on a flat screen the right mouse button aims and the left fires (the left still grabs when not aiming); in a headset it is drawn from a hip holster.
+- Rules (`RevolverRules`, engine-free, 11 EditMode tests): six rounds, a 0.45 s hammer cycle, a seventh pull clicks, a new life resets it; hits are a head ellipsoid and a hips-to-neck capsule tested against the ray up to the first wall, the nearer part winning and a tie going to the head (`ShotGeometry`).
+- `Revolver` (runtime): flat screen, look at the gun within 2.4 m and click to take it; holding the right button raises it to the eye; the left button fires along the view. Headset: XRI grab, the trigger fires along the muzzle, letting go stows it in `HolsterSocket` at the right hip. The shot is the `RevolverShot` cue (noise 20 m), played before the bullet lands; blood or dust specks; a self-lit muzzle-flash quad, not a light. Nothing on screen counts the rounds; the rounds in the cylinder go one by one.
+- Zombies (seat B, exception E-25): `ZombieAgentShell.Shot(head)` kills or staggers 1.2 s; a dead zombie keeps its Death pose until the next life; new `HitReact` and `Death` states in the zombie controller (`ZombieArt`).
+- `ZombieHitbox` on every dressed zombie, sized at compose time from the model's own skinned mesh: the head is an ellipsoid in the head bone's space spanning the 2nd to 98th percentile of its vertices on each axis (the model's cartoon head, ears, jaw and tongue included); the body capsule's radius is the 70th percentile of the torso vertices' distance from the hips-to-neck line, kept within 0.09-0.4 m. Arms and legs do not stop a bullet.
+- `RevolverStep` (Ward 988): the officer (the zombie model in its Death pose, dark navy tint, cap beside him, pool of blood) across the floor-3 corridor at x 6.8, the gun by his right hand, the holster, the hit areas.
+- Contract v1.5: `RevolverShot` 906, `RevolverDryFire` 907, `RevolverHandle` 908; CueTable rows, fallback recipes in `ProceduralSound`, and three synthesized recordings (`tools/audio/make_revolver_sounds.py`; nobody has listened to them).
+- Seat A's `FlatInput` (`GunInHand`, `Aim`, `Fire`) and seat B's files are recorded as integration exception E-25 in `INTEGRATION_ROUND2.md`; `GAME_DESIGN.md` section 13 and the cue table; `ASSET_MANIFEST.md` A-08, E-12, C-05.
+- The probe: round 1 takes the gun at the start of Act 3, waits for a zombie that can hear (the director holds the patroller for its first 10 s), body-shoots then head-shoots a zombie with no other zombie in the line (a deaf pack follower first, so the hearing ones are left to answer), checks the shot drew the zombies in hearing, empties the gun and pulls once more; rounds 2 and 3 check the gun is back, full, and no zombie stayed dead.
+Evidence:
+- Windows build (`unity_batch.py build-windows`, which recomposes first): PASS, 0 errors, 0 warnings. Compose measured 28 zombies' hit areas: on average the head 0.82 x 0.59 x 0.55 m along the head bone's axes, its centre 1.24 m up; the body capsule 0.289 m round.
+- Release probe, 3 rounds with screenshots: RESULT PASS, 3/3 complete, 0 errors or exceptions logged. Round 1: the gun taken with 6 rounds; one zombie that can hear came into range after 7.5 s (the patroller); a body shot on pack follower 105 at 3.6 m hit Body and staggered it; the shot drew 1 of 1 zombie in hearing; a headshot on 105 hit Head and killed it; the drawn patroller (3) came to the player and a headshot killed it; then the shots into the floor, the seventh pull `Empty`, 0 left. Rounds 2 and 3: the gun back on the officer, 6 rounds, at the start of Act 3.
+- One thing the probe showed: the second pack follower (106) walked into the player while the gun was being emptied at the floor, and that shot counted as a point-blank headshot (the shot started inside its head shape).
+- First probe run (before the probe fix): the body shot hit the patroller standing in the line of fire instead of the chosen zombie, and no zombie could hear (the director holds the patroller deaf for the first 10 s of Act 3). The probe now waits for a zombie that can hear and shoots only with no other zombie in the line.
+- Shots viewed: the officer lying across the corridor with the gun by his hand (brightened to check: the model's death pose has his hips 6 cm and torso 9 cm off the floor; the big cartoon head stands 0.9 m); the gun at the bottom right in hand; three zombies in the side room at the headshot; the patroller reaching for the player after the shot.
+- Unity tests: EditMode 263/263 passed (the 11 revolver tests included); PlayMode 28/28 passed. Engine-free logic tests 259/259.
+- `check_rules.py`: 1 error, 41 warnings, all `debug-log`; the error is the probe's scene search from before. `integration_scan.py`: only the existing `partial` duplicate-type error and the `HapticRequested` warning.
+- Privacy scan of the change, scenes and new assets: no paths, names or keys.
+- The 112 "Failed to create agent because there is no valid NavMesh" lines are the same count as in the E-23 and E-24 probe logs.
+Not verified:
+- The mouse path (right button aims, left fires) was not driven by the probe: the probe calls `Revolver.Pull` with its own aim. A person must try it.
+- Any headset: the grab, the trigger, the hip holster and the stow-on-release are untested (VR checks are the owner's).
+- Nobody has listened to the three synthesized sounds.
+- Phone and iPad builds: there is no fire button on touch yet.
+Follow-ups:
+- The owner plays it: the feel of aiming, the kick, the flash, the sound, and whether 20 m draws too many zombies.
+- Owner decisions still open from the plan: whether zombies hear the empty click; whether shooting is possible while held.
+- A pack whose hunter is shot stays in play, standing where it is.
+- A zombie standing on the player takes any shot as a headshot (the shot starts inside its head shape); fair at point blank, but the owner may want it otherwise.
+- The woman's lunge and the dead doctor (later plan steps) are not built, so the officer lies alone.
+- The scarier zombie model and the graphics level still wait for the owner's choices.

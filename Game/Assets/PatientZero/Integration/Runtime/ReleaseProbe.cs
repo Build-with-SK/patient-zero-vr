@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using PatientZero.AI.Logic;
 using PatientZero.Core;
 using PatientZero.Flow;
 using PatientZero.Flow.Logic;
@@ -144,7 +145,7 @@ namespace PatientZero.Integration
                 while (flow.Core.State != GameState.Playing && Time.realtimeSinceStartup < deadline) yield return null;
 
                 ActId previous = ActId.None, retried = ActId.None;
-                bool acted = false, scareShot = false, newsChecked = false, roomLooked = false, corridorLooked = false;
+                bool acted = false, scareShot = false, newsChecked = false, roomLooked = false, corridorLooked = false, gunTried = false;
                 float actedAt = 0;
                 while (flow.Core.State != GameState.Complete && Time.realtimeSinceStartup < deadline)
                 {
@@ -192,6 +193,8 @@ namespace PatientZero.Integration
                         // room); the corridor's once it has looked at the dead end and turned away. Round 1 checks both.
                         if (round == 1 && previous == ActId.Awakening && !roomLooked) { roomLooked = true; yield return LookBack(RoomScare, false); }
                         if (round == 1 && previous == ActId.Machinery && !corridorLooked) { corridorLooked = true; yield return LookBack(CorridorScare, true); }
+                        // E-25: round 1 takes the revolver from the officer and uses all six rounds; later rounds check it is back, full.
+                        if (previous == ActId.Darkness && !gunTried) { gunTried = true; yield return round == 1 ? Gun() : GunBackOnTheOfficer(); }
                         yield return Act(previous);
                         actedAt = Time.realtimeSinceStartup;
                         if (round == 1 && previous == ActId.Darkness) yield return Shot("3-darkness-end");
@@ -304,6 +307,280 @@ namespace PatientZero.Integration
             }
 
             MoveTo(back);
+        }
+
+        /// <summary>
+        /// E-25, the revolver (owner, 2026-11-12: "Build the gun next"). At the start of Act 3 the probe stands by the dead police
+        /// officer, looks at the gun and takes it; waits for a zombie that can hear (the patroller starts its beat 10 s into the act);
+        /// picks a zombie in play on this floor (a deaf pack follower first), stands 3 to 8 m from it with nothing in the way,
+        /// and shoots it low in the body, below the jaw that hangs over its chest (it must stagger) and then in the head (it must die). The first shot must draw every other
+        /// zombie in hearing within 20 m to where it was fired; those it can see it shoots in the head too. The rest of the six go
+        /// into the floor, and a seventh pull must only click. Round 1 photographs the officer, the gun in hand and the kill.
+        /// The bot aims each bullet itself (Revolver.Pull with its own direction); the mouse path (FlatInput.Aim and Fire) is not
+        /// driven here.
+        /// </summary>
+        private IEnumerator Gun()
+        {
+            Revolver[] guns = Ward<Revolver>();
+            if (guns.Length != 1) { Problem("[PZ-PROBE] expected one revolver in Ward, found " + guns.Length); yield break; }
+            Revolver gun = guns[0];
+            if (gun.Held || gun.RoundsLeft != RevolverRules.Capacity) Problem("[PZ-PROBE] the revolver was not on the officer, full, at the start of Act 3");
+            Vector3 at = gun.model.position;
+            float y = Floor3Y();
+            if (round == 1)
+            {
+                // From further back first, so a level-ish view takes in the officer and the gun.
+                MoveTo(new Vector3(at.x - 2.6f, y, 3.25f));
+                LookAt(at);
+                yield return GameSeconds(.4f);
+                yield return Shot("3-revolver-officer");
+            }
+
+            var stand = new Vector3(at.x - .9f, y, Mathf.Clamp(at.z, 2.7f, 3.9f));
+            MoveTo(stand);
+            LookAt(at);
+            yield return GameSeconds(.3f);
+            if (!gun.TakeWithinReach()) { Problem("[PZ-PROBE] could not take the revolver from " + stand + " (gun at " + at + ")"); LevelView(); yield break; }
+            LevelView();
+            Face(new Vector3(at.x + 10, y, 3.25f));
+            yield return GameSeconds(.4f);
+            if (round == 1) yield return Shot("3-revolver-in-hand");
+
+            // Act 3 opens with the patroller held by the director, and a held zombie hears nothing; it starts its beat 10 s in.
+            // Wait for a zombie that can hear within 20 m, so the shot's noise has someone to draw.
+            float waited = 0;
+            while (waited < 16 && Hearers(Eye(), null).Count == 0 && flow.Core.State != GameState.Caught)
+            {
+                yield return GameSeconds(.25f);
+                waited += .25f;
+            }
+
+            Debug.Log("[PZ-PROBE] revolver: " + Hearers(Eye(), null).Count + " zombie(s) that can hear within " + RevolverRules.ShotNoiseMeters + " m after " + waited.ToString("0.0") + " s");
+            // Shoot a deaf one (a pack follower) when there is one, so the hearing ones are left to answer the shot; with nothing
+            // but other zombies' bodies in the way. Zombies move, so the line is checked again on the frame of the shot.
+            ZombieHitbox target = null;
+            Vector3 eye = Eye();
+            waited = 0;
+            while (waited < 20 && flow.Core.State != GameState.Caught)
+            {
+                target = Pick(at, 15, out Vector3 spot);
+                if (target)
+                {
+                    MoveTo(spot);
+                    LookAt(target.Belly);
+                    yield return null;
+                    eye = Eye();
+                    if (target.Shootable && LineFree(eye, target.Belly, target) && LineFree(eye, target.HeadCentre, target)) break;
+                }
+
+                target = null;
+                yield return GameSeconds(.25f);
+                waited += .25f;
+            }
+
+            if (!target) { Problem("[PZ-PROBE] no zombie in play on floor 3 to shoot within 20 s of taking the revolver"); LevelView(); yield break; }
+            List<ZombieHitbox> others = Hearers(gun.muzzle.position, target);
+            Debug.Log("[PZ-PROBE] revolver: shooting zombie " + target.zombie.ZombieId + (target.zombie.Brain.IsFollower ? " (a pack follower)" : "") + " from " +
+                      Round(Eye()) + "; " + others.Count + " other zombie(s) can hear the shot");
+
+            ShotResult first = gun.Pull(eye, target.Belly - eye);
+            Vector3 fired = gun.muzzle.position;
+            bool staggered = target.zombie.Brain.IsStunned;
+            Debug.Log("[PZ-PROBE] revolver: body shot on zombie " + target.zombie.ZombieId + " from " + Vector3.Distance(eye, target.Belly).ToString("0.0") +
+                      " m: " + first + ", hit " + gun.LastPart + (staggered ? ", staggered" : ", NOT staggered"));
+            if (first != ShotResult.Fired || gun.LastTarget != target || gun.LastPart != HitPart.Body || !staggered)
+                Problem("[PZ-PROBE] the body shot did not stagger zombie " + target.zombie.ZombieId + " (" + first + ", " + gun.LastPart + ")");
+            yield return GameSeconds(.15f);
+            int drawn = 0;
+            var coming = new List<ZombieHitbox>();
+            foreach (ZombieHitbox z in others)
+            {
+                ZombieBrain brain = z.zombie.Brain;
+                if (WardLayout.HorizontalDistance(brain.Target, fired) < .5f && brain.Level >= AlertLevel.Suspicious) { drawn++; coming.Add(z); }
+                else Debug.Log("[PZ-PROBE] revolver: zombie " + z.zombie.ZombieId + " " + Vector3.Distance(z.transform.position, fired).ToString("0.0") +
+                               " m away did not turn to the shot (" + brain.Level + ", " + brain.Mode + ")");
+            }
+
+            Debug.Log("[PZ-PROBE] revolver: the shot drew " + drawn + " of " + others.Count + " zombie(s) in hearing within " + RevolverRules.ShotNoiseMeters + " m");
+            if (drawn < others.Count) Problem("[PZ-PROBE] the shot drew only " + drawn + " of " + others.Count + " zombies within " + RevolverRules.ShotNoiseMeters + " m");
+
+            yield return GameSeconds(RevolverRules.CycleSeconds + .05f);
+            eye = Eye();
+            LookAt(target.HeadCentre);
+            ShotResult second = gun.Pull(eye, target.HeadCentre - eye);
+            Debug.Log("[PZ-PROBE] revolver: headshot on zombie " + target.zombie.ZombieId + ": " + second + ", hit " + gun.LastPart + (target.zombie.Dead ? ", dead" : ", NOT dead"));
+            if (second != ShotResult.Fired || gun.LastPart != HitPart.Head || !target.zombie.Dead)
+                Problem("[PZ-PROBE] the headshot did not kill zombie " + target.zombie.ZombieId + " (" + second + ", " + gun.LastPart + ")");
+            if (round == 1) yield return Shot("3-revolver-headshot");
+            yield return GameSeconds(1.6f);
+            if (round == 1) { LookAt(target.Belly); yield return Shot("3-revolver-dead"); }
+
+            // The zombies the shot drew are coming: those in view get a headshot too, while rounds are left.
+            foreach (ZombieHitbox z in coming)
+            {
+                if (gun.RoundsLeft <= 1) break;
+                float giveUp = 0;
+                while (giveUp < 6 && z.Shootable && !Clear(Eye(), z.HeadCentre) && flow.Core.State != GameState.Caught) { yield return GameSeconds(.2f); giveUp += .2f; }
+                if (!z.Shootable || !Clear(Eye(), z.HeadCentre)) { Debug.Log("[PZ-PROBE] revolver: drawn zombie " + z.zombie.ZombieId + " did not come into view"); continue; }
+                yield return GameSeconds(RevolverRules.CycleSeconds + .05f);
+                eye = Eye();
+                ShotResult r = gun.Pull(eye, z.HeadCentre - eye);
+                Debug.Log("[PZ-PROBE] revolver: headshot on drawn zombie " + z.zombie.ZombieId + ": " + r + ", hit " + gun.LastPart + (z.zombie.Dead ? ", dead" : ", NOT dead"));
+            }
+
+            LevelView();
+            int spent = 0;
+            while (gun.RoundsLeft > 0 && spent < 8)
+            {
+                yield return GameSeconds(RevolverRules.CycleSeconds + .05f);
+                eye = Eye();
+                gun.Pull(eye, Vector3.down + Facing() * .5f);
+                spent++;
+            }
+
+            yield return GameSeconds(RevolverRules.CycleSeconds + .05f);
+            eye = Eye();
+            ShotResult click = gun.Pull(eye, Facing());
+            Debug.Log("[PZ-PROBE] revolver: " + spent + " more into the floor, then " + click + "; " + gun.RoundsLeft + " left");
+            if (click != ShotResult.Empty || gun.RoundsLeft != 0) Problem("[PZ-PROBE] the seventh pull did not just click (" + click + ", " + gun.RoundsLeft + " left)");
+        }
+
+        /// <summary>E-25: rounds 2 and 3 come after a new run (Play again): the revolver must be back on the officer, full, and no zombie dead.</summary>
+        private IEnumerator GunBackOnTheOfficer()
+        {
+            Revolver[] guns = Ward<Revolver>();
+            if (guns.Length != 1) { Problem("[PZ-PROBE] expected one revolver in Ward, found " + guns.Length); yield break; }
+            Revolver gun = guns[0];
+            Debug.Log("[PZ-PROBE] revolver at the start of Act 3: " + (gun.Held ? "held" : "on the officer") + ", " + gun.RoundsLeft + " rounds");
+            if (gun.Held || gun.RoundsLeft != RevolverRules.Capacity) Problem("[PZ-PROBE] a new run did not put the revolver back on the officer, full");
+            int dead = 0;
+            foreach (ZombieHitbox z in Ward<ZombieHitbox>())
+                if (z.zombie.Dead) dead++;
+            if (dead > 0) Problem("[PZ-PROBE] " + dead + " zombie(s) shot in an earlier run are still dead in a new run");
+        }
+
+        /// <summary>A zombie in play that would hear a noise now: not a (deaf) pack follower, not staggered, not held by the director.</summary>
+        private static bool CanHear(ZombieHitbox z)
+        {
+            if (!z.zombie.Active || z.zombie.Dead) return false;
+            ZombieBrain brain = z.zombie.Brain;
+            return !brain.IsFollower && !brain.IsStunned && brain.Mode != ZombieMode.Passive && brain.Mode != ZombieMode.Scripted && brain.Mode != ZombieMode.Restrained;
+        }
+
+        /// <summary>Every zombie but <paramref name="not"/> that can hear and is within the shot's noise reach (less a metre) of <paramref name="at"/>.</summary>
+        private static List<ZombieHitbox> Hearers(Vector3 at, ZombieHitbox not)
+        {
+            var all = new List<ZombieHitbox>();
+            foreach (ZombieHitbox z in Boxes())
+                if (z != not && CanHear(z) && Vector3.Distance(z.transform.position, at) <= RevolverRules.ShotNoiseMeters - 1) all.Add(z);
+            return all;
+        }
+
+        /// <summary>
+        /// The nearest zombie that can be shot within <paramref name="meters"/> of <paramref name="from"/> and a spot to shoot it
+        /// from; a deaf one first, any one if there is no deaf one to be had.
+        /// </summary>
+        private static ZombieHitbox Pick(Vector3 from, float meters, out Vector3 spot)
+        {
+            spot = default;
+            for (int pass = 0; pass < 2; pass++)
+            {
+                ZombieHitbox best = null;
+                Vector3 bestSpot = default;
+                float nearest = meters;
+                foreach (ZombieHitbox z in Boxes())
+                {
+                    if (!z.Shootable || (pass == 0 && CanHear(z))) continue;
+                    float d = WardLayout.HorizontalDistance(z.transform.position, from);
+                    if (d >= nearest || !Standing(z, out Vector3 at)) continue;
+                    nearest = d;
+                    best = z;
+                    bestSpot = at;
+                }
+
+                if (!best) continue;
+                spot = bestSpot;
+                return best;
+            }
+
+            return null;
+        }
+
+        /// <summary>No wall and no other zombie's head or body between <paramref name="eye"/> and <paramref name="point"/>.</summary>
+        private static bool LineFree(Vector3 eye, Vector3 point, ZombieHitbox target)
+        {
+            if (!Clear(eye, point)) return false;
+            Vector3 to = point - eye;
+            float meters = to.magnitude;
+            if (meters < 1e-3f) return true;
+            to /= meters;
+            foreach (ZombieHitbox z in Boxes())
+                if (z != target && z.Test(eye, to, meters, out _) != HitPart.None) return false;
+            return true;
+        }
+
+        private static ZombieHitbox[] boxes;
+
+        /// <summary>Every zombie's hit area in Ward, found once (again after a scene reload).</summary>
+        private static ZombieHitbox[] Boxes() => boxes != null && boxes.Length > 0 && boxes[0] ? boxes : boxes = Ward<ZombieHitbox>();
+
+        private static string Round(Vector3 p) =>
+            "(" + p.x.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + ", " + p.z.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + ")";
+
+        /// <summary>A spot on the corridor's middle line 3 to 8 m from <paramref name="z"/>, with nothing in the way from the eyes to its belly and head.</summary>
+        private static bool Standing(ZombieHitbox z, out Vector3 spot)
+        {
+            float eyeUp = Services<IPlayerQuery>.TryGet(out IPlayerQuery p) ? p.HeadPosition.y - p.FloorPosition.y : 1.6f, y = Floor3Y();
+            Vector3 zp = z.transform.position;
+            spot = default;
+            float best = float.MaxValue;
+            for (float x = -1.5f; x <= 12.5f; x += .5f)
+            {
+                var floor = new Vector3(x, y, 3.25f);
+                float d = WardLayout.HorizontalDistance(floor, zp);
+                if (d < 3 || d > 8) continue;
+                Vector3 eye = floor + Vector3.up * eyeUp;
+                if (!LineFree(eye, z.Belly, z) || !LineFree(eye, z.HeadCentre, z)) continue;
+                float score = Mathf.Abs(d - 4.5f);
+                if (score >= best) continue;
+                best = score;
+                spot = floor;
+            }
+
+            return best < float.MaxValue;
+        }
+
+        private static bool Clear(Vector3 from, Vector3 to) => !Physics.Linecast(from, to, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+
+        private static float Floor3Y() => Services<IPlayerQuery>.TryGet(out IPlayerQuery p) && p.FloorPosition.x < 20 ? p.FloorPosition.y : 0;
+
+        private static Vector3 Eye() => Services<IPlayerQuery>.TryGet(out IPlayerQuery p) ? p.HeadPosition : Vector3.up * 1.6f;
+
+        private static Vector3 Facing() => Services<IPlayerQuery>.TryGet(out IPlayerQuery p) ? p.HeadForward : Vector3.forward;
+
+        private static Quaternion levelView = Quaternion.identity;
+        private static bool pitched;
+
+        /// <summary>
+        /// Turns the view to <paramref name="point"/>, pitch included, for the photographs (the bullets aim on their own). The flat
+        /// camera's pitch is written only on mouse movement (DesktopLocomotion), so <see cref="LevelView"/> puts it back.
+        /// </summary>
+        private static void LookAt(Vector3 point)
+        {
+            Face(point);
+            if (!(Services<IPlayerQuery>.Instance is PlayerRig rig) || !(rig.GetComponent<DesktopLocomotion>() is DesktopLocomotion desk) || !desk.cameraView) return;
+            Transform view = desk.cameraView.transform;
+            if (!pitched) { levelView = view.localRotation; pitched = true; }
+            Vector3 to = point - view.position;
+            float level = new Vector2(to.x, to.z).magnitude;
+            view.localRotation = Quaternion.Euler(Mathf.Clamp(-Mathf.Atan2(to.y, level) * Mathf.Rad2Deg, -75, 75), 0, 0);
+        }
+
+        private static void LevelView()
+        {
+            if (!pitched || !(Services<IPlayerQuery>.Instance is PlayerRig rig) || !(rig.GetComponent<DesktopLocomotion>() is DesktopLocomotion desk) || !desk.cameraView) return;
+            desk.cameraView.transform.localRotation = levelView;
+            pitched = false;
         }
 
         private void Problem(string message)

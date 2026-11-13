@@ -98,7 +98,11 @@ namespace PatientZero.Audio.Logic
             W(CueId.CrowdPanic, 3, 30, true, 0, MixerBus.Ambience, CaptionPolicy.Always, "[a panicking crowd outside]"),
             W(CueId.NewsBroadcast, 1.5f, 14, false, 0, MixerBus.Voice, CaptionPolicy.None, "[emergency news broadcast]"),
             F(CueId.JumpScareStinger, MixerBus.Music),
-            W(CueId.JumpScareScream, .5f, 12, false, 0, MixerBus.World, CaptionPolicy.Always, "[a scream in your face]")
+            W(CueId.JumpScareScream, .5f, 12, false, 0, MixerBus.World, CaptionPolicy.Always, "[a scream in your face]"),
+            // The revolver (contract v1.5, Claude integration E-25): sounds made for this game, Audio/Recorded.
+            W(CueId.RevolverShot, 2, 60, false, 20, MixerBus.World, CaptionPolicy.Visuals, "[gunshot]"),
+            W(CueId.RevolverDryFire, .3f, 6, false, 0, MixerBus.World, CaptionPolicy.Visuals, "[click]"),
+            W(CueId.RevolverHandle, .3f, 4, false, 0, MixerBus.World)
         };
         public static int Count => Rows.Length;
         public static CueDefinition At(int index) => Rows[index];

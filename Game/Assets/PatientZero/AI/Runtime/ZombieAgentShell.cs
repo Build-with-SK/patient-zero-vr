@@ -13,6 +13,8 @@ namespace PatientZero.AI
     /// Two-minute version (owner-approved plan 2026-11-10; Claude integration E-22): the Walker is the door zombie the director
     /// confronts the player with, and its followers stay out of play. A zombie that grabbed the player lets go, stunned and
     /// pushed back, when the player wins the struggle.
+    /// E-25 (the revolver, owner's plan step 4): a headshot kills it (it falls and stays down until the player's next life); a
+    /// body shot staggers it. The shot's own noise has already told it where the shot came from.
     /// </summary>
     [RequireComponent(typeof(ZombieNavigation))]
     public sealed class ZombieAgentShell : MonoBehaviour
@@ -34,16 +36,20 @@ namespace PatientZero.AI
         private LightingState lighting = LightingState.Awakening;
         private ExperienceSettings settings = ExperienceSettings.Defaults;
         private float nextTick, lastTick;
-        private bool active, holdingPlayer;
+        private bool active, holdingPlayer, dead;
         private CueHandle breathing, shuffling;
         /// <summary>E-22: how long a zombie the player fought off stays stunned, and how far it staggers back.</summary>
         public const float BreakFreeStunSeconds = 3, BreakFreePushMeters = 1.2f;
+        /// <summary>E-25: how long a body shot staggers it.</summary>
+        public const float ShotStaggerSeconds = 1.2f;
         private static readonly ProfilerMarker TickMarker = new ProfilerMarker("PatientZero.AI.Tick");
         public ZombieBrain Brain => brain;
         /// <summary>In play this act (its simulation runs).</summary>
         public bool Active => active;
         /// <summary>In play and in view (the Walker stays out of view until its window pass).</summary>
         public bool Shown { get; private set; }
+        /// <summary>E-25: shot in the head this life. It lies where it fell, in view, and nothing commands it until the player's next life.</summary>
+        public bool Dead => dead;
         private void Awake()
         {
             navigation = GetComponent<ZombieNavigation>();
@@ -86,6 +92,10 @@ namespace PatientZero.AI
         private void ActStarted(ActStarted e)
         {
             state = GameState.Playing; // Ward can load after Bootstrap's Playing notification.
+            // E-25: a zombie the player killed stays down for the rest of this life; a new life or a new run (both begin in the
+            // bed, Awakening) brings it back.
+            if (dead && !e.IsRestore && e.Act != ActId.Awakening) return;
+            dead = false;
             // v1.4: a follower is never in play at the start of an act; it joins when its leader shows (Update).
             active = horde ? member.Hunter && member.Act == e.Act : ZombieIds.ActOf(ZombieId) == e.Act;
             StopLoops(); holdingPlayer = false; // v1.3: two zombies share the lobby lastTick = Time.time; nextTick = Time.time + ZombieId * .017f;
@@ -102,8 +112,10 @@ namespace PatientZero.AI
         /// <summary>A follower comes into play with its leader and leaves with it: a pack is never split across acts.</summary>
         private void TrackLeader()
         {
+            if (dead) return;
             // E-22: the Walker is now the lone door zombie; its old window-pass pack stays out of play.
-            bool join = Leader.active && Leader.Shown && Leader.ZombieId != ZombieIds.Walker;
+            // E-25: a pack whose hunter was shot stays in play where it stands.
+            bool join = (Leader.active || Leader.dead) && Leader.Shown && Leader.ZombieId != ZombieIds.Walker;
             if (join == active) return;
             active = join; formed = false;
             StopLoops(); brain.Reset(ZombieMode.Dormant);
@@ -181,6 +193,7 @@ namespace PatientZero.AI
         /// <summary>Director-only same-seat command; never used by player gameplay.</summary>
         public void SetActiveInAct(bool value)
         {
+            if (dead) return;
             active = value;
             navigation.SetSimulationActive(value);
             if (value) navigation.Warp(transform.position);
@@ -188,13 +201,14 @@ namespace PatientZero.AI
             Shown = value;
             if (!value) { navigation.Stop(); StopLoops(); } else StartBreathing();
         }
-        public void SetMode(ZombieMode mode) { brain.SetMode(mode); if (mode == ZombieMode.Passive) { navigation.Stop(); StopLoops(2); } }
+        public void SetMode(ZombieMode mode) { if (dead) return; brain.SetMode(mode); if (mode == ZombieMode.Passive) { navigation.Stop(); StopLoops(2); } }
         /// <summary>
         /// E-22, director-only: the door zombie is suddenly at <paramref name="at"/>, facing the player, screaming (the director
         /// plays the scream). It hears nothing for a moment, then hunts by sound around that spot.
         /// </summary>
         public void Confront(Vector3 at)
         {
+            if (dead) return;
             holdingPlayer = false;
             SetActiveInAct(true);
             navigation.Warp(at);
@@ -220,11 +234,35 @@ namespace PatientZero.AI
             navigation.Stop(); lastTick = Time.time;
             Cues.Play(CueId.ZombieGroan, eye, NoiseOrigin.Zombie);
         }
-        public void MoveScripted(Vector3 target) => brain.ScriptedMove(target);
-        public void Stun(float seconds) { brain.Stun(seconds); navigation.Stop(); }
+        public void MoveScripted(Vector3 target) { if (!dead) brain.ScriptedMove(target); }
+        public void Stun(float seconds) { if (dead) return; brain.Stun(seconds); navigation.Stop(); }
         public void AssistSpeed(bool value) => brain.AssistedSpeed = value;
-        public void SnapRestraint(bool lunge) { brain.ReleaseRestraint(); if (Animation && lunge) Animation.Lunge(); }
-        public void Kneel() { if (Animation) Animation.Kneel(); }
+        public void SnapRestraint(bool lunge) { if (dead) return; brain.ReleaseRestraint(); if (Animation && lunge) Animation.Lunge(); }
+        public void Kneel() { if (Animation && !dead) Animation.Kneel(); }
+
+        /// <summary>
+        /// E-25, the revolver (Claude integration): a headshot kills; a body shot staggers it for <see cref="ShotStaggerSeconds"/>
+        /// and it snarls. Only a zombie in play and in view can be shot. Returns whether it died.
+        /// </summary>
+        public bool Shot(bool head)
+        {
+            if (dead || !active || !Shown) return false;
+            Vector3 eye = Head ? Head.position : transform.position + Vector3.up;
+            if (!head)
+            {
+                brain.Stun(ShotStaggerSeconds); navigation.Stop();
+                if (Animation) Animation.Hit();
+                Cues.Play(CueId.ZombieSnarl, eye, NoiseOrigin.Zombie);
+                return false;
+            }
+
+            dead = true; active = false; holdingPlayer = false;
+            brain.SetMode(ZombieMode.Passive);
+            navigation.SetSimulationActive(false); StopLoops();
+            if (Animation) Animation.Die();
+            GameEvents.ZombieAlert.Raise(new ZombieAlertChanged(ZombieId, AlertLevel.Unaware, transform.position));
+            return true;
+        }
         private void StartBreathing() { if (!breathing.IsValid && Head) breathing = Cues.PlayAttached(CueId.ZombieBreath, Head, NoiseOrigin.Zombie); }
         private void StopLoops(float fade = .1f) { Cues.Stop(breathing, fade); Cues.Stop(shuffling, fade); breathing = shuffling = default; }
     }

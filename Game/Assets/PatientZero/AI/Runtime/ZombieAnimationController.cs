@@ -6,6 +6,7 @@ using UnityEngine;
 namespace PatientZero.AI
 {
     /// <summary>Generated mannequin shamble with optional Animator adapter. Never affects the player camera.</summary>
+    /// <remarks>E-25 (Claude integration, the revolver): Hit plays the model's HitReact, Die its Death; a dead zombie holds still.</remarks>
     public sealed class ZombieAnimationController : MonoBehaviour
     {
         public Transform Body, Head, LeftLeg, RightLeg, LeftArm, RightArm, FootEmitter;
@@ -13,11 +14,13 @@ namespace PatientZero.AI
         public SkinnedMeshRenderer Visual;
         private Vector3 bodyStart, leftFootStart, rightFootStart, target;
         private float speed, lungeUntil;
-        private bool kneel;
+        private bool kneel, dead;
         private AlertLevel level;
         private ZombieMode mode;
         private static readonly int StateParameter = UnityEngine.Animator.StringToHash("AlertLevel");
         private static readonly int SpeedParameter = UnityEngine.Animator.StringToHash("Speed");
+        private static readonly int HitTrigger = UnityEngine.Animator.StringToHash("Hit"), DieTrigger = UnityEngine.Animator.StringToHash("Die");
+        private static readonly int LocomotionState = UnityEngine.Animator.StringToHash("Locomotion");
         private void Awake()
         {
             if (Body) bodyStart = Body.localPosition;
@@ -27,11 +30,24 @@ namespace PatientZero.AI
         public void Apply(AlertLevel alert, ZombieMode zombieMode, float motionSpeed, Vector3 lookAt)
         { level = alert; mode = zombieMode; speed = motionSpeed; target = lookAt; }
         public void SetVisible(bool visible) { if (Visual) Visual.enabled = visible; else if (Body) Body.gameObject.SetActive(visible); }
-        public void ResetPose() { kneel = false; lungeUntil = 0; speed = 0; level = AlertLevel.Unaware; mode = ZombieMode.Dormant; }
+        public void ResetPose()
+        {
+            kneel = false; lungeUntil = 0; speed = 0; level = AlertLevel.Unaware; mode = ZombieMode.Dormant;
+            if (dead && Animator) { Animator.ResetTrigger(DieTrigger); Animator.Play(LocomotionState, 0, 0); }
+            dead = false;
+        }
+        public void Hit() { if (Animator && !dead) Animator.SetTrigger(HitTrigger); }
+        public void Die()
+        {
+            dead = true; speed = 0;
+            if (Body) { Body.localPosition = bodyStart; Body.localRotation = Quaternion.identity; }
+            if (Animator) { Animator.ResetTrigger(HitTrigger); Animator.SetFloat(SpeedParameter, 0); Animator.SetTrigger(DieTrigger); }
+        }
         public void Lunge() => lungeUntil = Time.time + .5f;
         public void Kneel() => kneel = true;
         private void Update()
         {
+            if (dead) return;
             float phase = Time.time * (speed > .05f ? 5 : 1.2f), sway = Mathf.Sin(phase);
             if (Body)
             {

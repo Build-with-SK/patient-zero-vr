@@ -2,12 +2,15 @@
   "name": "PatientZero.Integration.Runtime",
   "references": [
     "PatientZero.Core",
+    "PatientZero.AI",
+    "PatientZero.AI.Logic",
     "PatientZero.Flow",
     "PatientZero.Flow.Logic",
     "PatientZero.Integration.Logic",
     "PatientZero.Interaction",
     "PatientZero.Player",
     "Unity.XR.CoreUtils",
+    "Unity.XR.Interaction.Toolkit",
     "Unity.RenderPipelines.Core.Runtime",
     "Unity.RenderPipelines.Universal.Runtime"
   ]

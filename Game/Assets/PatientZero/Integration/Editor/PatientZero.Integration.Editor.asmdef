@@ -8,6 +8,7 @@
     "PatientZero.Flow",
     "PatientZero.Atmosphere",
     "PatientZero.AI",
+    "Unity.XR.Interaction.Toolkit",
     "Unity.RenderPipelines.Core.Runtime",
     "Unity.RenderPipelines.Universal.Runtime"
   ],

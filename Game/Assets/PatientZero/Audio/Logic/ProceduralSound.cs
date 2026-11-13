@@ -95,6 +95,14 @@ namespace PatientZero.Audio.Logic
                     return (low - slower) * 2 * (.25 + .75 * Math.Max(0, Sin(3, t)));
                 case CueId.JumpScareStinger:
                     return (Sin(55, t) * .8 + noise * .6) * Math.Exp(-t * 3);
+                // E-25 placeholders (the revolver), used only when a recording is missing: a crack over a low boom, a dry double
+                // click, a soft knock.
+                case CueId.RevolverShot:
+                    return noise * 2.5 * Math.Exp(-t * 30) + Sin(60, t) * 1.2 * Math.Exp(-t * 6) + low * 3 * Math.Exp(-t * 4);
+                case CueId.RevolverDryFire:
+                    return noise * 1.5 * (Pulse(t, 10, 120) + .8 * Pulse(t, 10, 160, .09));
+                case CueId.RevolverHandle:
+                    return (Sin(140, t) * .5 + low * 2) * Math.Exp(-t * 12);
                 default: return 0;
             }
         }

@@ -34,7 +34,14 @@ namespace PatientZero.Audio.Editor
             // E-24 (owner, 2026-11-11): the bulletin is cut to its three key lines, about 17 s (see the folder's LICENSE.md).
             [CueId.NewsBroadcast] = new[] { "News/ZombieNews_Zisongbr_Short.ogg" },
             [CueId.JumpScareStinger] = new[] { "Stingers/Stinger_Psychhead_VeryBassy2.ogg", "Stingers/Stinger_Psychhead_VeryBassy4.ogg" },
+            // E-25 (the revolver): made for this game, not from OpenGameArt (see Audio/Recorded/README.md).
+            [CueId.RevolverShot] = new[] { Made + "Revolver_Shot_1.ogg", Made + "Revolver_Shot_2.ogg", Made + "Revolver_Shot_3.ogg" },
+            [CueId.RevolverDryFire] = new[] { Made + "Revolver_DryFire.ogg" },
+            [CueId.RevolverHandle] = new[] { Made + "Revolver_Handle.ogg" },
         };
+
+        /// <summary>E-25: sounds made for this game live in the Audio area, not under <see cref="Root"/>.</summary>
+        public const string Made = "Assets/PatientZero/Audio/Recorded/";
 
         /// <summary>
         /// What the news anchor says, as timed speech captions. Transcribed by machine (faster-whisper "small", run locally) from
@@ -91,7 +98,8 @@ namespace PatientZero.Audio.Editor
                 var clips = new AudioClip[entry.Value.Length];
                 for (int i = 0; i < clips.Length; i++)
                 {
-                    clips[i] = Load(Root + entry.Value[i]);
+                    string file = entry.Value[i];
+                    clips[i] = Load(file.StartsWith("Assets/", StringComparison.Ordinal) ? file : Root + file);
                     count++;
                 }
 

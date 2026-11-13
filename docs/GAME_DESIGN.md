@@ -289,6 +289,9 @@ All world cues use **spatial blend 1, Doppler 0, a custom rolloff curve that is 
 | NewsBroadcast (v1.4) | the ceiling TV in B-7 at the start of a run | 3D | 1.5–14 | no | 0 | Voice | the anchor's words, timed from the recording's transcript |
 | JumpScareStinger (v1.4) | the exit jump scare | 2D | — | no | 0 | Music | — |
 | JumpScareScream (v1.4) | the exit zombie, in the player's face | 3D | .5–12 | no | 0 | World | ● [a scream in your face] |
+| RevolverShot (v1.5) | the revolver fires; the noise draws every zombie within 20 m | 3D | 2–60 | no | 20 | World | ○ [gunshot] |
+| RevolverDryFire (v1.5) | the trigger pulled with all six spent | 3D | .3–6 | no | 0 | World | ○ [click] |
+| RevolverHandle (v1.5) | the revolver is picked up | 3D | .3–4 | no | 0 | World | — |
 
 `i` = the intensity argument (0..1) passed to `Cues.Play`.
 **Fairness rule (tested):** every zombie vocal's Max is ≥ 9 m (1.5 × the largest common player noise radius of 6 m), so **you always hear a zombie before it can hear you.** Noise radius ≤ Max for every cue.
@@ -421,3 +424,31 @@ existing game.
 * **Exit jump scare.** As the main doors open, a zombie throws itself at the player's face from the doorway, with a
   stinger and a scream; the picture cuts to black for 0.75 s and the ending plays. Skipped with reduced scares. No
   controller rumble (only AI and Atmosphere may raise haptics).
+
+## 13. The revolver (owner request, 2026-11-12; contract v1.5, integration exception E-25)
+
+Step 4 of the owner's two-minute plan. Agreed: found on a dead police officer halfway through floor 3; six bullets fill
+it once, it never reloads and there are none to find; a headshot kills, a body shot staggers for a moment; every shot
+draws every zombie within about 20 m; on a flat screen the right mouse button aims and the left fires (the left still
+grabs when not aiming); in a headset it is drawn from a hip holster.
+
+* **Where.** The officer lies across the floor-3 corridor at x 6.8 (between the supply-room door and the cart), his head
+  to the north wall, in a pool of blood, his cap beside him. The gun lies on the floor by his right hand. Until the
+  woman's lunge and the dead doctor are built (later plan steps), he lies there alone.
+* **Taking it.** Flat screen: look at it from within 2.4 m and click. Headset: grab it; let go anywhere and it goes to
+  the hip holster, where it is drawn again. Taking it makes a quiet handling sound no zombie can hear.
+* **Firing.** Flat screen: hold the right button (the gun comes up to the eye in 0.12 s), click the left. The bullet
+  goes where the view points. Headset: the trigger; the bullet leaves the muzzle. One shot per 0.45 s at most. A
+  shot is not possible while paused or in a zombie's grip (the game is not running then).
+* **What a bullet does.** It stops at the first wall or object, reaches 40 m at most, and meets a zombie's head (a
+  sphere) or body (hips to neck); arms and legs do not stop it. A headshot kills: the zombie falls and lies where it
+  fell until the player's next life. A body shot staggers it for 1.2 s and it snarls; it then comes on. Blood specks
+  fly from a hit, dust from a wall.
+* **Noise.** Every shot is the `RevolverShot` cue, and its noise (20 m) draws every zombie in hearing to where it was
+  fired. The sound goes out before the bullet lands, so the zombie that is hit hears it too unless it is staggered.
+* **Six rounds.** Nothing on screen counts them (owner rule: no instructions or counters on screen); the rounds can be
+  seen in the cylinder, one fewer per shot. The seventh pull only clicks (`RevolverDryFire`, which no zombie hears).
+* **A new life.** Every death sends the player back to bed (Act 1), and the gun is back by the officer, full; every
+  zombie shot in that life is back too.
+* **Not decided (owner):** whether the empty click should be heard by zombies, and whether shooting should be possible
+  while held. Touch builds (phone, iPad) have no fire button yet. A pack whose hunter is shot stays where it stands.

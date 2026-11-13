@@ -32,10 +32,17 @@ namespace PatientZero.Player
         /// any mouse button counts (a tap on a touch screen).
         /// </summary>
         public static bool Struggle;
+        /// <summary>
+        /// E-25 (the revolver, Claude integration): set by the revolver while the player holds it. Holding the right mouse button
+        /// then aims (<see cref="Aim"/>) and the left button fires (<see cref="Fire"/>) instead of grabbing; with the right button
+        /// up the left one still grabs. Kept across frames.
+        /// </summary>
+        public static bool GunInHand;
+        public static bool Aim, Fire;
         private static int polledFrame = -1;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() { polledFrame = -1; PuzzleGripped = false; Clear(); }
+        private static void ResetStatics() { polledFrame = -1; PuzzleGripped = GunInHand = false; Clear(); }
 
         /// <summary>Reads the devices once per frame; every reader calls it, the first call of a frame does the work.</summary>
         public static void Poll()
@@ -70,17 +77,24 @@ namespace PatientZero.Player
                 GrabReleased = mouse.leftButton.wasReleasedThisFrame;
                 if (GrabHeld) Drag = delta;
                 Struggle |= mouse.rightButton.wasPressedThisFrame || mouse.middleButton.wasPressedThisFrame;
+                Aim = GunInHand && mouse.rightButton.isPressed;
+                if (Aim)
+                {
+                    Fire = GrabPressed;
+                    GrabPressed = GrabHeld = GrabReleased = false;
+                    Drag = Vector2.zero;
+                }
             }
 #elif PZ_TOUCH
             if (TouchControls.Active != null) TouchControls.Active.Fill();
 #endif
-            Struggle |= GrabPressed;
+            Struggle |= GrabPressed || Fire;
         }
 
         public static void Clear()
         {
             Move = Look = Drag = Vector2.zero;
-            GrabPressed = GrabHeld = GrabReleased = Throw = Teleport = Flashlight = Pause = Confirm = Struggle = false;
+            GrabPressed = GrabHeld = GrabReleased = Throw = Teleport = Flashlight = Pause = Confirm = Struggle = Aim = Fire = false;
         }
     }
 }

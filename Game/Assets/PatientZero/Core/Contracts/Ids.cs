@@ -283,5 +283,10 @@ namespace PatientZero.Core
         NewsBroadcast = 903,     // the opening TV broadcast; Audio captions it from the recording's timed transcript
         JumpScareStinger = 904,  // 2D hit for the exit jump scare
         JumpScareScream = 905,   // the zombie's scream in the player's face
+
+        // The revolver (contract v1.5, Claude integration E-25; owner's two-minute plan, step 4).
+        RevolverShot = 906,      // very loud: every zombie in play within 20 m comes to where it was fired
+        RevolverDryFire = 907,   // the hammer falling on a spent chamber
+        RevolverHandle = 908,    // the revolver picked up off the dead officer
     }
 }

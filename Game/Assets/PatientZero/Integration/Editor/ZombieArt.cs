@@ -21,10 +21,12 @@ namespace PatientZero.Integration.Editor
         /// <summary>E-21: the single-clip controller of the scripted jump-scare zombie.</summary>
         public const string PuppetControllerPath = ArtTextures.Folder + "/ZombieJumpScare.controller";
         public const string ModelName = "Zombie model (Quaternius, CC0)";
-        public const string Version = "pz-art-zombie-1";
+        public const string Version = "pz-art-zombie-2"; // E-25: HitReact and Death states
         public const float TargetHeight = 1.75f;
         public const string SpeedParameter = "Speed";
         public const string AlertParameter = "AlertLevel";
+        /// <summary>E-25 (the revolver): triggers ZombieAnimationController sets for a body shot and a headshot.</summary>
+        public const string HitParameter = "Hit", DieParameter = "Die";
 
         private static readonly string[] Clips = { "Idle", "Walk", "Run_Arms" };
         private static readonly float[] Thresholds = { 0f, .85f, 1.5f };
@@ -50,7 +52,7 @@ namespace PatientZero.Integration.Editor
             Material skin = Skin("Zombie_Skin", new Color(.8f, .84f, .76f, 1));
             var kit = new Kit
             {
-                Model = model, Controller = Controller(clips), Skin = skin,
+                Model = model, Controller = Controller(clips, OnceCopy("HitReact"), OnceCopy("Death")), Skin = skin,
                 Skins = new[] { skin, Skin("Zombie_Skin_Pale", new Color(.9f, .94f, .96f, 1)), Skin("Zombie_Skin_Dark", new Color(.6f, .55f, .5f, 1)) },
             };
             Measure(kit, clips[0]);
@@ -347,7 +349,18 @@ namespace PatientZero.Integration.Editor
             return copy;
         }
 
-        private static AnimatorController Controller(AnimationClip[] clips)
+        /// <summary>E-25: a play-once .anim copy of one imported clip (it holds its last frame).</summary>
+        private static AnimationClip OnceCopy(string name)
+        {
+            AnimationClip copy = LoopingCopy(name);
+            AnimationClipSettings settings = AnimationUtility.GetAnimationClipSettings(copy);
+            settings.loopTime = false;
+            AnimationUtility.SetAnimationClipSettings(copy, settings);
+            EditorUtility.SetDirty(copy);
+            return copy;
+        }
+
+        private static AnimatorController Controller(AnimationClip[] clips, AnimationClip hit, AnimationClip death)
         {
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
             AssetImporter importer = controller ? AssetImporter.GetAtPath(ControllerPath) : null;
@@ -362,7 +375,24 @@ namespace PatientZero.Integration.Editor
             tree.blendParameter = SpeedParameter;
             tree.useAutomaticThresholds = false;
             for (int i = 0; i < clips.Length; i++) tree.AddChild(clips[i], Thresholds[i]);
-            controller.layers[0].stateMachine.defaultState = state;
+            AnimatorStateMachine machine = controller.layers[0].stateMachine;
+            machine.defaultState = state;
+
+            // E-25: a body shot plays HitReact once and returns to walking; a headshot plays Death and holds the last frame.
+            controller.AddParameter(HitParameter, AnimatorControllerParameterType.Trigger);
+            controller.AddParameter(DieParameter, AnimatorControllerParameterType.Trigger);
+            AnimatorState flinch = machine.AddState("HitReact");
+            flinch.motion = hit;
+            AnimatorStateTransition back = flinch.AddTransition(state);
+            back.hasExitTime = true; back.exitTime = .9f; back.duration = .12f;
+            AnimatorStateTransition toFlinch = machine.AddAnyStateTransition(flinch);
+            toFlinch.AddCondition(AnimatorConditionMode.If, 0, HitParameter);
+            toFlinch.duration = .05f; toFlinch.canTransitionToSelf = true;
+            AnimatorState fall = machine.AddState("Death");
+            fall.motion = death;
+            AnimatorStateTransition toFall = machine.AddAnyStateTransition(fall);
+            toFall.AddCondition(AnimatorConditionMode.If, 0, DieParameter);
+            toFall.duration = .1f; toFall.canTransitionToSelf = false;
             EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();
 
@@ -392,14 +422,16 @@ namespace PatientZero.Integration.Editor
 
         private static bool HasParameters(AnimatorController controller)
         {
-            bool speed = false, alert = false;
+            bool speed = false, alert = false, hit = false, die = false;
             foreach (AnimatorControllerParameter p in controller.parameters)
             {
                 if (p.name == SpeedParameter && p.type == AnimatorControllerParameterType.Float) speed = true;
                 if (p.name == AlertParameter && p.type == AnimatorControllerParameterType.Int) alert = true;
+                if (p.name == HitParameter && p.type == AnimatorControllerParameterType.Trigger) hit = true;
+                if (p.name == DieParameter && p.type == AnimatorControllerParameterType.Trigger) die = true;
             }
 
-            return speed && alert;
+            return speed && alert && hit && die;
         }
 
         /// <summary>URP Lit on the model's colour atlas, a little desaturated and damp, so it sits in the ward's light.</summary>

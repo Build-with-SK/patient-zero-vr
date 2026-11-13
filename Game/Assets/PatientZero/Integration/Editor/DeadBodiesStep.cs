@@ -86,7 +86,7 @@ namespace PatientZero.Integration.Editor
             swing.gameObject.SetActive(false);
         }
 
-        private static void Pool(Transform body, Material material, Vector3 floor, float size)
+        internal static void Pool(Transform body, Material material, Vector3 floor, float size)
         {
             var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
             quad.name = "BloodPool";
@@ -100,7 +100,7 @@ namespace PatientZero.Integration.Editor
         }
 
         /// <summary>The floor under (x, z), from the composed scene's colliders.</summary>
-        private static Vector3 Floor(Vector3 p)
+        internal static Vector3 Floor(Vector3 p)
         {
             Physics.SyncTransforms();
             if (!Physics.Raycast(new Vector3(p.x, 1.5f, p.z), Vector3.down, out RaycastHit hit, 3f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
@@ -120,7 +120,7 @@ namespace PatientZero.Integration.Editor
         private const float WallClear = .15f;
 
         /// <summary>The horizontal shift that brings <paramref name="b"/> inside the room holding <paramref name="p"/>.</summary>
-        private static Vector3 IntoRoom(Bounds b, Vector3 p)
+        internal static Vector3 IntoRoom(Bounds b, Vector3 p)
         {
             foreach (RoomRect room in WardLayout.Rooms)
             {
@@ -133,7 +133,7 @@ namespace PatientZero.Integration.Editor
             return Vector3.zero;
         }
 
-        private static void RequireRoom(Vector3 p, string what)
+        internal static void RequireRoom(Vector3 p, string what)
         {
             foreach (RoomRect room in WardLayout.Rooms)
             {
@@ -143,7 +143,7 @@ namespace PatientZero.Integration.Editor
             throw new InvalidOperationException("The " + what + " at " + p + " is in no room of WardLayout (layout changed?).");
         }
 
-        private static Material Skin(ZombieArt.Kit kit, string name, Color tint)
+        internal static Material Skin(ZombieArt.Kit kit, string name, Color tint)
         {
             Material m = ArtSurfaces.LitMaterial(name);
             m.CopyPropertiesFromMaterial(kit.Skin);
