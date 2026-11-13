@@ -345,6 +345,7 @@ namespace PatientZero.Integration
             Face(new Vector3(at.x + 10, y, 3.25f));
             yield return GameSeconds(.4f);
             if (round == 1) yield return Shot("3-revolver-in-hand");
+            Arms();
 
             // Act 3 opens with the patroller held by the director, and a held zombie hears nothing; it starts its beat 10 s in.
             // Wait for a zombie that can hear within 20 m, so the shot's noise has someone to draw.
@@ -446,6 +447,21 @@ namespace PatientZero.Integration
         }
 
         /// <summary>E-25: rounds 2 and 3 come after a new run (Play again): the revolver must be back on the officer, full, and no zombie dead.</summary>
+        /// <summary>
+        /// E-27: on a flat screen, with the revolver taken, the right arm is up and its forearm ends where the hand on the gun's grip
+        /// puts the wrist; the left one likewise on the torch (a gap means the IK could not reach).
+        /// </summary>
+        private void Arms()
+        {
+            FirstPersonArms[] all = Ward<FirstPersonArms>();
+            if (all.Length != 1) { Problem("[PZ-PROBE] expected one set of first-person arms in Ward, found " + all.Length); return; }
+            FirstPersonArms arms = all[0];
+            float right = FirstPersonArms.WristGap(arms.right), left = FirstPersonArms.WristGap(arms.left);
+            Debug.Log("[PZ-PROBE] arms: " + (arms.Shown ? "shown" : "hidden") + ", right arm raised " + arms.Raised.ToString("0.00") + "; wrist gaps " +
+                      right.ToString("0.000") + " m (gun) and " + left.ToString("0.000") + " m (torch)");
+            if (!arms.Shown || arms.Raised < 1 || right > .01f || left > .01f) Problem("[PZ-PROBE] the arms do not hold the gun and the torch");
+        }
+
         private IEnumerator GunBackOnTheOfficer()
         {
             Revolver[] guns = Ward<Revolver>();

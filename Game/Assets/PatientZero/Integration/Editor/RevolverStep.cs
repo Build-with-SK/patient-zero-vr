@@ -124,7 +124,7 @@ namespace PatientZero.Integration.Editor
         // ------------------------------------------------------------------ the gun
 
         /// <summary>A revolver about 25 cm long made of plain shapes: the grip at its origin, the barrel along +z.</summary>
-        private static Transform Gun(Transform parent, out Transform muzzle, out Renderer flash, out GameObject[] rounds, out BoxCollider pickup)
+        internal static Transform Gun(Transform parent, out Transform muzzle, out Renderer flash, out GameObject[] rounds, out BoxCollider pickup)
         {
             Material steel = Paint("Revolver_Steel", new Color(.07f, .07f, .075f, 1), .9f, .55f);
             Material wood = Paint("Revolver_Grip", new Color(.17f, .09f, .05f, 1), 0, .35f);
@@ -168,7 +168,7 @@ namespace PatientZero.Integration.Editor
             return gun;
         }
 
-        private static Transform Part(Transform parent, string name, PrimitiveType shape, Material material, Vector3 at, Vector3 euler, Vector3 scale)
+        internal static Transform Part(Transform parent, string name, PrimitiveType shape, Material material, Vector3 at, Vector3 euler, Vector3 scale)
         {
             GameObject o = GameObject.CreatePrimitive(shape);
             o.name = name;
@@ -181,7 +181,7 @@ namespace PatientZero.Integration.Editor
             return o.transform;
         }
 
-        private static Material Paint(string name, Color color, float metallic, float smoothness)
+        internal static Material Paint(string name, Color color, float metallic, float smoothness)
         {
             Material m = ArtSurfaces.LitMaterial(name);
             m.SetTexture("_BaseMap", null);

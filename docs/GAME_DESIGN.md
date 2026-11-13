@@ -473,3 +473,18 @@ default all the time, and turning it off it's the players wish", and "make the d
   is pulled they swing away from the player into the room beyond (90 degrees in 1.5 s). They were one leaf turning
   about its middle, which left the doorway half blocked. The room door (B-7) was already hinged and is unchanged; the
   stairwell's fire doors slide.
+
+## 15. The player's arms (owner request, 2026-11-13; integration exception E-27)
+
+The owner asked whether visible hands would look good, then "Yes, find a model". On a flat screen (PC, phone, iPad)
+the player now sees their own arms: CC0 arms by para (OpenGameArt, made with MakeHuman), bare forearms and hands.
+
+* **Left hand: the torch.** A black metal torch held low on the left in a fist, knuckles up, the lens forward. Its beam
+  starts at the lens (it started at a fixed point low on the right before). The lens glows while the torch is on and is
+  dark glass when F (or LIGHT) turns it off. The torch rises and falls slightly with the player's breathing.
+* **Right hand: the revolver.** Until the revolver is taken the right arm hangs out of sight. Taking it raises the
+  arm onto the grip in 0.2 s, the hand wrapped round it and the thumb on the far side; aiming brings
+  the gun to the middle of the view, and the torch moves a little toward the middle with it.
+* **Walls.** Near a wall the torch and the gun draw back toward the player instead of going through it.
+* **Not in a headset.** The controllers are the hands there (and the Quest build has no torch). The hands do not move
+  on levers, planks or valves: the player still uses them with the mouse or a touch as before.

@@ -328,5 +328,31 @@ Not verified:
 - Phone and iPad builds.
 Follow-ups:
 - The owner plays this build.
-- Visible hands on PC (asked by the owner): waits for their choice of a model; nothing built.
+- Visible hands on PC (asked by the owner): waits for their choice of a model; nothing built (done the same day: E-27).
 - The plan's chained lab door with banging on the way down (a hint at floor 2) is not built.
+
+## 2026-11-13 · The player's arms (owner: "Yes, find a model", "Yes, download it"; E-27)
+Kind: INTEGRATION
+What: The owner asked whether visible hands would look good; I said yes on PC, but only with a real rigged arms model. They said "Yes, find a model", then "Yes, download it" for `fps arms.7z` (1.4 MB, OpenGameArt, CC0, by para, made with MakeHuman).
+- Asset: the T-pose FBX and its 1024 x 1024 skin, renamed, in `Assets/ThirdParty/OpenGameArt/FpsArms/` with a `LICENSE.md` (what was kept and what was not). `ASSET_MANIFEST.md` C-06. Credited in the game's credits. Imported as a Generic rig with no avatar (with no rig Unity dropped the skinning), Animator off.
+- `FirstPersonArmsStep` (Ward compose step 989) hangs the model under the player's eyes, squared to them, curls the fingers round the two grips once (they never move after), builds a black torch from primitives (body, head, bezel, lens, tail cap, switch) and the materials `M_Arms_Skin` and `M_Torch_*`.
+- `FirstPersonArms` (runtime, after the revolver each frame): shown on flat screens only (never in a headset, never on the Quest build). A two-bone IK puts the left hand on the torch, low on the left, and the right hand on the revolver's grip once it is taken (raised in 0.2 s; until then the arm hangs out of sight). The elbows point out and down; the forearm turns toward the hand. A slow breath moves the torch by 4 mm. Near a wall the torch and the gun draw back toward the player (a sphere cast from the eyes) instead of going through it. The lens glows while the torch is on.
+- The torch's beam now starts at its lens: `DesktopInteraction.TorchFromEyes` (seat A) is where the beam starts in the view's space, the old fixed point by default; the arms move it to the lens each frame. Interaction is still the only writer of `HandheldLightChanged` (my first version re-raised it from Integration; `check_rules.py` refused that).
+- `Revolver`: hip pose (0.16, -0.18, 0.4), aim pose (0, -0.085, 0.4), further out and higher so the hand and forearm fit under the gun; draws back from walls. `RevolverStep.Gun`, `Part`, `Paint` are internal so the arms and the preview reuse them.
+- `ArmsPreview` (editor tool, not part of the game): renders the arms, torch and gun in an empty scene from the eyes and from outside, unlit (lights belong to Atmosphere and Environment). I used it to fit the grips: the first fits closed the fingers in front of the handles and ran the torch along the fingers.
+- The probe checks the arms once the revolver is in hand: shown, right arm raised, both wrists on their targets.
+- Docs: `GAME_DESIGN.md` section 15; `INTEGRATION_ROUND2.md` E-27 (seat A: `DesktopInteraction.cs`, `UiBuildStep.cs`).
+Evidence:
+- Windows build (`unity_batch.py build-windows`, which recomposes first): PASS, 0 errors, 0 warnings, 131 MB; compose logged "first-person arms: 4600 vertices, 50 bones; upper arm 0.259 m, forearm 0.267 m; wrist to hand handle at rest 0.000 m (R), 0.000 m (L)". Built twice: the second time after the two rule fixes.
+- Release probe, 3 rounds with screenshots: RESULT PASS, 3/3 complete, 0 errors or exceptions logged. Round 1, with the revolver in hand: "arms: shown, right arm raised 1.00; wrist gaps 0.000 m (gun) and 0.000 m (torch)". Rounds took 89.2, 77.4 and 76.8 s (E-26: 88.9, 77.2, 76.7). The revolver, door and stairwell checks as in E-26.
+- Shots viewed: B-7 at the start (the left hand's fist round the torch, low on the left, the beam from it lighting the door) and the corridor with the revolver just taken (torch on the left, gun in the right hand); the arms are dark outside the beam, as the room is. The preview's pictures (before its lights were removed): torch, hip and aim poses from the eyes, both sides and the front, and close-ups of each hand on its grip; every pose's wrist on its target (0.000 m).
+- Unity tests: EditMode 263/263 passed; PlayMode 28/28 passed. Engine-free logic tests 259/259.
+- `check_rules.py`: 1 error, 43 warnings, all `debug-log` (one new: the probe's arms line); the error is the probe's scene search from before. `integration_scan.py`: only the existing `partial` duplicate-type error and the `HapticRequested` warning.
+- The 112 "Failed to create agent because there is no valid NavMesh" lines are the same count as before.
+Not verified:
+- A person playing: how the arms look and feel in motion, the torch beam from the lens, the walls.
+- Phone and iPad builds (the arms are meant for them too). Any headset (the arms are meant to stay hidden there).
+- The probe never aims: no picture of the aim pose in the game (the preview shows it).
+Follow-ups:
+- The owner plays this build.
+- The hands do not move on levers, planks or valves; the gun has no reload; the zombie model, the chained lab door, the woman and the doctor, and the empty click are still open from before.

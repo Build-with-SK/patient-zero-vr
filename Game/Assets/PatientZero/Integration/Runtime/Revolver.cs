@@ -39,8 +39,11 @@ namespace PatientZero.Integration
         /// <summary>Flat screen: how near and how straight the player must look at the gun to take it.</summary>
         public const float ReachMeters = 2.4f, ReachDegrees = 14;
         public const float AimSeconds = .12f, FlashSeconds = .05f, KickSeconds = .2f, KickDegrees = 10;
-        /// <summary>From the eyes, turning with the view: low at the right hip, and raised to the eye while aiming.</summary>
-        private static readonly Vector3 HipPose = new Vector3(.17f, -.24f, .36f), AimPose = new Vector3(0, -.075f, .32f);
+        /// <summary>
+        /// From the eyes, turning with the view: low on the right, and raised to the eye while aiming. E-27: a little higher and
+        /// further out than before (hip .17, -.24, .36; aim 0, -.075, .32), so the hand holding it is seen and its arm is not folded tight.
+        /// </summary>
+        public static readonly Vector3 HipPose = new Vector3(.16f, -.18f, .4f), AimPose = new Vector3(0, -.085f, .4f);
         /// <summary>Headset: the holster at the right hip, from the eyes, turning with the head's yaw only.</summary>
         private static readonly Vector3 HolsterOffset = new Vector3(.2f, -.62f, .05f);
 
@@ -53,6 +56,8 @@ namespace PatientZero.Integration
         private string takenNote, emptyNote, stowNote;
 
         public bool Held => rules.Held;
+        /// <summary>Flat screen: 0 at the hip, 1 raised to the eye (E-27: the arms follow it).</summary>
+        public float Aim => aim;
         public int RoundsLeft => rules.Rounds;
         public ShotResult LastShot { get; private set; }
         public HitPart LastPart { get; private set; }
@@ -178,7 +183,8 @@ namespace PatientZero.Integration
             if (headset || forward.sqrMagnitude < 1e-6f) return; // in a headset the hand or the holster holds it
             Quaternion look = Quaternion.LookRotation(forward, Vector3.up);
             float kick = kickUntil > Time.time ? (kickUntil - Time.time) / KickSeconds : 0;
-            Vector3 pose = Vector3.Lerp(HipPose, AimPose, aim) + Vector3.back * (.035f * kick);
+            // E-27: drawn back from a wall the player faces, as the torch is, instead of reaching into it.
+            Vector3 pose = Vector3.Lerp(HipPose, AimPose, aim) + Vector3.back * (.035f * kick) + FirstPersonArms.DrawBack(player.HeadPosition, forward);
             model.SetPositionAndRotation(player.HeadPosition + look * pose, look * Quaternion.Euler(-KickDegrees * kick, 0, 0));
         }
 
