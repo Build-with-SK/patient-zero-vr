@@ -226,3 +226,55 @@ Evidence: Main Core v1.1 has no such payload/channel/item; D-1b is documented in
 Kind: PROGRESS
 What: Read WORK_PLAN.md and CODEX_B_BRIEF_ZOMBIE_FEAR.md. Created codex/zombie-fear in an isolated worktree from origin/claude/two-minute at ea0b219. Preserve E-22 through E-28, blind sound hunting, all ZombieBrain numbers and the Generic rig path. Changes are limited to seat B source/tests and this required append-only log. No Core amendment is needed: explicit shuffle intensity updates can drive presentation cadence inside Audio.
 Evidence: python tools/logic_tests/run_logic_tests.py -> Logic tests: 261 passed, 0 failed. Baseline Unity/editor/headset/audio listening checks: NOT RUN in Unity.
+
+## 2026-11-13 · Zombie fear delivery
+Kind: READY FOR REVIEW 264a1fe
+What: Implemented T1 and T2 on codex/zombie-fear, based on origin/claude/two-minute ea0b219b1e7f8d05898b98e26f7dc4256534bbd8. To Claude for review and native validation; no merge to main or claude/two-minute. ZombieBrain.cs is unchanged, including every number, blindness, freeze-or-die, the one struggle and E-28 gunshot rushing. No Core, Integration, scene, controller, asset or hand-written metadata changes.
+
+Files changed (complete list, relative to repository root):
+- Game/Assets/PatientZero/AI/Logic/ZombieMotion.cs
+- Game/Assets/PatientZero/AI/Runtime/ZombieAnimationController.cs
+- Game/Assets/PatientZero/AI/Runtime/ZombieAgentShell.cs
+- Game/Assets/PatientZero/AI/Tests/EditMode/ZombieMotionTests.cs
+- Game/Assets/PatientZero/Audio/Logic/ShuffleCadence.cs
+- Game/Assets/PatientZero/Audio/Runtime/AudioCuePlayer.cs
+- Game/Assets/PatientZero/Audio/Tests/EditMode/ShuffleCadenceTests.cs
+- docs/collab/CODEX_B_LOG.md (this required append-only log)
+
+Motion: guarded by Animator != null && Animator.isHuman. Uses GetBoneTransform, cached once per Animator, with optional chest/shoulder fallbacks. Update removes the preceding frame's offsets before animation evaluation; LateUpdate adds the new pose, so frozen or unkeyed bones do not accumulate it. Suspicious freezes clip playback, saves/restores Animator.speed, eases into a 20-degree head cock and aims at the heard target. Looking is eased and bounded to 70 degrees yaw / 30 degrees pitch. Outside Chasing the shell supplies brain.Target; only Chasing supplies the player's head as the look target. The existing director-scripted Generic restraint lunge retains its separate target and original motion. Humanoids skip the mannequin's procedural sway; the Generic shamble and original shuffle playback calls are retained.
+
+Motion: per-id xorshift seed, independent of the brain RNG; waits of 3-7 eligible seconds between twitches, 0.1 s outward / 0.3 s eased return, up to 7 degrees head pitch or 9 degrees at the left shoulder. Only Unaware/Searching at slow speed permit a twitch. Chasing, fast motion, Suspicious, Investigating, Hit/stun, death, kneeling, restraint and Passive cancel it. Hit/stun/death/kneel/restraint suppress the whole procedural pose. Actual speed above WalkSpeed + 0.05 m/s blends toward a 15-degree forward lean, reaching full blend at WalkSpeed + 0.25 m/s; it eases in/out during both chase and gunshot investigation. No camera/light/text/postprocessing additions. Cached bones and value-type pose output; portable steady-state motion allocation test reports zero bytes, not a Quest performance claim.
+
+Audio, exact intended change for listening review: only a Humanoid shell explicitly updates its attached ZombieShuffle intensity. At walking speed intensity is 0.6, with the recording's original playback rate. The same speed blend raises intensity to 1 and playback rate to 1.65 times the voice's initial pitch at a full run. Thus running is 65% faster and about 4.44 dB louder than the new walking bed; playback also raises all recorded frequencies by the same factor. Existing per-play recording pitch variation (0.93-1.06) is retained and multiplied, never compounded by repeated updates. Each pooled voice resets its base pitch on reuse. Generic shells never opt into the intensity/rate updates. No new cue/recording/voice, API or contract is required; the existing attached loop, mix settings, occlusion, stops and voice budget remain. ZombieShuffle's noise radius stays zero and zombie-origin hearing rules are unchanged. Audio was not auditioned; these are code-derived ratios, not a listening result.
+
+Evidence (portable checks, final implementation):
+```
+python tools/logic_tests/run_logic_tests.py
+Compiling 76 files ...
+Logic tests: 275 passed, 0 failed.
+
+python tools/review/check_rules.py --seat B --base origin/claude/two-minute --head codex/zombie-fear
+1 error(s), 45 warning(s).
+
+Baseline comparison using the unchanged check_rules.run on a temporary git archive of origin/claude/two-minute:
+Baseline: 1 error(s), 45 warning(s).
+Current: 1 error(s), 45 warning(s).
+New findings versus origin/claude/two-minute: 0.
+Seat B findings: 0.
+
+git diff --check
+(no output)
+git diff origin/claude/two-minute -- Game/Assets/PatientZero/AI/Logic/ZombieBrain.cs
+(no output)
+```
+The 14 added portable tests cover target/state policy, listening duration, head clamp/easing and frame-rate composition, seeded/reset twitch timing and amplitude, pause/interruption, excluded poses, gunshot-speed lean, zero steady-state logic allocations, shuffle rate bounds and zero gameplay-noise radius. The first allocation assertion counted its own boxing; the measurement now captures bytes before invoking Assert, and the final suite above passes.
+
+To Claude (inherited checker findings, not modified): the checker is not globally clean. Its existing error is scene-search at Game/Assets/PatientZero/Integration/Runtime/ReleaseProbe.cs:905. All 45 existing debug-log warnings are in Integration/Runtime/LookAwayScare.cs, ReleaseProbe.cs and Revolver.cs. Baseline/current finding tuples (severity, rule, path, line, message) match exactly. Per this task's brief, the branch adds no errors or warnings, including no ownership violations. Those TD-owned files were left untouched.
+
+Not run, separately from the portable evidence:
+- Unity compilation, asset import/metadata generation, model/controller binding and scene composition: NOT RUN in Unity.
+- Unity EditMode and PlayMode suites, release probe, visual head/shoulder axes, telegraph freeze/restore, Hit/Die/kneeling transitions and the Generic-rig regression: NOT RUN in Unity.
+- Full gameplay validation of blindness, freeze-or-die, struggle and gunshot rushing: NOT RUN in Unity (their existing portable regressions passed).
+- Audio audition, run/walk transition, spatial mix, clipping, pause/reuse behavior and subjective fear: NOT RUN in Unity; no audio listening performed.
+- Android/Quest build, headset comfort and CPU/GPU/memory/allocation profiling: NOT RUN in Unity.
+Handoff: Claude supplies the Humanoid model/controller and composes in the integration checkout, then runs native tests/release probe and listens to walk versus rush before deciding on the animation angles and mix. This entry reports portable logic and source review only; it makes no claim that the Unity implementation compiles or works.
