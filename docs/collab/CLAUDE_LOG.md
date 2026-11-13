@@ -381,3 +381,12 @@ Not verified:
 Follow-ups:
 - The owner plays this build.
 - Scarier zombies with the owner's models (licence and size to check before any download), the bigger two-floor hospital (a layout for the owner to approve first) and realistic graphics are waiting on the owner.
+
+## 2026-11-13 · The owner's zombie models (Meshy); Codex 2 brief
+Kind: PROGRESS
+What: The owner sent two Meshy community models (one link twice) to make the zombies scarier, and asked that Codex get a share of the work.
+- Model 1, "Zombie" (Meshy 7): realistic, bloodied, torn shirt and jeans, standing with the arms down; CC0 on its page; 1,902,320 faces, 1,014,438 vertices. Model 2, "zombie" (Meshy 6): green jacket, caught mid-stride; CC0; 387,048 faces, 228,611 vertices. Both are unrigged statues.
+- Meshy's docs: downloading needs a (free) Meshy account; rigging needs the model in that account and under 300,000 faces (Remesh, free plan: 10,000 only), works best from a T- or A-pose, and gives a humanoid with walk and run clips, exportable as FBX with a Mixamo-named skeleton. Free-plan outputs are CC BY 4.0 (credit Meshy).
+- So model 1 is the one to rig first; model 2's stride may not rig cleanly. Nothing downloaded: the sign-in and the download wait on the owner.
+- Codex 2's share (seat B, no Unity needed): `CODEX_B_BRIEF_ZOMBIE_FEAR.md` (head that turns to what it heard, listening freeze, twitches, forward lean when running, running footsteps). Branch `codex/zombie-fear` from `origin/claude/two-minute`.
+Evidence: the two model pages and Meshy's rigging guide, read in the browser; nothing run.
