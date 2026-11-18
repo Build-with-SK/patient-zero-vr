@@ -300,10 +300,11 @@ namespace PatientZero.Integration.Editor
             foreach (GameObject sceneRoot in root.gameObject.scene.GetRootGameObjects()) zombies.AddRange(sceneRoot.GetComponentsInChildren<ZombieAgentShell>(true));
             foreach (ZombieAgentShell zombie in zombies)
             {
-                SkinnedMeshRenderer mesh = null;
-                foreach (SkinnedMeshRenderer s in zombie.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-                    if (s.name == "Zombie" && s.transform.parent && HasAncestorNamed(s.transform, ZombieArt.ModelName)) { mesh = s; break; }
-                if (!mesh) throw new InvalidOperationException(zombie.name + " does not wear the zombie model: the art pass (Ward 980) must come first.");
+                // E-29: the body the art pass dressed it in (ZombieAnimationController.Visual), whichever model that is.
+                var dressed = zombie.GetComponent<ZombieAnimationController>();
+                SkinnedMeshRenderer mesh = dressed ? dressed.Visual : null;
+                if (!mesh || !mesh.transform.parent || !HasAncestorNamed(mesh.transform, ZombieArt.ModelName))
+                    throw new InvalidOperationException(zombie.name + " does not wear the zombie model: the art pass (Ward 980) must come first.");
                 Transform model = Ancestor(mesh.transform, ZombieArt.ModelName);
                 var box = zombie.gameObject.AddComponent<ZombieHitbox>();
                 box.zombie = zombie;
@@ -347,8 +348,9 @@ namespace PatientZero.Integration.Editor
             {
                 if (!bones[i]) throw new InvalidOperationException(ZombieArt.ModelPath + ": bone " + i + " is missing.");
                 skin[i] = bones[i].localToWorldMatrix * bindposes[i];
-                string n = bones[i].name;
-                part[i] = bones[i] == box.head || bones[i].IsChildOf(box.head) ? 1 : n == "Hips" || n == "Abdomen" || n == "Torso" || n == "Neck" ? 2 : 0;
+                string n = Unprefixed(bones[i].name);
+                part[i] = bones[i] == box.head || bones[i].IsChildOf(box.head) ? 1 :
+                    n == "Hips" || n == "Abdomen" || n == "Torso" || n == "Neck" || n == "Spine" || n == "Spine1" || n == "Spine2" ? 2 : 0;
             }
 
             var head = new List<Vector3>();
@@ -409,12 +411,17 @@ namespace PatientZero.Integration.Editor
 
         // ------------------------------------------------------------------ helpers
 
+        /// <summary>E-29: a bone by its plain name; Mixamo skeletons (the Meshy zombie) prefix theirs with "mixamorig:".</summary>
         private static Transform Bone(Transform root, string name)
         {
             foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
                 if (t.name == name) return t;
+            foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+                if (Unprefixed(t.name) == name) return t;
             throw new InvalidOperationException(ZombieArt.ModelPath + " has no bone '" + name + "' under " + root.name + ".");
         }
+
+        private static string Unprefixed(string bone) { int colon = bone.LastIndexOf(':'); return colon < 0 ? bone : bone.Substring(colon + 1); }
 
         private static bool HasAncestorNamed(Transform t, string name) => Ancestor(t, name);
 

@@ -36,6 +36,8 @@ namespace PatientZero.Integration.Editor.Quest
     {
         public const string Version = "1.0.0";
         public const string WindowsExePath = "Builds/Windows/PatientZero/PatientZero.exe";
+        /// <summary>E-29: optional; another path for the Windows exe (relative to Game/ or absolute), e.g. while the usual one is running.</summary>
+        public const string WindowsExeVariable = "PZ_WINDOWS_EXE";
         public const string PhoneApkPath = "Builds/Android/PatientZero-phone.apk";
         public const string IPadXcodePath = "Builds/iOS/PatientZero-Xcode";
         public const string IPadBundleId = "com.buildwithsk.patientzero";
@@ -135,8 +137,17 @@ namespace PatientZero.Integration.Editor.Quest
                 report.Pass("windows: Mono, x64, fullscreen window at desktop resolution (Alt+Enter toggles), no XR loader");
                 if (!report.Ok || !Compose(report)) return;
 
-                string exe = Absolute(WindowsExePath);
+                string custom = Environment.GetEnvironmentVariable(WindowsExeVariable);
+                string exe = Absolute(string.IsNullOrWhiteSpace(custom) ? WindowsExePath : custom.Trim());
                 string folder = Path.GetDirectoryName(exe);
+                // E-29 (2026-11-18): a build here once deleted the files of the game the owner was playing from this folder.
+                string running = RunningFrom(folder);
+                if (running != null)
+                {
+                    report.Error("windows: " + running + " is running from " + folder + "; close it first (the build replaces the whole folder), or set " +
+                                 WindowsExeVariable + " to build somewhere else");
+                    return;
+                }
                 if (Directory.Exists(folder)) Directory.Delete(folder, true); // a clean folder: no stale data from older builds
                 Directory.CreateDirectory(folder);
                 Build(report, exe, BuildTarget.StandaloneWindows64, BuildTargetGroup.Standalone, DesktopSimulation.DesktopMouseDefine);
@@ -303,6 +314,27 @@ namespace PatientZero.Integration.Editor.Quest
         }
 
         private static string Absolute(string projectRelative) => Path.GetFullPath(Path.Combine(Application.dataPath, "..", projectRelative));
+
+        /// <summary>The name and id of a process whose program lies in <paramref name="folder"/>, or null when none does.</summary>
+        private static string RunningFrom(string folder)
+        {
+            string root = Path.GetFullPath(folder).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            foreach (System.Diagnostics.Process process in System.Diagnostics.Process.GetProcesses())
+            {
+                try
+                {
+                    string file = process.MainModule?.FileName;
+                    if (file != null && Path.GetFullPath(file).StartsWith(root, StringComparison.OrdinalIgnoreCase))
+                        return Path.GetFileName(file) + " (process " + process.Id + ")";
+                }
+                catch (Exception e) when (e is System.ComponentModel.Win32Exception || e is InvalidOperationException || e is NotSupportedException)
+                {
+                    // another user's or a system process, or one that just exited: none of ours
+                }
+                finally { process.Dispose(); }
+            }
+            return null;
+        }
 
         /// <summary>Orientation is shared by every Android build and QuestBuild.Configure does not set it, so it is saved here.</summary>
         private sealed class SavedOrientation

@@ -10,6 +10,8 @@ namespace PatientZero.Interaction
         public PhysicsProp plug;public ObjectivePublisher objectives;public LineRenderer cable;private Vector3 hook;private bool assist,complete;
         // v1.3 (E-19): the Floor 2 fuse box is this socket again. The defaults are the ward's cable socket.
         public ActId socketAct=ActId.Machinery;public ObjectiveId socketObjective=ObjectiveId.Act2_CablePlugged;
+        // E-29 (Claude integration, 2026-11-18): where the cable leaves the wall and enters the plug, once Ward 990 dresses them; unset, the plug's first position and its origin.
+        public Transform cableStart,cableEnd;
         private void Awake(){if(plug)hook=plug.transform.position;}
         private void OnEnable(){GameEvents.AssistChanged.Subscribe(Assist);GameEvents.ActStarted.Subscribe(Act);GameEvents.SettingsChanged.Subscribe(Settings);}
         private void OnDisable(){GameEvents.AssistChanged.Unsubscribe(Assist);GameEvents.ActStarted.Unsubscribe(Act);GameEvents.SettingsChanged.Unsubscribe(Settings);}
@@ -29,6 +31,6 @@ namespace PatientZero.Interaction
 #endif
             }
         }
-        private void Update(){if(!complete)TryConnect();if(!cable || !plug)return;cable.SetPosition(0,hook);cable.SetPosition(1,(hook+plug.transform.position)*.5f+Vector3.down*.15f);cable.SetPosition(2,plug.transform.position);}
+        private void Update(){if(!complete)TryConnect();if(!cable || !plug)return;Vector3 a=cableStart?cableStart.position:hook,b=cableEnd?cableEnd.position:plug.transform.position;cable.SetPosition(0,a);cable.SetPosition(1,(a+b)*.5f+Vector3.down*.15f);cable.SetPosition(2,b);}
     }
 }

@@ -13,23 +13,55 @@ namespace PatientZero.Integration.Editor
     /// The CC0 Quaternius "Animated Zombie" (Assets/ThirdParty/Quaternius/AnimatedZombie, imported by glTFast) in place of
     /// seat B's box mannequin. Builds the looping clips and the Animator controller ZombieAnimationController drives
     /// (float Speed: Idle 0, Walk 0.85, Run_Arms 1.5 m/s; int AlertLevel), then dresses each zombie at compose time.
+    /// E-29 (owner, 2026-11-17: "make the zombie scarier ... you can add them"): the zombies in play wear the owner's Meshy
+    /// zombie (Assets/ThirdParty/Meshy/Zombie, CC BY 4.0) on every platform but Android, where its 87,000 triangles would
+    /// sink the Quest's frame budget; <see cref="PrepareLive"/> picks. The props (dead bodies, the hanged man, the dead officer,
+    /// the jump-scare puppet) keep the Quaternius model: <see cref="Prepare"/>.
     /// </summary>
     public static class ZombieArt
     {
         public const string ModelPath = "Assets/ThirdParty/Quaternius/AnimatedZombie/Zombie.glb";
         public const string ControllerPath = ArtTextures.Folder + "/Zombie.controller";
+        /// <summary>E-29: the owner's Meshy zombie (stand removed by tools/art/glb_cut_stand.py) and its controller.</summary>
+        public const string MeshyModelPath = "Assets/ThirdParty/Meshy/Zombie/MeshyZombie.glb";
+        public const string MeshyControllerPath = ArtTextures.Folder + "/ZombieMeshy.controller";
         /// <summary>E-21: the single-clip controller of the scripted jump-scare zombie.</summary>
         public const string PuppetControllerPath = ArtTextures.Folder + "/ZombieJumpScare.controller";
         public const string ModelName = "Zombie model (Quaternius, CC0)";
         public const string Version = "pz-art-zombie-2"; // E-25: HitReact and Death states
+        public const string MeshyVersion = "pz-art-zombie-meshy-1"; // E-29
         public const float TargetHeight = 1.75f;
         public const string SpeedParameter = "Speed";
         public const string AlertParameter = "AlertLevel";
         /// <summary>E-25 (the revolver): triggers ZombieAnimationController sets for a body shot and a headshot.</summary>
         public const string HitParameter = "Hit", DieParameter = "Die";
 
-        private static readonly string[] Clips = { "Idle", "Walk", "Run_Arms" };
         private static readonly float[] Thresholds = { 0f, .85f, 1.5f };
+
+        /// <summary>E-29: where a zombie model and its clips are, and what they are called.</summary>
+        private sealed class Source
+        {
+            public string Path, MeshName, ControllerPath, Version, ClipPrefix;
+            /// <summary>Idle, walk and run, for Speed 0, 0.85 and 1.5 m/s.</summary>
+            public string[] Locomotion;
+            public string Hit, Death;
+            /// <summary>When the hit reaction hands back to walking, as a fraction of its clip.</summary>
+            public float HitExit;
+        }
+
+        private static readonly Source Quaternius = new Source
+        {
+            Path = ModelPath, MeshName = "Zombie", ControllerPath = ControllerPath, Version = Version, ClipPrefix = "Zombie_",
+            Locomotion = new[] { "Idle", "Walk", "Run_Arms" }, Hit = "HitReact", Death = "Death", HitExit = .9f,
+        };
+
+        // Meshy's free animations have no hit reaction: a body shot plays the first fifth of the fall (about 0.65 s, a stagger
+        // back) and the zombie recovers into its walk. Its walk is the unsteady one: a drunken, lurching gait.
+        private static readonly Source Meshy = new Source
+        {
+            Path = MeshyModelPath, MeshName = "Mesh_0", ControllerPath = MeshyControllerPath, Version = MeshyVersion, ClipPrefix = "ZombieMeshy_",
+            Locomotion = new[] { "Idle", "Unsteady_Walk", "Running" }, Hit = "Dead", Death = "Dead", HitExit = .22f,
+        };
 
         public sealed class Kit
         {
@@ -41,20 +73,45 @@ namespace PatientZero.Integration.Editor
             public float Scale;
             /// <summary>Height of the lowest vertex in the Idle pose, model units (scale 1).</summary>
             public float IdleFloor;
+            /// <summary>E-29: the model file, the name of its skinned body mesh, and its standing height at <see cref="Scale"/>.</summary>
+            public string Path = ModelPath, MeshName = "Zombie";
+            public float StandingHeight = ZombieArt.StandingHeight;
         }
 
-        public static Kit Prepare()
+        /// <summary>The Quaternius kit: the props, and the zombies in play on Android.</summary>
+        public static Kit Prepare() => Prepare(Quaternius);
+
+        /// <summary>E-29: the kit the zombies in play wear: the Meshy zombie, or the Quaternius one on Android (Quest).</summary>
+        public static Kit PrepareLive() =>
+            EditorUserBuildSettings.activeBuildTarget == BuildTarget.Android ? Prepare(Quaternius) : Prepare(Meshy);
+
+        private static Kit Prepare(Source source)
         {
             ArtTextures.CreateFolders();
-            GameObject model = Model();
-            var clips = new AnimationClip[Clips.Length];
-            for (int i = 0; i < Clips.Length; i++) clips[i] = LoopingCopy(Clips[i]);
-            Material skin = Skin("Zombie_Skin", new Color(.8f, .84f, .76f, 1));
-            var kit = new Kit
+            GameObject model = Model(source.Path);
+            var clips = new AnimationClip[source.Locomotion.Length];
+            for (int i = 0; i < clips.Length; i++) clips[i] = LoopingCopy(source, source.Locomotion[i]);
+            Kit kit;
+            if (source == Quaternius)
             {
-                Model = model, Controller = Controller(clips, OnceCopy("HitReact"), OnceCopy("Death")), Skin = skin,
-                Skins = new[] { skin, Skin("Zombie_Skin_Pale", new Color(.9f, .94f, .96f, 1)), Skin("Zombie_Skin_Dark", new Color(.6f, .55f, .5f, 1)) },
-            };
+                Material skin = Skin("Zombie_Skin", new Color(.8f, .84f, .76f, 1));
+                kit = new Kit
+                {
+                    Model = model, Controller = Controller(source, clips, OnceCopy(source, source.Hit), OnceCopy(source, source.Death)), Skin = skin,
+                    Skins = new[] { skin, Skin("Zombie_Skin_Pale", new Color(.9f, .94f, .96f, 1)), Skin("Zombie_Skin_Dark", new Color(.6f, .55f, .5f, 1)) },
+                };
+            }
+            else
+            {
+                AnimationClip fall = OnceCopy(source, source.Death);
+                Material skin = MeshySkin("ZombieMeshy_Skin", Color.white);
+                kit = new Kit
+                {
+                    Model = model, Controller = Controller(source, clips, fall, fall), Skin = skin, Path = source.Path, MeshName = source.MeshName,
+                    Skins = new[] { skin, MeshySkin("ZombieMeshy_Skin_Pale", new Color(.86f, .9f, .92f, 1)), MeshySkin("ZombieMeshy_Skin_Dark", new Color(.72f, .66f, .6f, 1)) },
+                };
+            }
+
             Measure(kit, clips[0]);
             AssetDatabase.SaveAssets();
             return kit;
@@ -96,11 +153,11 @@ namespace PatientZero.Integration.Editor
             {
                 renderer.sharedMaterial = skin;
                 renderer.enabled = visible;
-                if (!body && renderer is SkinnedMeshRenderer skinned && renderer.name == "Zombie") body = skinned;
+                if (!body && renderer is SkinnedMeshRenderer skinned && renderer.name == kit.MeshName) body = skinned;
                 else followers.Add(renderer);
             }
 
-            if (!body) throw new InvalidOperationException(ModelPath + " has no skinned mesh named 'Zombie'.");
+            if (!body) throw new InvalidOperationException(kit.Path + " has no skinned mesh named '" + kit.MeshName + "'.");
             zombie.Visual = body;
             var mirror = instance.AddComponent<RendererEnabledMirror>();
             mirror.source = body;
@@ -108,7 +165,7 @@ namespace PatientZero.Integration.Editor
             // E-24 (owner, 2026-11-11): hands and head went through walls; the model now eases back from them.
             var clearance = instance.AddComponent<WallClearance>();
             clearance.actor = actor;
-            clearance.height = StandingHeight * scale / Mathf.Max(1e-4f, kit.Scale);
+            clearance.height = kit.StandingHeight * scale / Mathf.Max(1e-4f, kit.Scale);
 
             if (mannequin) mannequin.enabled = false; // the box mannequin stays in the hierarchy (its bones carry Head and the foot emitter) but never draws
         }
@@ -291,13 +348,13 @@ namespace PatientZero.Integration.Editor
 
         // ------------------------------------------------------------------ assets
 
-        private static GameObject Model()
+        private static GameObject Model(string path)
         {
-            AssetImporter importer = AssetImporter.GetAtPath(ModelPath);
+            AssetImporter importer = AssetImporter.GetAtPath(path);
             if (importer == null)
-                throw new InvalidOperationException(ModelPath + " is missing.");
+                throw new InvalidOperationException(path + " is missing.");
             if (importer.GetType().Name != "GltfImporter")
-                throw new InvalidOperationException(ModelPath + " is imported by " + importer.GetType().Name +
+                throw new InvalidOperationException(path + " is imported by " + importer.GetType().Name +
                                                     ", not glTFast. Is com.unity.cloud.gltfast in Packages/manifest.json?");
 
             var settings = new SerializedObject(importer);
@@ -312,27 +369,31 @@ namespace PatientZero.Integration.Editor
                 importer.SaveAndReimport();
             }
 
-            var model = AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath);
-            if (!model) throw new InvalidOperationException(ModelPath + " did not import a GameObject.");
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (!model) throw new InvalidOperationException(path + " did not import a GameObject.");
             return model;
         }
 
-        private static AnimationClip SourceClip(string name)
+        private static AnimationClip SourceClip(string name) => SourceClip(ModelPath, name);
+
+        private static AnimationClip SourceClip(string path, string name)
         {
-            foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(ModelPath))
+            foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(path))
             {
                 if (asset is AnimationClip clip && clip.name == name) return clip;
             }
 
-            throw new InvalidOperationException(ModelPath + " has no animation '" + name + "'.");
+            throw new InvalidOperationException(path + " has no animation '" + name + "'.");
         }
 
         /// <summary>A looping .anim copy of one imported clip. The asset keeps its GUID across composes.</summary>
-        private static AnimationClip LoopingCopy(string name)
+        private static AnimationClip LoopingCopy(string name) => LoopingCopy(Quaternius, name);
+
+        private static AnimationClip LoopingCopy(Source from, string name)
         {
-            AnimationClip source = SourceClip(name);
+            AnimationClip source = SourceClip(from.Path, name);
             if (source.legacy) throw new InvalidOperationException("Clip '" + name + "' imported as Legacy; the importer must use Mecanim.");
-            string path = ArtTextures.Folder + "/Zombie_" + name + ".anim";
+            string path = ArtTextures.Folder + "/" + from.ClipPrefix + name + ".anim";
             var copy = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
             if (!copy)
             {
@@ -341,7 +402,7 @@ namespace PatientZero.Integration.Editor
             }
 
             EditorUtility.CopySerialized(source, copy);
-            copy.name = "Zombie_" + name;
+            copy.name = from.ClipPrefix + name;
             AnimationClipSettings settings = AnimationUtility.GetAnimationClipSettings(copy);
             settings.loopTime = true;
             AnimationUtility.SetAnimationClipSettings(copy, settings);
@@ -350,9 +411,9 @@ namespace PatientZero.Integration.Editor
         }
 
         /// <summary>E-25: a play-once .anim copy of one imported clip (it holds its last frame).</summary>
-        private static AnimationClip OnceCopy(string name)
+        private static AnimationClip OnceCopy(Source from, string name)
         {
-            AnimationClip copy = LoopingCopy(name);
+            AnimationClip copy = LoopingCopy(from, name);
             AnimationClipSettings settings = AnimationUtility.GetAnimationClipSettings(copy);
             settings.loopTime = false;
             AnimationUtility.SetAnimationClipSettings(copy, settings);
@@ -360,14 +421,15 @@ namespace PatientZero.Integration.Editor
             return copy;
         }
 
-        private static AnimatorController Controller(AnimationClip[] clips, AnimationClip hit, AnimationClip death)
+        private static AnimatorController Controller(Source source, AnimationClip[] clips, AnimationClip hit, AnimationClip death)
         {
-            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
-            AssetImporter importer = controller ? AssetImporter.GetAtPath(ControllerPath) : null;
-            if (controller && importer != null && importer.userData == Version && HasParameters(controller)) return controller;
+            string controllerPath = source.ControllerPath;
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(controllerPath);
+            AssetImporter importer = controller ? AssetImporter.GetAtPath(controllerPath) : null;
+            if (controller && importer != null && importer.userData == source.Version && HasParameters(controller)) return controller;
 
-            if (controller) AssetDatabase.DeleteAsset(ControllerPath);
-            controller = AnimatorController.CreateAnimatorControllerAtPath(ControllerPath);
+            if (controller) AssetDatabase.DeleteAsset(controllerPath);
+            controller = AnimatorController.CreateAnimatorControllerAtPath(controllerPath);
             controller.AddParameter(SpeedParameter, AnimatorControllerParameterType.Float);
             controller.AddParameter(AlertParameter, AnimatorControllerParameterType.Int);
             AnimatorState state = controller.CreateBlendTreeInController("Locomotion", out BlendTree tree, 0);
@@ -384,7 +446,7 @@ namespace PatientZero.Integration.Editor
             AnimatorState flinch = machine.AddState("HitReact");
             flinch.motion = hit;
             AnimatorStateTransition back = flinch.AddTransition(state);
-            back.hasExitTime = true; back.exitTime = .9f; back.duration = .12f;
+            back.hasExitTime = true; back.exitTime = source.HitExit; back.duration = source == Quaternius ? .12f : .3f;
             AnimatorStateTransition toFlinch = machine.AddAnyStateTransition(flinch);
             toFlinch.AddCondition(AnimatorConditionMode.If, 0, HitParameter);
             toFlinch.duration = .05f; toFlinch.canTransitionToSelf = true;
@@ -396,10 +458,10 @@ namespace PatientZero.Integration.Editor
             EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();
 
-            importer = AssetImporter.GetAtPath(ControllerPath);
-            importer.userData = Version;
-            AssetDatabase.WriteImportSettingsIfDirty(ControllerPath);
-            if (!HasParameters(controller)) throw new InvalidOperationException(ControllerPath + " lacks Speed/AlertLevel after creation.");
+            importer = AssetImporter.GetAtPath(controllerPath);
+            importer.userData = source.Version;
+            AssetDatabase.WriteImportSettingsIfDirty(controllerPath);
+            if (!HasParameters(controller)) throw new InvalidOperationException(controllerPath + " lacks Speed/AlertLevel after creation.");
             return controller;
         }
 
@@ -458,6 +520,50 @@ namespace PatientZero.Integration.Editor
             return skin;
         }
 
+        /// <summary>
+        /// E-29: URP Lit with the Meshy model's own colour and normal maps (taken from the material glTFast imported), tinted.
+        /// Its metal/roughness map is left out: glTF packs it differently from URP's, and wet skin reads better at one value.
+        /// </summary>
+        private static Material MeshySkin(string name, Color tint)
+        {
+            Material imported = null;
+            foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(MeshyModelPath))
+            {
+                if (asset is Material m) { imported = m; break; }
+            }
+
+            if (!imported) throw new InvalidOperationException(MeshyModelPath + " imported no material.");
+            Texture colour = null, normal = null;
+            var seen = new System.Text.StringBuilder();
+            foreach (string property in imported.GetTexturePropertyNames())
+            {
+                Texture texture = imported.GetTexture(property);
+                seen.Append(property).Append(texture ? "=" + texture.name : "=none").Append(' ');
+                if (!texture) continue;
+                string p = property.ToLowerInvariant();
+                if (!colour && (p.Contains("basecolor") || p == "_basemap" || p == "_maintex")) colour = texture;
+                else if (!normal && (p.Contains("normal") || p == "_bumpmap")) normal = texture;
+            }
+
+            if (!colour) throw new InvalidOperationException(MeshyModelPath + ": no colour map on " + imported.name + " (" + seen + ").");
+            Material skin = ArtSurfaces.LitMaterial(name);
+            skin.SetTexture("_BaseMap", colour);
+            skin.SetColor("_BaseColor", tint);
+            skin.SetTexture("_BumpMap", normal);
+            if (normal) skin.EnableKeyword("_NORMALMAP"); else skin.DisableKeyword("_NORMALMAP");
+            skin.SetFloat("_BumpScale", 1);
+            skin.SetFloat("_Metallic", 0);
+            skin.SetFloat("_Smoothness", .32f);
+            skin.SetFloat("_SmoothnessTextureChannel", 0);
+            skin.DisableKeyword("_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A");
+            skin.SetFloat("_Cull", 0); // the download is double-sided: torn clothes show their inside
+            skin.doubleSidedGI = true;
+            skin.SetTextureScale("_BaseMap", Vector2.one);
+            EditorUtility.SetDirty(skin);
+            Debug.Log("[PZ] " + name + ": colour " + colour.name + ", normal " + (normal ? normal.name : "none") + " (from " + seen + ")");
+            return skin;
+        }
+
         /// <summary>Scale to <see cref="TargetHeight"/> from the bind pose, and where the feet are in the Idle pose.</summary>
         private static void Measure(Kit kit, AnimationClip idle)
         {
@@ -469,16 +575,21 @@ namespace PatientZero.Integration.Editor
                 SkinnedMeshRenderer body = null;
                 foreach (SkinnedMeshRenderer s in probe.GetComponentsInChildren<SkinnedMeshRenderer>(true))
                 {
-                    if (s.name == "Zombie") body = s;
+                    if (s.name == kit.MeshName) body = s;
                 }
 
-                if (!body) throw new InvalidOperationException(ModelPath + " has no skinned mesh named 'Zombie'.");
+                if (!body) throw new InvalidOperationException(kit.Path + " has no skinned mesh named '" + kit.MeshName + "'.");
                 Vector2 bind = VerticalExtent(body);
                 float height = bind.y - bind.x;
                 if (height < .5f || height > 5f) throw new InvalidOperationException("Zombie model height " + height + " m is implausible.");
                 kit.Scale = TargetHeight / height;
                 idle.SampleAnimation(probe, 0);
-                kit.IdleFloor = VerticalExtent(body).x;
+                Vector2 standing = VerticalExtent(body);
+                kit.IdleFloor = standing.x;
+                // E-29: the Quaternius figure keeps the height DeadBodiesStep measured (1.66 m); another model is measured here.
+                if (kit.Path != ModelPath) kit.StandingHeight = (standing.y - standing.x) * kit.Scale;
+                Debug.Log("[PZ] zombie model " + kit.Path + ": " + height.ToString("0.000") + " m in its bind pose, scaled x" + kit.Scale.ToString("0.000") +
+                          " to " + TargetHeight + " m; " + (kit.StandingHeight).ToString("0.00") + " m tall standing idle");
             }
             finally
             {

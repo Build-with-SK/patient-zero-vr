@@ -4,9 +4,9 @@ A 120-second hand-tracked VR horror experience for Meta Quest. You wake in a sea
 
 Built by three agents: Claude (Technical Director and integrator) and two Codex agents (A: player, interaction, flow, UI · B: AI, audio, atmosphere, environment).
 
-## Status (2026-10-28)
+## Status (2026-11-18)
 
-**Pre-production.** Contracts, design, review tooling, integration logic, Unity build tooling (written, not yet run in Unity), pinned packages and offline CI are done. **No Unity project has been opened, no build exists, nothing has run on a headset.** The owner actions that unblock the next step are in [`docs/ARCHITECTURE.md` section 11](docs/ARCHITECTURE.md#11-blockers-and-owner-actions).
+**Playable on Windows; the newest work is on branch `claude/two-minute`** (`main` is older). The project compiles and builds in Unity 6000.3.27f1, and a release probe plays it through on Windows. The game is now the ward (floor 3) then the ground-floor lobby, with a revolver, the player's arms on flat screens, and zombies that hunt by sound and run to gunshots. What changed lately and what was tested: [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md) sections 11-16 and the end of [`docs/collab/CLAUDE_LOG.md`](docs/collab/CLAUDE_LOG.md). **Nothing has run on a headset**; the Quest build is a development build. The rest of this README dates from 2026-10-28.
 
 ## Start here
 

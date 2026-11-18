@@ -15,6 +15,10 @@ namespace PatientZero.AI
     /// pushed back, when the player wins the struggle.
     /// E-25 (the revolver, owner's plan step 4): a headshot kills it (it falls and stays down until the player's next life); a
     /// body shot staggers it. The shot's own noise has already told it where the shot came from.
+    /// E-29 (owner's playtest: zombies vanished and appeared after the plug went in): it never comes into play or leaves it in
+    /// the player's sight (ZombiePresence). Told to leave while the player could see it, it stops, hears nothing and catches no
+    /// one, and goes once they cannot see it. Told to appear where the player could see, it waits until they cannot. A new
+    /// life or run (an act that starts in the bed or from a restore) still swaps every zombie at once.
     /// </summary>
     [RequireComponent(typeof(ZombieNavigation))]
     public sealed class ZombieAgentShell : MonoBehaviour
@@ -37,6 +41,13 @@ namespace PatientZero.AI
         private ExperienceSettings settings = ExperienceSettings.Defaults;
         private float nextTick, lastTick;
         private bool active, holdingPlayer, dead;
+        // E-29: leaving = in play, standing still, until the player cannot see it; entering = out of play until the player cannot
+        // see enterAt, where it will appear. snapFrame is the frame of the last act start that swaps zombies at once.
+        private bool leaving, entering;
+        private Vector3 enterAt;
+        private int snapFrame = -10;
+        private float nextPresence;
+        private static readonly RaycastHit[] SightHits = new RaycastHit[8];
         private CueHandle breathing, shuffling;
         /// <summary>E-22: how long a zombie the player fought off stays stunned, and how far it staggers back.</summary>
         public const float BreakFreeStunSeconds = 3, BreakFreePushMeters = 1.2f;
@@ -50,6 +61,10 @@ namespace PatientZero.AI
         public bool Shown { get; private set; }
         /// <summary>E-25: shot in the head this life. It lies where it fell, in view, and nothing commands it until the player's next life.</summary>
         public bool Dead => dead;
+        /// <summary>E-29: told to leave play while the player could see it; it stands still until they cannot.</summary>
+        public bool Leaving => leaving;
+        /// <summary>E-29: told to come into play where the player could see; it appears once they cannot.</summary>
+        public bool Entering => entering;
         private void Awake()
         {
             navigation = GetComponent<ZombieNavigation>();
@@ -95,9 +110,18 @@ namespace PatientZero.AI
             // E-25: a zombie the player killed stays down for the rest of this life; a new life or a new run (both begin in the
             // bed, Awakening) brings it back.
             if (dead && !e.IsRestore && e.Act != ActId.Awakening) return;
-            dead = false;
+            // E-29: a new life or run starts in the bed (or from a restore), where the swap is not seen: it happens at once.
+            // Otherwise a zombie of the last act that the player can see stays where it is until they cannot.
+            bool atOnce = e.IsRestore || e.Act == ActId.Awakening;
+            if (atOnce) snapFrame = Time.frameCount;
+            bool inPlay = horde ? member.Hunter && member.Act == e.Act : ZombieIds.ActOf(ZombieId) == e.Act;
+            if (!atOnce && !inPlay && (leaving || (active && Shown && PlayerCouldSee(transform.position)))) { BeginLeave(); return; }
+            dead = false; leaving = false;
+            enterAt = Spawn();
             // v1.4: a follower is never in play at the start of an act; it joins when its leader shows (Update).
-            active = horde ? member.Hunter && member.Act == e.Act : ZombieIds.ActOf(ZombieId) == e.Act;
+            // E-29: one whose spawn the player can see is held back until they cannot (Update).
+            active = inPlay && (atOnce || !PlayerCouldSee(enterAt));
+            entering = inPlay && !active;
             StopLoops(); holdingPlayer = false; // v1.3: two zombies share the lobby lastTick = Time.time; nextTick = Time.time + ZombieId * .017f;
             brain.Reset(ZombieId == 4 ? ZombieMode.Restrained : ZombieMode.Dormant);
             formed = false;
@@ -107,26 +131,118 @@ namespace PatientZero.AI
             Shown = active && ZombieId != 1;
             if (Animation) Animation.SetVisible(Shown);
             if (Shown) StartBreathing();
-            if (active && horde && member.Patrols) brain.SetMode(ZombieMode.Patrol);
+            if (inPlay && horde && member.Patrols) brain.SetMode(ZombieMode.Patrol);
         }
         /// <summary>A follower comes into play with its leader and leaves with it: a pack is never split across acts.</summary>
         private void TrackLeader()
         {
-            if (dead) return;
+            if (dead || leaving) return; // E-29: a follower slipping away goes when the player cannot see it (UpdatePresence)
             // E-22: the Walker is now the lone door zombie; its old window-pass pack stays out of play.
             // E-25: a pack whose hunter was shot stays in play where it stands.
             bool join = (Leader.active || Leader.dead) && Leader.Shown && Leader.ZombieId != ZombieIds.Walker;
-            if (join == active) return;
-            active = join; formed = false;
-            StopLoops(); brain.Reset(ZombieMode.Dormant);
-            navigation.SetSimulationActive(join);
+            if (join == (active || entering)) return;
             if (join)
             {
-                navigation.Warp(Spawn()); transform.rotation = Quaternion.Euler(0, member.Yaw, 0);
-                brain.SetMode(ZombieMode.Follow); lastTick = Time.time; nextTick = Time.time + ZombieId % 10 * .01f;
+                enterAt = Spawn();
+                if (SwapsAtOnce || !PlayerCouldSee(enterAt)) JoinPack(); else entering = true;
+                return;
             }
-            if (Animation) { Animation.ResetPose(); Animation.SetVisible(join); }
-            Shown = join; // followers do not breathe: a pack is heard by its shuffling, and the voice budget stays with the hunters
+            if (entering) { entering = false; return; }
+            if (!SwapsAtOnce && Shown && PlayerCouldSee(transform.position)) BeginLeave(); else LeavePack();
+        }
+        private void JoinPack()
+        {
+            active = true; entering = false; formed = false;
+            StopLoops(); brain.Reset(ZombieMode.Dormant);
+            navigation.SetSimulationActive(true);
+            navigation.Warp(enterAt); transform.rotation = Quaternion.Euler(0, member.Yaw, 0);
+            brain.SetMode(ZombieMode.Follow); lastTick = Time.time; nextTick = Time.time + ZombieId % 10 * .01f;
+            if (Animation) { Animation.ResetPose(); Animation.SetVisible(true); }
+            Shown = true; // followers do not breathe: a pack is heard by its shuffling, and the voice budget stays with the hunters
+        }
+        private void LeavePack()
+        {
+            active = false; leaving = entering = false; formed = false;
+            StopLoops(); brain.Reset(ZombieMode.Dormant);
+            navigation.SetSimulationActive(false);
+            if (Animation) { Animation.ResetPose(); Animation.SetVisible(false); }
+            Shown = false;
+        }
+
+        /// <summary>E-29: true in the frames an act started from the bed or a restore, when every swap happens at once.</summary>
+        private bool SwapsAtOnce => Time.frameCount - snapFrame <= 2;
+
+        /// <summary>
+        /// E-29: whether the player could see a zombie standing at <paramref name="feet"/>: its chest or head inside the cone they
+        /// face (ZombiePresence) with nothing on <see cref="SightBlockers"/> between. Hits within ZombiePresence.NearMeters of the
+        /// head (the player's own hands, gun and props) and on this zombie's own body do not block. No player: nobody sees.
+        /// </summary>
+        private bool PlayerCouldSee(Vector3 feet)
+        {
+            if (!Services<IPlayerQuery>.TryGet(out var player)) return false;
+            Vector3 head = player.HeadPosition, forward = player.HeadForward;
+            return SightLine(head, forward, ZombiePresence.Chest(feet)) || SightLine(head, forward, ZombiePresence.Head(feet));
+        }
+        private bool SightLine(Vector3 head, Vector3 forward, Vector3 point)
+        {
+            if (!ZombiePresence.InSightCone(head, forward, point)) return false;
+            Vector3 to = point - head;
+            float distance = to.magnitude;
+            if (distance <= ZombiePresence.NearMeters) return true;
+            int hits = Physics.RaycastNonAlloc(head, to / distance, SightHits, distance, SightBlockers, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < hits; i++)
+            {
+                RaycastHit hit = SightHits[i];
+                if (hit.distance <= ZombiePresence.NearMeters || hit.collider.transform.IsChildOf(transform)) continue;
+                return false;
+            }
+            return true;
+        }
+        /// <summary>E-29: stand still and stop hunting; <see cref="UpdatePresence"/> takes it out of play once the player cannot see it.</summary>
+        private void BeginLeave()
+        {
+            if (leaving) return;
+            leaving = true; entering = false; holdingPlayer = false;
+            brain.SetMode(ZombieMode.Dormant);             // stands down (its alert drops to Unaware, published on the next tick)
+            brain.ScriptedMove(transform.position);        // scripted: it hears nothing and catches no one
+            navigation.Stop();
+            nextPresence = Time.time + ZombiePresence.CheckSeconds;
+        }
+        /// <summary>E-29: finish a deferred leave or entrance once the player cannot see the spot.</summary>
+        private void UpdatePresence()
+        {
+            nextPresence = Time.time + ZombiePresence.CheckSeconds;
+            if (entering)
+            {
+                if (PlayerCouldSee(enterAt)) return;
+                if (Leader) JoinPack(); else Appear();
+                return;
+            }
+            if (PlayerCouldSee(transform.position)) return;
+            if (Leader) { LeavePack(); return; }
+            Vanish();
+            brain.Reset(ZombieId == ZombieIds.FinalPatient ? ZombieMode.Restrained : ZombieMode.Dormant);
+            if (Animation) Animation.ResetPose();
+        }
+        /// <summary>E-29: come into play at <see cref="enterAt"/> (a held-back act start, or the director showing it).</summary>
+        private void Appear()
+        {
+            active = true; entering = false; leaving = false;
+            navigation.SetSimulationActive(true); navigation.Warp(enterAt);
+            if (horde) transform.rotation = Quaternion.Euler(0, member.Yaw, 0);
+            if (Animation) { Animation.ResetPose(); Animation.SetVisible(true); }
+            Shown = true; StartBreathing();
+            lastTick = Time.time; nextTick = Time.time + .1f;
+        }
+        /// <summary>Out of play and out of view where it stands (the director's Hide, or the end of a deferred leave).</summary>
+        private void Vanish()
+        {
+            active = false; leaving = entering = false;
+            navigation.SetSimulationActive(false);
+            if (Animation) Animation.SetVisible(false);
+            Shown = false;
+            navigation.Stop(); StopLoops();
+            enterAt = transform.position;
         }
         /// <summary>Its place in the pack: where it spawned until the leader first moves off, then behind the leader.</summary>
         private Vector3 Slot()
@@ -155,6 +271,7 @@ namespace PatientZero.AI
         }
         private void Update()
         {
+            if ((leaving || entering) && !dead && Time.time >= nextPresence) UpdatePresence();
             if (Leader) TrackLeader();
             if (!active || Time.time < nextTick) return;
             float now = Time.time, delta = Mathf.Max(0, now - lastTick); lastTick = now; nextTick = now + .1f;
@@ -185,22 +302,44 @@ namespace PatientZero.AI
                 GameEvents.PlayerCaught.Raise(new PlayerCaught(ZombieId, transform.position)); return;
             }
             // E-28: a zombie running to a gunshot moves at its chase speed although it is only investigating.
-            navigation.Drive(brain.HasMoveTarget && !brain.IsStunned, brain.Target,
+            // E-29: one leaving play stands where it is.
+            navigation.Drive(brain.HasMoveTarget && !brain.IsStunned && !leaving, brain.Target,
                 brain.Level == AlertLevel.Chasing || brain.Rushing ? brain.ChaseSpeed : brain.WalkSpeed, now);
             if (navigation.Speed > .05f && !shuffling.IsValid && FootEmitter) shuffling = Cues.PlayAttached(CueId.ZombieShuffle, FootEmitter, NoiseOrigin.Zombie);
             else if (navigation.Speed <= .05f && shuffling.IsValid) { Cues.Stop(shuffling); shuffling = default; }
             if (Animation) Animation.Apply(brain.Level, brain.Mode, navigation.Speed, player.HeadPosition);
         }
-        /// <summary>Director-only same-seat command; never used by player gameplay.</summary>
+        /// <summary>
+        /// Director-only same-seat command; never used by player gameplay. E-29: it comes into play or leaves it only where the
+        /// player cannot see (except in the frames of an act start from the bed or a restore). A zombie already in play, such as
+        /// the Walker waiting out of view for its scare, is shown where it stands at once: that reveal is meant to be seen.
+        /// </summary>
         public void SetActiveInAct(bool value)
         {
             if (dead) return;
-            active = value;
-            navigation.SetSimulationActive(value);
-            if (value) navigation.Warp(transform.position);
-            if (Animation) Animation.SetVisible(value);
-            Shown = value;
-            if (!value) { navigation.Stop(); StopLoops(); } else StartBreathing();
+            if (value)
+            {
+                if (entering) return; // already waiting for the player to look away from where it will appear
+                if (leaving) { leaving = false; brain.SetMode(ZombieMode.Dormant); } // shown again before it slipped away
+                if (active) Present();
+                else if (SwapsAtOnce || !PlayerCouldSee(enterAt)) Appear();
+                else { entering = true; nextPresence = Time.time + ZombiePresence.CheckSeconds; }
+                return;
+            }
+            if (entering) { entering = false; return; }
+            if (leaving) return;
+            if (active && Shown && !SwapsAtOnce && PlayerCouldSee(transform.position)) BeginLeave();
+            else Vanish();
+        }
+        /// <summary>In play and in view where it stands (the pre-E-29 SetActiveInAct(true)).</summary>
+        private void Present()
+        {
+            active = true;
+            navigation.SetSimulationActive(true);
+            navigation.Warp(transform.position);
+            if (Animation) Animation.SetVisible(true);
+            Shown = true;
+            StartBreathing();
         }
         public void SetMode(ZombieMode mode) { if (dead) return; brain.SetMode(mode); if (mode == ZombieMode.Passive) { navigation.Stop(); StopLoops(2); } }
         /// <summary>
@@ -257,7 +396,7 @@ namespace PatientZero.AI
                 return false;
             }
 
-            dead = true; active = false; holdingPlayer = false;
+            dead = true; active = false; holdingPlayer = false; leaving = entering = false;
             brain.SetMode(ZombieMode.Passive);
             navigation.SetSimulationActive(false); StopLoops();
             if (Animation) Animation.Die();

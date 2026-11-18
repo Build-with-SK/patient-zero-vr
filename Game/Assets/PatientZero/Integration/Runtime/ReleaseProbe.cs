@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using PatientZero.AI;
 using PatientZero.AI.Logic;
 using PatientZero.Core;
 using PatientZero.Flow;
@@ -24,6 +25,8 @@ namespace PatientZero.Integration
     /// E-22 (two-minute version): in Act 1 the probe stands at the room door, pushes the bar and meets the door zombie. In
     /// round 1 it stands still (the zombie must lose it and leave); in round 2 it keeps stepping until grabbed and wins the
     /// struggle; in round 3 it is grabbed, loses the struggle and must wake in the bed again before it stands still.
+    /// E-29: every frame of play it also watches each zombie; one shown or hidden while on screen with nothing in front of
+    /// it is a problem ("appeared/vanished in view"), outside the frames in which a new life or run puts every zombie back.
     /// </summary>
     public sealed class ReleaseProbe : MonoBehaviour
     {
@@ -38,6 +41,14 @@ namespace PatientZero.Integration
         public GameFlow flow;
         private int rounds, problems, round;
         private string firstProblem, shots;
+        // E-29: the owner saw zombies appear and vanish in front of them after plugging the cable in (an act change).
+        private const int SnapFrames = 3;
+        private readonly Dictionary<ZombieAgentShell, bool> shownBefore = new Dictionary<ZombieAgentShell, bool>();
+        private readonly Dictionary<ZombieAgentShell, bool> waitingBefore = new Dictionary<ZombieAgentShell, bool>();
+        private readonly RaycastHit[] viewHits = new RaycastHit[16];
+        private ZombieAgentShell[] watched;
+        private Camera view;
+        private int snapUntil, pops, heldBack;
 
         private void Start()
         {
@@ -49,10 +60,82 @@ namespace PatientZero.Integration
             Application.runInBackground = true; // an unattended run keeps going when another window takes focus
             Application.logMessageReceived += Logged;
             GameEvents.PlayerCaught.Subscribe(AnyGrab);
+            GameEvents.ActStarted.Subscribe(ActBegan);
             StartCoroutine(Run());
         }
 
-        private void OnDestroy() { Application.logMessageReceived -= Logged; GameEvents.PlayerCaught.Unsubscribe(AnyGrab); }
+        private void OnDestroy()
+        {
+            Application.logMessageReceived -= Logged; GameEvents.PlayerCaught.Unsubscribe(AnyGrab); GameEvents.ActStarted.Unsubscribe(ActBegan);
+        }
+
+        /// <summary>E-29: a new life or run (a restore, or Awakening) puts every zombie back at once: those frames are not watched.</summary>
+        private void ActBegan(ActStarted e)
+        {
+            watched = null; // the Ward may have been loaded again
+            if (!e.IsRestore && e.Act != ActId.Awakening) return;
+            snapUntil = Time.frameCount + SnapFrames;
+            shownBefore.Clear(); waitingBefore.Clear();
+        }
+
+        /// <summary>
+        /// E-29: a zombie shown or hidden this frame while its chest or head is on screen with nothing between it and the camera
+        /// is a problem. Also counts how often a zombie was held back instead (it stood still until unseen, or waited to come in).
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (!flow || flow.Core.State != GameState.Playing) { shownBefore.Clear(); return; }
+            if (!view || !view.isActiveAndEnabled) view = PlayerCamera();
+            if (!view) return;
+            if (watched == null) watched = Ward<ZombieAgentShell>();
+            foreach (ZombieAgentShell z in watched)
+            {
+                if (!z) continue;
+                bool waiting = z.Leaving || z.Entering, shown = z.Shown;
+                if (waiting && !(waitingBefore.TryGetValue(z, out bool wasWaiting) && wasWaiting)) heldBack++;
+                waitingBefore[z] = waiting;
+                if (shownBefore.TryGetValue(z, out bool was) && was != shown && Time.frameCount > snapUntil && OnScreen(view, z, out float metres))
+                    Popped(z, shown, metres);
+                shownBefore[z] = shown;
+            }
+        }
+
+        /// <summary>Looked up only when the cached camera is gone or off (a new run, a scene load).</summary>
+        private static Camera PlayerCamera() => Camera.main;
+
+        private void Popped(ZombieAgentShell z, bool shown, float metres)
+        {
+            // E-22's door scare is meant to be seen: pushing the door bar shows the door zombie in the doorway, with a stinger,
+            // a scream and a light pulse (DirectorCore.DoorConfront). It is the one zombie that may appear in view.
+            if (shown && z.ZombieId == ZombieIds.Walker && flow.Core.CurrentAct == ActId.Awakening)
+            {
+                Debug.Log("[PZ-PROBE] the door zombie appeared in the doorway (the scripted scare), " + metres.ToString("0.0") + " m away");
+                return;
+            }
+            pops++;
+            Problem("[PZ-PROBE] zombie " + z.ZombieId + (shown ? " appeared" : " vanished") + " in view, " + metres.ToString("0.0") + " m away, in " +
+                    flow.Core.CurrentAct);
+        }
+
+        private bool OnScreen(Camera view, ZombieAgentShell z, out float metres)
+        {
+            Vector3 eye = view.transform.position, feet = z.transform.position;
+            metres = Vector3.Distance(eye, feet);
+            return InClearView(view, eye, ZombiePresence.Chest(feet), z.transform) || InClearView(view, eye, ZombiePresence.Head(feet), z.transform);
+        }
+
+        private bool InClearView(Camera view, Vector3 eye, Vector3 point, Transform zombie)
+        {
+            Vector3 v = view.WorldToViewportPoint(point);
+            if (v.z <= 0 || v.x < 0 || v.x > 1 || v.y < 0 || v.y > 1) return false;
+            Vector3 to = point - eye;
+            float distance = to.magnitude;
+            if (distance < .01f) return true;
+            int n = Physics.RaycastNonAlloc(eye, to / distance, viewHits, distance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < n; i++)
+                if (!viewHits[i].collider.transform.IsChildOf(zombie) && viewHits[i].distance >= ZombiePresence.NearMeters) return false;
+            return true;
+        }
 
         /// <summary>E-22: every grab of the run, in any act, so a stalled act can be read against them.</summary>
         private void AnyGrab(PlayerCaught caught)
@@ -206,6 +289,9 @@ namespace PatientZero.Integration
                 bool ok = flow.Core.State == GameState.Complete;
                 Debug.Log("[PZ-PROBE] round " + round + ": " + (ok ? "COMPLETE" : "NOT COMPLETE, stopped in " + flow.Core.CurrentAct + " / " + flow.Core.State) +
                           " after " + (Time.realtimeSinceStartup - start).ToString("0.0") + " s");
+                Debug.Log("[PZ-PROBE] round " + round + ": zombies held back from popping (stood still until unseen, or came in unseen) " +
+                          heldBack + " time(s); appeared or vanished in view " + pops + " time(s)");
+                heldBack = pops = 0;
                 if (!ok) break;
                 completed++;
                 yield return new WaitForSecondsRealtime(2f); // the results screen
@@ -412,8 +498,13 @@ namespace PatientZero.Integration
             LookAt(target.HeadCentre);
             ShotResult second = gun.Pull(eye, target.HeadCentre - eye);
             Debug.Log("[PZ-PROBE] revolver: headshot on zombie " + target.zombie.ZombieId + ": " + second + ", hit " + gun.LastPart + (target.zombie.Dead ? ", dead" : ", NOT dead"));
-            if (second != ShotResult.Fired || gun.LastPart != HitPart.Head || !target.zombie.Dead)
-                Problem("[PZ-PROBE] the headshot did not kill zombie " + target.zombie.ZombieId + " (" + second + ", " + gun.LastPart + ")");
+            // E-29: the shot draws the others at a run, and one can step into the line of fire; the bullet then takes the first
+            // head in line (2026-11-18: the pack's hunter, 3, at the same 3.4 m). A headshot must still kill what it hits.
+            ZombieHitbox hit = gun.LastTarget;
+            bool other = hit && hit != target;
+            if (other) Debug.Log("[PZ-PROBE] revolver: zombie " + hit.zombie.ZombieId + " stepped into the line of fire and took the shot: " + gun.LastPart + (hit.zombie.Dead ? ", dead" : ", NOT dead"));
+            if (second != ShotResult.Fired || gun.LastPart != HitPart.Head || !(other ? hit.zombie.Dead : target.zombie.Dead))
+                Problem("[PZ-PROBE] the headshot did not kill zombie " + (other ? hit.zombie.ZombieId : target.zombie.ZombieId) + " (" + second + ", " + gun.LastPart + ")");
             if (round == 1) yield return Shot("3-revolver-headshot");
             yield return GameSeconds(1.6f);
             if (round == 1) { LookAt(target.Belly); yield return Shot("3-revolver-dead"); }
@@ -653,8 +744,11 @@ namespace PatientZero.Integration
                     yield return DoorScene(round == 2 ? DoorPlay.BreakFree : round == 3 ? DoorPlay.Die : DoorPlay.StandStill);
                     break;
                 case ActId.Machinery:
-                    Valves(puzzles, act);
+                    // E-29: round 1 photographs the plug on its shelf and in the socket, so it goes in before the valve ends the act.
+                    if (round == 1) yield return PlugPhoto(act, "2-plug-on-shelf");
                     Plug(act);
+                    if (round == 1) yield return PlugPhoto(act, "2-plug-in-socket");
+                    Valves(puzzles, act);
                     break;
                 case ActId.Darkness:
                     MoveTo(WardLayout.A3_End.Position);
@@ -903,6 +997,27 @@ namespace PatientZero.Integration
                 Debug.Log("[PZ-PROBE] the game window has no focus; telling the rig it has, so a held lever stays held");
             }
             rig.SendMessage("OnApplicationFocus", true, SendMessageOptions.DontRequireReceiver);
+        }
+
+        /// <summary>E-29: a photograph of the act's plug from a step away, the view on it (only with -pz-shots).</summary>
+        private IEnumerator PlugPhoto(ActId act, string name)
+        {
+            if (shots == null) yield break;
+            foreach (CableSocket socket in Ward<CableSocket>())
+            {
+                if (socket.socketAct != act || !socket.plug) continue;
+                Physics.SyncTransforms(); // the plug may have been moved this frame
+                Collider body = socket.plug.GetComponentInChildren<Collider>();
+                Vector3 at = body ? body.bounds.center : socket.plug.transform.position, back = -socket.transform.forward;
+                back.y = 0;
+                float floor = Services<IPlayerQuery>.Instance != null ? Services<IPlayerQuery>.Instance.FloorPosition.y : 0;
+                MoveTo(new Vector3(at.x, floor, at.z) + back.normalized * .6f);
+                LookAt(at);
+                yield return new WaitForSeconds(.3f);
+                yield return Shot(name);
+                LevelView();
+                yield break;
+            }
         }
 
         /// <summary>Carries the act's plug or fuse into its socket.</summary>

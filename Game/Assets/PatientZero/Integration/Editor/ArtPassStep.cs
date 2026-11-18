@@ -13,7 +13,8 @@ namespace PatientZero.Integration.Editor
 {
     /// <summary>
     /// The art pass, done at compose time so no seat file changes:
-    ///   Ward 980:      every zombie wears the CC0 Quaternius model (ZombieArt) instead of the box mannequin; every box
+    ///   Ward 980:      every zombie wears the Meshy model (CC BY 4.0; the CC0 Quaternius one on Android) instead of the
+    ///                  box mannequin (ZombieArt.PrepareLive); every box
     ///                  built with a seat material gets a textured material and world-metre UVs (ArtSurfaces); blood on
     ///                  the white tiles, floors and ceilings (ArtBlood).
     ///   Bootstrap 980: the flat-screen post-processing volume (FlatScreenPost), off while a headset is active.
@@ -31,7 +32,8 @@ namespace PatientZero.Integration.Editor
             foreach (GameObject sceneRoot in sceneRoots) zombies.AddRange(sceneRoot.GetComponentsInChildren<ZombieAnimationController>(true));
             if (zombies.Count == 0) throw new InvalidOperationException("No ZombieAnimationController in Ward: the AI step (500) must run before the art pass.");
 
-            ZombieArt.Kit kit = ZombieArt.Prepare();
+            // E-29: the zombies in play wear the owner's Meshy zombie (Quaternius on Android; ZombieArt.PrepareLive).
+            ZombieArt.Kit kit = ZombieArt.PrepareLive();
             foreach (ZombieAnimationController zombie in zombies) ZombieArt.Dress(zombie, kit);
 
             var surfaces = new ArtSurfaces();

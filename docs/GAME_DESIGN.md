@@ -495,3 +495,30 @@ the player now sees their own arms: CC0 arms by para (OpenGameArt, made with Mak
 * **Walls.** Near a wall the torch and the gun draw back toward the player instead of going through it.
 * **Not in a headset.** The controllers are the hands there (and the Quest build has no torch). The hands do not move
   on levers, planks or valves: the player still uses them with the mouse or a touch as before.
+
+## 16. No zombie pops, the owner's zombie, a real plug (owner request, 2026-11-18; integration exception E-29)
+
+The owner, after playing E-28: "while playing random zombies are disappering and appering after i plug the plug into the
+socket", "make the plug looks like a plug and socket", and a zombie the owner made in Meshy for "make the zombie scarier".
+
+* **Why they popped.** Plugging the cable in completes the power objective, and the act changes. On every act change the
+  director hides the last act's zombies and shows the next act's at their spots, in the same frame, wherever the player
+  was looking.
+* **Presence.** A zombie whose act ends while the player can see it stays where it is, still and harmless: it hears
+  nothing, catches no one and can still be shot. It vanishes once the player cannot see it. A zombie whose act starts
+  stays hidden until its spot is out of sight, then appears there. "Can see" is a cone of 65 degrees either side of the
+  view (wider than a monitor's view and half a headset's), up to 40 m, to the zombie's chest or head, with walls
+  blocking the line. A zombie already in play when its act starts is shown at once, and so is everything on a restart
+  after being caught and at the start of Act 1.
+* **The zombie.** On Windows every zombie in play is the owner's Meshy zombie: a realistic, bloodied
+  man in a torn shirt and jeans, 87,340 triangles, 2048 x 2048 colour, normal and metal/roughness maps, with Meshy's
+  Idle, Unsteady Walk, Running and Dead animations (Dead's first fifth is the flinch when shot; Meshy's hit reaction is
+  on a paid plan). Three tints keep the horde from looking cloned. The Android builds (Quest and phone) keep the CC0
+  Quaternius zombie (the zombie budget is 8,000 triangles), and so do the props made from a zombie: the dead bodies, the hanged man, the officer and
+  the jump-scare.
+* **Plug and socket.** The socket is an off-white surface box on the corridor wall with a UK faceplate (three slots) and
+  a red switch, fed by a steel conduit from the ceiling. The plug is a black rubber UK plug with three brass pins and a
+  cable gland; the cable runs to it from a steel junction box above its shelf. It waits on the shelf with its pins toward
+  the corridor, so they can be seen; in a headset the player turns it round to plug it in, as with any plug. Plugged in,
+  the pins sit in the slots. The hand holds the plug by its body; the snap rule (6 cm and 35 degrees, assist 12 cm and
+  60, 25 cm on flat screens) is unchanged.
