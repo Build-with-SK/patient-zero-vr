@@ -22,7 +22,10 @@ namespace PatientZero.Audio.Logic
         {
             Id = id; World = world; Min = min; Max = max; Loop = loop; NoiseRadius = noise;
             Bus = bus; CaptionPolicy = policy; Caption = caption;
-            Priority = bus == MixerBus.UI ? 0 : bus == MixerBus.Voice ? 32 :
+            // E-30: a one-shot loud enough to move zombies (3 m or more: a thrown object landing, the gunshot, the lure) outranks
+            // the zombies' own cues. A refused cue raises no noise, so with the pool full of breathing and shuffling it was
+            // silent and unheard. Footsteps (2.5 m) stay below, so walking never cuts a zombie's sounds.
+            Priority = bus == MixerBus.UI ? 0 : bus == MixerBus.Voice ? 32 : world && !loop && noise >= 3 ? 48 :
                 (int)id >= 500 && (int)id < 600 ? 64 : bus == MixerBus.Ambience || bus == MixerBus.Music ? 160 : 96;
         }
         /// <summary>Unity's custom distance curve uses this linear-to-silence rule.</summary>
@@ -80,7 +83,8 @@ namespace PatientZero.Audio.Logic
             W(CueId.ZombieSniff, .5f, 9, false, 0, MixerBus.World, CaptionPolicy.Always, "[sniffing]"),
             W(CueId.ZombieLunge, .5f, 9, false, 0, MixerBus.World, CaptionPolicy.Always, "[lunge]"),
             W(CueId.ZombieGlassTap, .5f, 9, false, 0, MixerBus.World, CaptionPolicy.Always, "[tapping on glass]"),
-            W(CueId.ImpactLight, .5f, 10, false, 2, MixerBus.World, CaptionPolicy.Visuals, "[clatter]"),
+            // E-30: 6 m (was 2 m, under a footstep's 2.5 m): a thrown object is the player's lure.
+            W(CueId.ImpactLight, .5f, 10, false, 6, MixerBus.World, CaptionPolicy.Visuals, "[clatter]"),
             W(CueId.ImpactHeavy, 1, 14, false, 6, MixerBus.World, CaptionPolicy.Visuals, "[crash]"),
             W(CueId.PlayerFootstep, .3f, 5, false, 2.5f),
             W(CueId.TeleportLand, .3f, 4, false, 1.5f),

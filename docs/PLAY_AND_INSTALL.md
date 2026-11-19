@@ -1,6 +1,10 @@
 # PATIENT ZERO 1.0.0 — install, controls and play
 
-Release files are in `Game/Builds/Release/` (not in git; rebuild them with the commands at the end).
+Download the current Windows ZIP, Quest APK and complete source handoff from the
+[19 November GitHub release](https://github.com/Build-with-SK/patient-zero-vr/releases/tag/playtest-2026-11-19-vr-polish).
+The latest source branch is `codex/vr-polish-20261119`; `main` is older.
+For the source handoff ZIP, begin with its `HANDOFF.md` and open `CurrentProject/Game` in Unity Hub.
+Local release files are in `Game/Builds/Release/` (not in git; rebuild them with the commands at the end).
 `SHA256SUMS.txt` and `manifest.json` in the same folder list each file's checksum and the commit it was built from.
 What was tested, and how: `docs/TEST_REPORT.md`. What is not done: `docs/RELEASE_NOTES.md`, "Known limitations".
 
@@ -92,8 +96,13 @@ With the module installed: run `build-ipad`, copy `Game/Builds/iOS/PatientZero-X
 
 ## Meta Quest 3 / 3S (development build)
 
-The VR game is unchanged: hands or controllers, teleport, the hand menu. The APK is a development build signed with
-the debug key, and it has **not been run on a headset**.
+Hands or controllers, teleport, and the hand menu. The APK is a development build signed with the debug key,
+and it has **not been run on a headset**.
+
+The torch starts on and follows the left hand. **X** on the left controller switches it off/on during gameplay.
+With hand tracking it stays on; if the left hand loses tracking, the beam follows the head until tracking returns.
+The cable plug has a fixed grip that aligns its pins with the hand when picked up. These controls and their comfort,
+alignment and performance still need an on-headset playtest; building an APK does not verify them on a device.
 
 One-time headset setup (owner; needs your Meta account):
 

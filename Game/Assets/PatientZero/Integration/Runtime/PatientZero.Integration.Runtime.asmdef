@@ -4,6 +4,7 @@
     "PatientZero.Core",
     "PatientZero.AI",
     "PatientZero.AI.Logic",
+    "PatientZero.Audio",
     "PatientZero.Flow",
     "PatientZero.Flow.Logic",
     "PatientZero.Integration.Logic",

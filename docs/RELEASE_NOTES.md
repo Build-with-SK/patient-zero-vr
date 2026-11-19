@@ -1,9 +1,24 @@
 # PATIENT ZERO 1.0.0 — release notes
 
-Date: 2026-10-30 · Branch: `integration/round2` (draft PR #5) · Unity 6000.3.27f1 · Built and tested by Claude Code
-(release authority under the owner's final-release mission). Exact commit, file sizes and SHA-256 checksums:
+Current playtest: 2026-11-19 · Branch: `codex/vr-polish-20261119` · Unity 6000.3.27f1 · Continuation of the owner's
+VR-polish and publish request. Exact commit, file sizes and SHA-256 checksums:
 `Game/Builds/Release/manifest.json` and `SHA256SUMS.txt`. Install and controls: `docs/PLAY_AND_INSTALL.md`.
 Evidence: `docs/TEST_REPORT.md`.
+
+## Update 2026-11-19: thrown-object lures and headset torch (E-30, E-31)
+
+* Small thrown objects carry gameplay noise up to 6 m at full impact intensity. Audible gameplay one-shots can take
+  a voice slot from zombie breathing/shuffling when the 24-voice pool is full; footsteps retain their lower priority.
+* Quest gets a torch beam from the left hand, with head fallback when tracking is lost. The left controller's X button
+  toggles it during gameplay. Hand tracking keeps it lit even after switching from controllers whose torch was off.
+* Quest configure/validate selects OpenXR Prioritize Input Polling. The plug already has a fixed grab pose that aligns
+  its pins with the hand; the old note requiring an extra half-turn described the shelf pose, not the held pose.
+* The release robot checks a thrown bottle's landing noise and zombie reaction. The integration scanner now understands
+  legal partial classes without allowing duplicate ordinary types or partial types split across assemblies.
+  Autoplay suppresses physical keyboard/mouse gameplay input while it drives the player, so background user activity
+  cannot accidentally move it or win a struggle; normal launches keep their usual controls.
+* The Quest APK remains a development build. No headset was connected: tracking ergonomics, beam alignment, comfort,
+  performance and the practical latency effect are NOT TESTED on-device. See the dated test-report entry for build/test evidence.
 
 ## What the game is
 
@@ -82,7 +97,7 @@ makes noise where they land, which lures zombies away. The countdown is atmosphe
 ## Known limitations
 
 * **Quest 3/3S**: development APK only, never run on a headset (no device was connected); no frame-rate claim.
-  No flashlight in VR yet (the hand-held penlight pickup is not built).
+  The headset torch is implemented in E-31, but its hand alignment and rendering cost need a headset playtest.
 * **iPad**: BLOCKED. iOS Build Support is not installed on the build PC, and an installable app needs a Mac with Xcode
   and the owner's Apple developer team. The build command exists (`unity_batch.py build-ipad`).
 * **Android phone**: signed with the debug key (sideloading only; Google Play needs the owner's upload key).

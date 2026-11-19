@@ -9,7 +9,7 @@ break the first Unity compile or the first composed scene:
   ERROR duplicate-assembly      two asmdefs with one name
   ERROR cycle                   asmdef reference cycle
   ERROR test-asmdef             test assembly without NUnit/TestRunner references or the UNITY_INCLUDE_TESTS constraint
-  ERROR duplicate-type          one full type name declared twice in an assembly, or in two assemblies
+  ERROR duplicate-type          one full type name declared twice, unless every declaration is partial in the same assembly
   ERROR unity-object-file-name  MonoBehaviour/ScriptableObject whose file name differs from the class (Unity loses the script on save)
   ERROR using-without-reference `using X;` where no referenced assembly provides namespace X
   ERROR editor-api-in-player    UnityEditor outside #if UNITY_EDITOR in a player assembly (breaks the Android build)
@@ -167,8 +167,10 @@ def scan(root: Path, tables: dict | None = None) -> list[Finding]:
     files: dict[str, tuple[str, str, str]] = {}
     namespace_providers: dict[str, set[str]] = defaultdict(set)
     types: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    partials: dict[str, list[bool]] = defaultdict(list)
+    type_kinds: dict[str, set[str]] = defaultdict(set)
     bases: dict[str, tuple[str, str]] = {}
-    declaration = re.compile(r"\b(?:class|struct|interface|enum)\s+(\w+)(?:\s*<[^>{]*>)?(?:\s*:\s*([\w.<>, ]+?))?\s*(?:where\b|\{)")
+    declaration = re.compile(r"\b(?P<partial>partial\s+)?(?P<kind>class|struct|interface|enum)\s+(?P<name>\w+)(?:\s*<[^>{]*>)?(?:\s*:\s*(?P<base>[\w.<>, ]+?))?\s*(?:where\b|\{)")
     for cs in sorted(game.rglob("*.cs")):
         rel = cs.relative_to(root).as_posix()
         asm = owner(cs)
@@ -183,13 +185,17 @@ def scan(root: Path, tables: dict | None = None) -> list[Finding]:
                 namespace_providers[".".join(parts[:i])].add(asm)
         ns = namespaces[0] if namespaces else ""
         for m in declaration.finditer(text):
-            types[(ns + "." if ns else "") + m.group(1)].append((asm, rel))
-            if m.group(2):
-                bases[m.group(1)] = (m.group(2).split(",")[0].strip().split("<")[0].split(".")[-1], rel)
+            full = (ns + "." if ns else "") + m.group("name")
+            types[full].append((asm, rel))
+            partials[full].append(bool(m.group("partial")) and m.group("kind") != "enum")
+            type_kinds[full].add(m.group("kind"))
+            if m.group("base"):
+                bases[m.group("name")] = (m.group("base").split(",")[0].strip().split("<")[0].split(".")[-1], rel)
         files[rel] = (asm, text, raw)
 
     for full, where in sorted(types.items()):
-        if len(where) > 1:
+        legal_partial = len({asm for asm, _ in where}) == 1 and len(type_kinds[full]) == 1 and all(partials[full])
+        if len(where) > 1 and not legal_partial:
             findings.append(Finding("ERROR", "duplicate-type", where[1][1], f"{full} is also declared in {where[0][1]}"))
 
     def unity_object_kind(cls: str, depth: int = 0) -> str | None:

@@ -49,12 +49,15 @@ namespace PatientZero.Integration
         private ZombieAgentShell[] watched;
         private Camera view;
         private int snapUntil, pops, heldBack;
+        private bool suppressingInput, previousInputSuppression;
 
         private void Start()
         {
             string[] args = Environment.GetCommandLineArgs();
             rounds = RequestedRounds(args);
             if (rounds <= 0 || !flow) { enabled = false; return; }
+            previousInputSuppression = FlatInput.SuppressPhysicalInput;
+            FlatInput.SuppressPhysicalInput = suppressingInput = true;
             shots = Value(args, ShotsArgument);
             if (shots != null) System.IO.Directory.CreateDirectory(shots);
             Application.runInBackground = true; // an unattended run keeps going when another window takes focus
@@ -66,6 +69,7 @@ namespace PatientZero.Integration
 
         private void OnDestroy()
         {
+            if (suppressingInput) FlatInput.SuppressPhysicalInput = previousInputSuppression;
             Application.logMessageReceived -= Logged; GameEvents.PlayerCaught.Unsubscribe(AnyGrab); GameEvents.ActStarted.Unsubscribe(ActBegan);
         }
 
@@ -277,6 +281,8 @@ namespace PatientZero.Integration
                         if (round == 1 && previous == ActId.Awakening && !roomLooked) { roomLooked = true; yield return LookBack(RoomScare, false); }
                         if (round == 1 && previous == ActId.Machinery && !corridorLooked) { corridorLooked = true; yield return LookBack(CorridorScare, true); }
                         // E-25: round 1 takes the revolver from the officer and uses all six rounds; later rounds check it is back, full.
+                        // E-30: round 2 throws a bottle toward a zombie first: it must make a sound and turn the zombie.
+                        if (round == 2 && previous == ActId.Darkness && !gunTried) yield return Throw();
                         if (previous == ActId.Darkness && !gunTried) { gunTried = true; yield return round == 1 ? Gun() : GunBackOnTheOfficer(); }
                         yield return Act(previous);
                         actedAt = Time.realtimeSinceStartup;
@@ -584,6 +590,121 @@ namespace PatientZero.Integration
             foreach (ZombieHitbox z in Ward<ZombieHitbox>())
                 if (z.zombie.Dead) dead++;
             if (dead > 0) Problem("[PZ-PROBE] " + dead + " zombie(s) shot in an earlier run are still dead in a new run");
+        }
+
+        private const float ThrowSpeed = 5, ThrowPitchDegrees = 25, ThrowFromMin = 6.5f, ThrowFromMax = 8.5f;
+        private NoiseEvent landing;
+        private bool landed;
+
+        private void ThrowLanded(NoiseEvent noise)
+        {
+            if (landed || noise.Origin != NoiseOrigin.Player || (noise.Source != CueId.ImpactLight && noise.Source != CueId.ImpactHeavy)) return;
+            landing = noise;
+            landed = true;
+        }
+
+        /// <summary>
+        /// E-30 (owner playtest 2026-11-18: "when I throw ... it's not making any sound and zombies are not following them"). Round 2,
+        /// at the start of Act 3: the probe waits for a zombie that hears ordinary noises (not a pack follower), stands 6.5 to 8.5 m
+        /// from it on the corridor with nothing in the way, and throws a loose bottle toward it as the Q key does (held 0.65 m in
+        /// front of the eyes, let go at 5 m/s along the view, here pitched 25 degrees up). The landing must make its sound (a cue
+        /// refused a voice raises no noise) and, landing within that sound's reach of the zombie, turn the zombie to it. Also logs
+        /// how many of the audio pool's 24 voices were busy, the second cause found.
+        /// </summary>
+        private IEnumerator Throw()
+        {
+            PhysicsProp bottle = null;
+            foreach (PhysicsProp p in Ward<PhysicsProp>())
+                if (!p.heavy && !p.requiredItem && !p.Held && p.Body && !p.Body.isKinematic && (!bottle || p.name == "Loose bottle")) bottle = p;
+            if (!bottle) { Problem("[PZ-PROBE] throw: no loose object to throw in Ward"); yield break; }
+
+            ZombieHitbox target = null;
+            Vector3 spot = default;
+            float waited = 0, y = Floor3Y();
+            while (waited < 16 && flow.Core.State != GameState.Caught)
+            {
+                target = ThrowTarget(y, out spot);
+                if (target) break;
+                yield return GameSeconds(.25f);
+                waited += .25f;
+            }
+
+            if (!target) { Problem("[PZ-PROBE] throw: no zombie that hears ordinary noises on floor 3 within 16 s"); yield break; }
+            MoveTo(spot);
+            Vector3 zp = target.transform.position, flat = zp - spot;
+            flat.y = 0;
+            flat.Normalize();
+            Face(zp);
+            Vector3 aim = Quaternion.AngleAxis(-ThrowPitchDegrees, Vector3.Cross(Vector3.up, flat)) * flat;
+            LookAt(Eye() + aim * 3);
+            yield return null;
+
+            var audio = Services<IAudioCuePlayer>.Instance as PatientZero.Audio.AudioCuePlayer;
+            int busy = audio ? audio.ActiveVoices : -1, refusedBefore = audio ? audio.RejectedCues : 0;
+            Vector3 eye = Eye();
+            bottle.DesktopGrab();
+            bottle.Body.position = eye + aim * .65f;
+            bottle.Body.rotation = Quaternion.LookRotation(aim);
+            bottle.Body.linearVelocity = bottle.Body.angularVelocity = Vector3.zero;
+            Physics.SyncTransforms();
+            landed = false;
+            GameEvents.Noise.Subscribe(ThrowLanded);
+            try
+            {
+                bottle.DesktopRelease(aim * ThrowSpeed); // what Q does: DesktopInteraction.Release(true)
+                float flying = 0;
+                while (!landed && flying < 3 && flow.Core.State != GameState.Caught) { yield return GameSeconds(.05f); flying += .05f; }
+            }
+            finally { GameEvents.Noise.Unsubscribe(ThrowLanded); }
+            LevelView();
+
+            int refused = audio ? audio.RejectedCues - refusedBefore : 0;
+            Debug.Log("[PZ-PROBE] throw: '" + bottle.name + "' from " + Round(spot) + ", " + WardLayout.HorizontalDistance(spot, zp).ToString("0.0") +
+                      " m from zombie " + target.zombie.ZombieId + " (" + target.zombie.Brain.Level + "); audio voices busy " + busy + " of 24; " +
+                      refused + " cue(s) refused during the flight");
+            if (!landed)
+            {
+                Problem("[PZ-PROBE] throw: the bottle landed without a sound (no impact noise within 3 s; " + refused + " cue(s) refused, voices busy " + busy + ")");
+                yield break;
+            }
+
+            yield return GameSeconds(.3f);
+            ZombieBrain brain = target.zombie.Brain;
+            float apart = WardLayout.HorizontalDistance(target.transform.position, landing.Position);
+            bool turned = WardLayout.HorizontalDistance(brain.Target, landing.Position) < .5f && brain.Level >= AlertLevel.Suspicious;
+            Debug.Log("[PZ-PROBE] throw: landed at " + Round(landing.Position) + ", " + apart.ToString("0.0") + " m from zombie " + target.zombie.ZombieId +
+                      "; its sound carries " + landing.RadiusMeters.ToString("0.0") + " m; the zombie " + (turned ? "turned to it (" + brain.Level + ")" : "did NOT turn to it (" + brain.Level + ")"));
+            if (apart > landing.RadiusMeters) Problem("[PZ-PROBE] throw: the bottle landed " + apart.ToString("0.0") + " m from the zombie, beyond its " +
+                                                      landing.RadiusMeters.ToString("0.0") + " m sound; a thrown object cannot lure from where a player throws it");
+            else if (!turned) Problem("[PZ-PROBE] throw: zombie " + target.zombie.ZombieId + " did not turn to a bottle landing " + apart.ToString("0.0") + " m away");
+        }
+
+        /// <summary>E-30: a zombie on floor 3 that hears ordinary noises (pack followers hear only gunshots), and a corridor spot 6.5 to 8.5 m from it in clear view.</summary>
+        private static ZombieHitbox ThrowTarget(float y, out Vector3 spot)
+        {
+            spot = default;
+            float eyeUp = Services<IPlayerQuery>.TryGet(out IPlayerQuery p) ? p.HeadPosition.y - p.FloorPosition.y : 1.6f;
+            foreach (ZombieHitbox z in Boxes())
+            {
+                if (!CanHear(z) || !z.zombie.Shown || z.zombie.Brain.IsFollower || z.zombie.Brain.Level >= AlertLevel.Investigating) continue;
+                Vector3 zp = z.transform.position;
+                if (Mathf.Abs(zp.y - y) > 1.5f) continue;
+                float best = float.MaxValue;
+                for (float x = -1.5f; x <= 12.5f; x += .5f)
+                {
+                    var floor = new Vector3(x, y, 3.25f);
+                    float d = WardLayout.HorizontalDistance(floor, zp);
+                    if (d < ThrowFromMin || d > ThrowFromMax || !Clear(floor + Vector3.up * eyeUp, zp + Vector3.up * 1.2f)) continue;
+                    float score = Mathf.Abs(d - 7.5f);
+                    if (score >= best) continue;
+                    best = score;
+                    spot = floor;
+                }
+
+                if (best < float.MaxValue) return z;
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -996,7 +1117,7 @@ namespace PatientZero.Integration
                 focusNoted = true;
                 Debug.Log("[PZ-PROBE] the game window has no focus; telling the rig it has, so a held lever stays held");
             }
-            rig.SendMessage("OnApplicationFocus", true, SendMessageOptions.DontRequireReceiver);
+            rig.OnApplicationFocus(true);
         }
 
         /// <summary>E-29: a photograph of the act's plug from a step away, the view on it (only with -pz-shots).</summary>

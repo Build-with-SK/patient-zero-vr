@@ -8,6 +8,6 @@ namespace PatientZero.Player.Editor
     {
         /// <summary>Composer connects desktop mouse adapter to the same head camera as the XRI rig.</summary>
         [SceneBuildStep(BuildScene.Bootstrap,420)]
-        public static void Build(Transform root){var desktop=root.gameObject.AddComponent<DesktopInteraction>();var rig=UnityEngine.Object.FindFirstObjectByType<PlayerRig>();if(!rig || !rig.origin || !rig.origin.Camera)throw new System.InvalidOperationException("Player rig camera missing before desktop adapter step.");desktop.view=rig.origin.Camera;}
+        public static void Build(Transform root){var desktop=root.gameObject.AddComponent<DesktopInteraction>();root.gameObject.AddComponent<HeadsetTorch>();var rig=UnityEngine.Object.FindFirstObjectByType<PlayerRig>();if(!rig || !rig.origin || !rig.origin.Camera)throw new System.InvalidOperationException("Player rig camera missing before desktop adapter step.");desktop.view=rig.origin.Camera;}
     }
 }

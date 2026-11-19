@@ -18,7 +18,8 @@ namespace PatientZero.Integration.Editor
     /// faceplate and the pins are in the slots. The cable now runs from a steel junction box on the wall above the shelf to
     /// the plug's gland. The plug's collider moves onto the body it now shows, the hand holds the body (the grab's attach point),
     /// and the plug starts where that body rests on the middle of its shelf, turned with its pins toward the corridor so they
-    /// can be seen (the player turns it round to plug it in, as with any plug). The snap rule and the socket's collider stay seat A's.
+    /// can be seen. Its fixed grip aligns the pins with the hand when grabbed; the shelf rotation is not a required extra
+    /// turn in VR. The snap rule and the socket's collider stay seat A's.
     /// </summary>
     public static class PlugSocketStep
     {

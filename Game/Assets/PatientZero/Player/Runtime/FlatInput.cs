@@ -39,10 +39,12 @@ namespace PatientZero.Player
         /// </summary>
         public static bool GunInHand;
         public static bool Aim, Fire;
+        /// <summary>Only the explicit release robot sets this: user typing or clicking elsewhere cannot drive its player.</summary>
+        public static bool SuppressPhysicalInput;
         private static int polledFrame = -1;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() { polledFrame = -1; PuzzleGripped = GunInHand = false; Clear(); }
+        private static void ResetStatics() { polledFrame = -1; PuzzleGripped = GunInHand = SuppressPhysicalInput = false; Clear(); }
 
         /// <summary>Reads the devices once per frame; every reader calls it, the first call of a frame does the work.</summary>
         public static void Poll()
@@ -50,6 +52,7 @@ namespace PatientZero.Player
             if (polledFrame == Time.frameCount) return;
             polledFrame = Time.frameCount;
             Clear();
+            if (SuppressPhysicalInput) return;
 #if PZ_DESKTOP_MOUSE
             Keyboard keys = Keyboard.current;
             Mouse mouse = Mouse.current;
