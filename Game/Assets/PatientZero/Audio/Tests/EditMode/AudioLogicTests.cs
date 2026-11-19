@@ -109,6 +109,32 @@ namespace PatientZero.Audio.Tests
             var next = b.Start(Row(CueId.RoomTone), false); b.Release(a.Handle);
             Assert.AreNotEqual(a.Handle, next.Handle); Assert.GreaterOrEqual(b.Find(next.Handle), 0);
         }
+        // E-30 (owner playtest 2026-11-18: a thrown object made no sound and no zombie came). A throw is the player's lure, so it
+        // must carry farther than a footstep; 2 m (the October spec) only reached a zombie already beside the landing.
+        [Test] public void AThrownObjectCarriesFartherThanAFootstep()
+        {
+            Assert.GreaterOrEqual(Row(CueId.ImpactLight).NoiseRadius, 6);
+            Assert.Greater(Row(CueId.ImpactLight).NoiseRadius, Row(CueId.PlayerFootstep).NoiseRadius);
+        }
+        // E-30: with the pool full of zombie breathing and shuffling, a landing object or a gunshot was refused a voice, and a
+        // refused cue raises no noise, so it was silent AND unheard. A one-shot loud enough to move zombies (3 m or more) now
+        // outranks zombie cues; footsteps do not, so walking never cuts the zombies' own sounds.
+        [Test] public void SoundsThatMoveZombiesAreNeverDroppedForZombieLoops()
+        {
+            foreach (CueId loud in new[] { CueId.ImpactLight, CueId.ImpactHeavy, CueId.RevolverShot, CueId.PlugSpark, CueId.DistantCrashLure })
+            {
+                var b = new VoiceBudget();
+                for (int i = 0; i < 24; i++) b.Start(Row(i % 2 == 0 ? CueId.ZombieBreath : CueId.ZombieShuffle), true);
+                var admitted = b.Start(Row(loud), true);
+                Assert.IsTrue(admitted.Accepted, loud.ToString());
+                Assert.IsTrue(admitted.Stolen == CueId.ZombieBreath || admitted.Stolen == CueId.ZombieShuffle, loud.ToString());
+            }
+            var full = new VoiceBudget();
+            for (int i = 0; i < 24; i++) full.Start(Row(CueId.ZombieBreath), true);
+            Assert.IsFalse(full.Start(Row(CueId.PlayerFootstep), true).Accepted);
+            Assert.Less(Row(CueId.ImpactLight).Priority, Row(CueId.ZombieBreath).Priority);
+            Assert.Greater(Row(CueId.ImpactLight).Priority, Row(CueId.PaPatientZero).Priority); // speech still wins
+        }
         private static NoiseEvent Noise(float time = 0, float radius = 6) => new NoiseEvent(Vector3.zero, radius, CueId.ImpactHeavy, NoiseOrigin.Player, time);
         [Test] public void PortedNoiseCooldownAndNestedDispatchGuards()
         {

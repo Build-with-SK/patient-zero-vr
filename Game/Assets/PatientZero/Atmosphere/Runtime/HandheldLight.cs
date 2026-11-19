@@ -12,7 +12,7 @@ namespace PatientZero.Atmosphere
     /// players wish"): the torch is on from the start and only the player turns it off. The power cut no longer kills it (it
     /// used to, from the surge until the lights came back, so that Act 3 was played by sound alone); the blind zombies hunt
     /// by sound, so the torch shows the way without giving the player away. One shadowless spot light, created on first use
-    /// only, so the composed ward keeps its light budget and the Quest build (which never raises the event) never has it.
+    /// only, so the composed ward keeps its light budget. HeadsetTorch now supplies its pose on Quest too (E-31).
     /// Added to Ward by the Integration build step HandheldLightStep.
     /// </summary>
     public sealed class HandheldLight : MonoBehaviour

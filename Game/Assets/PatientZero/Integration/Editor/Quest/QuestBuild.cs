@@ -255,6 +255,8 @@ namespace PatientZero.Integration.Editor.Quest
             }
 
             openxr.renderMode = OpenXRSettings.RenderMode.SinglePassInstanced;
+            openxr.latencyOptimization = OpenXRSettings.LatencyOptimization.PrioritizeInputPolling;
+            report.Pass("openxr latency: prioritize input polling");
             EditorUtility.SetDirty(openxr);
             OpenXRFeature[] features = openxr.GetFeatures();
             foreach (string typeName in QuestBuildConfig.RequiredOpenXRFeatures)
@@ -331,6 +333,10 @@ namespace PatientZero.Integration.Editor.Quest
 
             if (openxr.renderMode == OpenXRSettings.RenderMode.SinglePassInstanced) report.Pass("openxr render mode: single pass instanced (multiview)");
             else report.Error("openxr render mode is " + openxr.renderMode + "; the contract requires multiview.");
+
+            if (openxr.latencyOptimization == OpenXRSettings.LatencyOptimization.PrioritizeInputPolling)
+                report.Pass("openxr latency: prioritize input polling");
+            else report.Error("openxr latency must prioritize input polling. Run configure.");
 
             OpenXRFeature[] features = openxr.GetFeatures();
             foreach (string typeName in QuestBuildConfig.RequiredOpenXRFeatures)

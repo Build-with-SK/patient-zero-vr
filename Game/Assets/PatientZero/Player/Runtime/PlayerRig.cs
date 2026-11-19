@@ -48,6 +48,6 @@ namespace PatientZero.Player
         }
         public const float StairFadeOutSeconds=.35f,StairFadeInSeconds=1.2f;
         private void OnState(GameStateChanged state){if(!GameStateRules.IsSimulationLive(state.To)){cancelLeft.Invoke();cancelRight.Invoke();}}
-        private void OnApplicationFocus(bool focus){focused=focus;}
+        public void OnApplicationFocus(bool focus){focused=focus;}
     }
 }

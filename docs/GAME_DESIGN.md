@@ -27,7 +27,7 @@ Narrative seeds, so the reveal is earned: in Act 1 the player's wristband reads 
 |---|---|---|
 | Pulling a plank (creak, scales with pull) | `PlankCreak` | 0–2 m |
 | Plank pops free | `PlankPop` | 5 m |
-| Object hits the floor | `ImpactLight` / `ImpactHeavy` | 2 m / 6 m × intensity (impact speed ÷ 3 m/s, clamped 0–1) |
+| Object hits the floor | `ImpactLight` / `ImpactHeavy` | 6 m / 6 m × intensity (impact speed ÷ 3 m/s, clamped 0–1); `ImpactLight` was 2 m until E-30 (section 17) |
 | Valve turned slowly, < 90°/s | `ValveSqueal` (low) | ≤ 1 m |
 | Valve turned fast, ≥ 180°/s | `ValveSqueal` (high) | up to 6 m |
 | Cable dragged | `CableDrag` | ≤ 1 m |
@@ -271,7 +271,7 @@ All world cues use **spatial blend 1, Doppler 0, a custom rolloff curve that is 
 | ZombieSniff | Suspicious / Searching | 3D | 0.5–9 | no | 0 | World | ● [sniffing] + arrow |
 | ZombieLunge | lunge / catch | 3D | 0.5–8 | no | 0 | World | ● [lunge] |
 | ZombieGlassTap | Z1 at the window | 3D | 0.5–8 | no | 0 | World | ● [tapping on glass] |
-| ImpactLight | small object lands | 3D | 0.5–10 | no | 2 × i | World | ○ [clatter] |
+| ImpactLight | small object lands | 3D | 0.5–10 | no | 6 × i (E-30; was 2 × i) | World | ○ [clatter] |
 | ImpactHeavy | heavy object / cart | 3D | 1–14 | no | 6 × i | World | ○ [crash] |
 | PlayerFootstep | smooth locomotion only | 3D (feet) | 0.3–5 | no | 2.5 | World | — |
 | TeleportLand | teleport arrival | 3D | 0.3–4 | no | 1.5 | World | — |
@@ -519,6 +519,34 @@ socket", "make the plug looks like a plug and socket", and a zombie the owner ma
 * **Plug and socket.** The socket is an off-white surface box on the corridor wall with a UK faceplate (three slots) and
   a red switch, fed by a steel conduit from the ceiling. The plug is a black rubber UK plug with three brass pins and a
   cable gland; the cable runs to it from a steel junction box above its shelf. It waits on the shelf with its pins toward
-  the corridor, so they can be seen; in a headset the player turns it round to plug it in, as with any plug. Plugged in,
+  the corridor, so they can be seen. Its fixed grab attach point aligns the pins with the hand when picked up, so the shelf
+  rotation does not require an extra 180-degree turn in VR (clarified in E-31). Plugged in,
   the pins sit in the slots. The hand holds the plug by its body; the snap rule (6 cm and 35 degrees, assist 12 cm and
   60, 25 cm on flat screens) is unchanged.
+
+## 17. Thrown objects lure (owner playtest, 2026-11-18; integration exception E-30)
+
+The owner threw things at zombies and "it's not making any sound and zombie are not following them". Two causes:
+
+* **Reach.** A small object landing (`ImpactLight`: the bottles, the kidney dish, the clipboard, the plug) carried
+  2 m, less than a footstep's 2.5 m, so a throw could only draw a zombie it almost hit. It now carries 6 m × intensity,
+  as far as the trolley's crash. A throw with Q leaves the hand at 5 m/s and lands about 3.5 to 4.5 m ahead, so a zombie
+  within about 10 m can be lured. A blind zombie walks to where the object landed, not to the thrower (a landing more
+  than 2 m away gives it nothing to grab), and the pack followers still hear only their hunter and gunshots.
+* **Sound slots.** The game plays at most 24 sounds at once, and a sound that gets no slot also raises no noise, so
+  zombies never hear what the player could not. With many zombies in play their breathing and shuffling filled the
+  slots and outranked a landing object, which was then silent and unheard. A one-shot loud enough to move zombies
+  (3 m or more: a landing object, the gunshot, the plug spark, the door latch, a plank popping, the valve's vent, the
+  director's lure) now outranks the zombies' own sounds and takes a slot from the least important sound playing
+  (background ambience first, then the oldest zombie sound). Footsteps (2.5 m) do not,
+  so walking never cuts a zombie's sounds. Speech and the menus still outrank everything.
+
+## 18. Headset torch and input polling (owner "polish for vr", 2026-11-19; E-31)
+
+The headset uses the same shadowless torch light as flat screens, through `HandheldLightChanged`; no new Core contract.
+The beam follows the left hand's pose, or the head when the hand is untracked or its pose is invalid. The left controller's
+X button switches it while gameplay is live. With hand tracking it stays on, including after switching from controllers
+whose torch was off, because there is no controller button to restore it. Switching back respects the controller's choice.
+The component is composed into Bootstrap so it observes the start of the run; it does not emit a competing beam on desktop.
+Quest OpenXR configuration and validation require Prioritize Input Polling. This is a configured latency preference,
+not a measured improvement. Hand ergonomics, beam alignment, rendering cost and comfort still require a real headset.

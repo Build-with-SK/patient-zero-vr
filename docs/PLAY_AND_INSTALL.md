@@ -92,8 +92,13 @@ With the module installed: run `build-ipad`, copy `Game/Builds/iOS/PatientZero-X
 
 ## Meta Quest 3 / 3S (development build)
 
-The VR game is unchanged: hands or controllers, teleport, the hand menu. The APK is a development build signed with
-the debug key, and it has **not been run on a headset**.
+Hands or controllers, teleport, and the hand menu. The APK is a development build signed with the debug key,
+and it has **not been run on a headset**.
+
+The torch starts on and follows the left hand. **X** on the left controller switches it off/on during gameplay.
+With hand tracking it stays on; if the left hand loses tracking, the beam follows the head until tracking returns.
+The cable plug has a fixed grip that aligns its pins with the hand when picked up. These controls and their comfort,
+alignment and performance still need an on-headset playtest; building an APK does not verify them on a device.
 
 One-time headset setup (owner; needs your Meta account):
 
