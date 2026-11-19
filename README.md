@@ -4,9 +4,13 @@ A 120-second hand-tracked VR horror experience for Meta Quest. You wake in a sea
 
 Built by three agents: Claude (Technical Director and integrator) and two Codex agents (A: player, interaction, flow, UI · B: AI, audio, atmosphere, environment).
 
-## Status (2026-11-18)
+## Status and handoff (2026-11-19)
 
-**Playable on Windows; the newest work is on branch `claude/two-minute`** (`main` is older). The project compiles and builds in Unity 6000.3.27f1, and a release probe plays it through on Windows. The game is now the ward (floor 3) then the ground-floor lobby, with a revolver, the player's arms on flat screens, and zombies that hunt by sound and run to gunshots. What changed lately and what was tested: [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md) sections 11-16 and the end of [`docs/collab/CLAUDE_LOG.md`](docs/collab/CLAUDE_LOG.md). **Nothing has run on a headset**; the Quest build is a development build. The rest of this README dates from 2026-10-28.
+**Playable on Windows; the newest work is on branch [`codex/vr-polish-20261119`](https://github.com/Build-with-SK/patient-zero-vr/tree/codex/vr-polish-20261119)** (`main` is older). This includes the audible thrown-object lure fix, left-hand Quest torch and OpenXR input polling configuration. The project compiles and builds in Unity 6000.3.27f1. The latest Windows build passed three automated playthroughs. **The Quest APK has not been run on a headset.**
+
+**Downloads and source handoff:** [19 November release](https://github.com/Build-with-SK/patient-zero-vr/releases/tag/playtest-2026-11-19-vr-polish). Download the Windows ZIP or Quest APK to play. To continue development, clone this branch with Git LFS, or download `PatientZero-complete-source-handoff-2026-11-19.zip` from that release and start with `HANDOFF.md` and `CurrentProject/Game`. The source handoff includes resolved asset files, the original Meshy model download and separate historical local worktree/editor backups. Unity caches and package samples are regenerated; the archive explains how. Historical snapshots are preserved separately and are not merged into the current game. Controls and setup: [`docs/PLAY_AND_INSTALL.md`](docs/PLAY_AND_INSTALL.md). Remaining work and verification limits: [`docs/RELEASE_NOTES.md`](docs/RELEASE_NOTES.md) and [`docs/TEST_REPORT.md`](docs/TEST_REPORT.md).
+
+The game is now the ward (floor 3) then the ground-floor lobby, with a revolver, the player's arms on flat screens, and zombies that hunt by sound and run to gunshots. Design and development history: [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md) and [`docs/collab/CLAUDE_LOG.md`](docs/collab/CLAUDE_LOG.md). The rest of this README dates from 2026-10-28.
 
 ## Start here
 

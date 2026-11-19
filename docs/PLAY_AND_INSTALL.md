@@ -1,6 +1,10 @@
 # PATIENT ZERO 1.0.0 — install, controls and play
 
-Release files are in `Game/Builds/Release/` (not in git; rebuild them with the commands at the end).
+Download the current Windows ZIP, Quest APK and complete source handoff from the
+[19 November GitHub release](https://github.com/Build-with-SK/patient-zero-vr/releases/tag/playtest-2026-11-19-vr-polish).
+The latest source branch is `codex/vr-polish-20261119`; `main` is older.
+For the source handoff ZIP, begin with its `HANDOFF.md` and open `CurrentProject/Game` in Unity Hub.
+Local release files are in `Game/Builds/Release/` (not in git; rebuild them with the commands at the end).
 `SHA256SUMS.txt` and `manifest.json` in the same folder list each file's checksum and the commit it was built from.
 What was tested, and how: `docs/TEST_REPORT.md`. What is not done: `docs/RELEASE_NOTES.md`, "Known limitations".
 
